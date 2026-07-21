@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-canvas-soft: var(--canvas-soft);
+  --color-canvas-pure: var(--canvas-pure);
+  --color-ink-main: var(--ink-main);
+  --color-ink-muted: var(--ink-muted);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-cold: var(--cold);
+
+  --color-pill-purple-bg: var(--pill-purple-bg);
+  --color-pill-purple-fg: var(--pill-purple-fg);
+  --color-pill-pink-bg: var(--pill-pink-bg);
+  --color-pill-pink-fg: var(--pill-pink-fg);
+  --color-pill-orange-bg: var(--pill-orange-bg);
+  --color-pill-orange-fg: var(--pill-orange-fg);
+  --color-pill-teal-bg: var(--pill-teal-bg);
+  --color-pill-teal-fg: var(--pill-teal-fg);
+  --color-pill-green-bg: var(--pill-green-bg);
+  --color-pill-green-fg: var(--pill-green-fg);
+  --color-pill-sky-bg: var(--pill-sky-bg);
+  --color-pill-sky-fg: var(--pill-sky-fg);
+
+  /* Shapes > Border Radius Scale (DESIGN.md) — overrides Tailwind's stock
+     scale, which used different px values under these same names. */
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Elevation & Depth (DESIGN.md). Level 2's stops beyond the one DESIGN.md
+     documents (the final "0 23px 52px / .05" stop) are our own interpolation
+     — DESIGN.md doesn't give the other 4. Values differ between themes (see
+     :root/.dark below) — black-on-near-black is far weaker than black-on-
+     white at the same alpha, so dark mode uses higher alphas to register at
+     all. */
+  --shadow-elevation-1: var(--elevation-1);
+  --shadow-elevation-2: var(--elevation-2);
+}
+
+@layer base {
+  :root {
+    --canvas-soft: oklch(0.97 0.005 60);
+    --canvas-pure: oklch(1 0 0);
+    --ink-main: oklch(0.12 0.008 60);
+    --ink-muted: oklch(0.5 0.006 60);
+    --hairline: oklch(0.92 0.004 60);
+    --accent: oklch(0.42 0.28 264);
+    --cold: oklch(0.7 0.005 60);
+
+    --pill-purple-bg: oklch(0.94 0.04 300);
+    --pill-purple-fg: oklch(0.45 0.18 300);
+    --pill-pink-bg: oklch(0.94 0.045 350);
+    --pill-pink-fg: oklch(0.5 0.19 350);
+    --pill-orange-bg: oklch(0.94 0.05 55);
+    --pill-orange-fg: oklch(0.48 0.17 45);
+    --pill-teal-bg: oklch(0.94 0.04 195);
+    --pill-teal-fg: oklch(0.45 0.1 195);
+    --pill-green-bg: oklch(0.94 0.05 145);
+    --pill-green-fg: oklch(0.45 0.14 145);
+    --pill-sky-bg: oklch(0.94 0.03 235);
+    --pill-sky-fg: oklch(0.48 0.12 235);
+
+    --elevation-1: 0 0.175px 1.041px rgba(0, 0, 0, 0.01),
+      0 0.8px 2.925px rgba(0, 0, 0, 0.02), 0 2.025px 7.847px rgba(0, 0, 0, 0.027),
+      0 4px 18px rgba(0, 0, 0, 0.04);
+    --elevation-2: 0 0.3px 1.8px rgba(0, 0, 0, 0.015),
+      0 1.4px 5px rgba(0, 0, 0, 0.025), 0 3.5px 13px rgba(0, 0, 0, 0.033),
+      0 8px 26px rgba(0, 0, 0, 0.042), 0 23px 52px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark {
+    --canvas-soft: oklch(0.15 0.005 240);
+    --canvas-pure: oklch(0.19 0.005 240);
+    --ink-main: oklch(0.98 0 0);
+    --ink-muted: oklch(0.65 0.01 240);
+    /* Brightened from 0.24 — against canvas-pure (0.19) that was only a
+       5-point lightness gap vs light mode's 8-point gap (hairline .92 on
+       canvas-pure 1.0), so borders (especially nested ones, e.g. inputs on
+       cards) were reading as nearly invisible. */
+    --hairline: oklch(0.3 0.006 240);
+    --accent: oklch(0.55 0.24 264);
+    --cold: oklch(0.45 0.005 240);
+
+    --pill-purple-bg: oklch(0.3 0.08 300);
+    --pill-purple-fg: oklch(0.86 0.06 300);
+    --pill-pink-bg: oklch(0.3 0.09 350);
+    --pill-pink-fg: oklch(0.87 0.07 350);
+    --pill-orange-bg: oklch(0.3 0.09 55);
+    --pill-orange-fg: oklch(0.85 0.07 55);
+    --pill-teal-bg: oklch(0.3 0.06 195);
+    --pill-teal-fg: oklch(0.85 0.05 195);
+    --pill-green-bg: oklch(0.3 0.08 145);
+    --pill-green-fg: oklch(0.85 0.06 145);
+    --pill-sky-bg: oklch(0.3 0.05 235);
+    --pill-sky-fg: oklch(0.85 0.05 235);
+
+    --elevation-1: 0 0.175px 1.041px rgba(0, 0, 0, 0.06),
+      0 0.8px 2.925px rgba(0, 0, 0, 0.1), 0 2.025px 7.847px rgba(0, 0, 0, 0.13),
+      0 4px 18px rgba(0, 0, 0, 0.18);
+    --elevation-2: 0 0.3px 1.8px rgba(0, 0, 0, 0.08),
+      0 1.4px 5px rgba(0, 0, 0, 0.12), 0 3.5px 13px rgba(0, 0, 0, 0.16),
+      0 8px 26px rgba(0, 0, 0, 0.2), 0 23px 52px rgba(0, 0, 0, 0.24);
+  }
+
+  body {
+    background-color: var(--canvas-soft);
+    color: var(--ink-main);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  /* DESIGN.md's text-input spec: "Focus adds the soft Level-1 shadow."
+     Accent is also documented as the focus-signal color. Previously every
+     input used outline-none with no replacement — zero visible focus state. */
+  input:not([type="checkbox"], [type="radio"]):focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--shadow-elevation-1);
+  }
+}
