@@ -5,8 +5,11 @@ import { getOwnerAdminRecipients } from "@/lib/email/recipients";
 import type { OrgRevenueAggregate } from "@/lib/reports/aggregate-org-revenue";
 
 // Falls back to localhost for local/dev testing — same env-var gap as
-// notify-new-lead.ts; must be set for a real deployment.
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// notify-new-lead.ts; must be set for a real deployment. Trailing slash
+// stripped so `${APP_URL}/` below always produces exactly one slash,
+// regardless of whether the env var itself has one (it does, in this
+// project's Vercel scope).
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 const REPORT_FROM = "TEKGUYZ CRM <onboarding@resend.dev>";
 
 // The only place Resend gets called in this feature. Plain text, not
