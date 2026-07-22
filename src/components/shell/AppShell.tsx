@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
+import { ProfileSheetController } from "@/components/leads/profile/ProfileSheetController";
 
 export function AppShell({
   children,
@@ -18,6 +19,9 @@ export function AppShell({
         <Header orgName={orgName} userEmail={userEmail} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
+      <Suspense fallback={null}>
+        <ProfileSheetController />
+      </Suspense>
     </div>
   );
 }

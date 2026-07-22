@@ -2,6 +2,7 @@ import { getCurrentOrg } from "@/lib/organizations/current";
 import { getWebhookSecret } from "@/lib/organizations/queries";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { OrgDetailsPanel } from "@/components/settings/OrgDetailsPanel";
+import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 
 export default async function SettingsPage() {
   const { orgId, orgName, orgTimezone, currencyFormat, role } = await getCurrentOrg();
@@ -23,6 +24,7 @@ export default async function SettingsPage() {
         canEdit={canManageOrg}
       />
       <TeamPanel orgId={orgId} canManage={canManageOrg} />
+      <ApiKeysPanel canEdit={canManageOrg} />
     </div>
   );
 }

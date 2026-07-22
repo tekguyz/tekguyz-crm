@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getActivityLogs, type ActivityLog } from "@/lib/activity/queries";
+import { transcribeAndSaveAudioNote } from "@/lib/activity/audio-transcription";
 
 // Client-callable boundary — ActivityTimeline is a client component (it
 // refetches on open and after a note is added), and server-only code like
@@ -45,4 +46,10 @@ export async function addManualNote(leadId: string, content: string): Promise<Ac
 
   if (error) throw error;
   return data;
+}
+
+// Client-callable boundary for NoteCaptureForm's recording mode — the actual
+// upload/transcription pipeline lives in audio-transcription.ts.
+export async function addAudioTranscript(leadId: string, audioBlob: Blob): Promise<ActivityLog> {
+  return transcribeAndSaveAudioNote(leadId, audioBlob);
 }

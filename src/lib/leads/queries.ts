@@ -18,7 +18,7 @@ export type Lead = {
   ai_brief: string | null;
 };
 
-const LEAD_COLUMNS =
+export const LEAD_COLUMNS =
   "id, client_name, company, email, phone, website, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief";
 
 export async function getSlaCriticalLeads(orgId: string): Promise<Lead[]> {
@@ -76,6 +76,21 @@ export async function getPipelineLeads(orgId: string): Promise<Lead[]> {
     .eq("organization_id", orgId)
     .eq("archived", false)
     .is("outcome", null);
+
+  if (error) throw error;
+  return data;
+}
+
+// Scoped by RLS alone (no explicit organization_id filter needed) — used by
+// the ?leadId= deep-link controller, where the caller only has an id, not
+// the org context a list query would already be filtered by.
+export async function getLeadById(leadId: string): Promise<Lead | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("leads")
+    .select(LEAD_COLUMNS)
+    .eq("id", leadId)
+    .maybeSingle();
 
   if (error) throw error;
   return data;

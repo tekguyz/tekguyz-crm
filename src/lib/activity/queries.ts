@@ -20,5 +20,17 @@ export async function getActivityLogs(leadId: string): Promise<ActivityLog[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data;
+
+  // audio_url is stored as a private-bucket storage path, not a directly
+  // playable URL (the audio-notes bucket is not public) — resolve a
+  // short-lived signed URL for any row that has one.
+  return Promise.all(
+    data.map(async (log) => {
+      if (!log.audio_url) return log;
+      const { data: signed } = await supabase.storage
+        .from("audio-notes")
+        .createSignedUrl(log.audio_url, 3600);
+      return { ...log, audio_url: signed?.signedUrl ?? null };
+    }),
+  );
 }

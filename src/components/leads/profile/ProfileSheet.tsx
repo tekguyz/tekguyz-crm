@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import type { Lead } from "@/lib/leads/queries";
 import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
-import { ActivityTimeline } from "@/components/leads/profile/ActivityTimeline";
+import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
 import { NoteCaptureForm } from "@/components/leads/profile/NoteCaptureForm";
 
 export function ProfileSheet({
@@ -20,6 +20,7 @@ export function ProfileSheet({
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [pendingVoiceNote, setPendingVoiceNote] = useState<PendingVoiceNote | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -85,13 +86,24 @@ export function ProfileSheet({
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
               <ExecutiveBrief brief={lead.ai_brief} />
-              <ActivityTimeline leadId={lead.id} refreshKey={refreshKey} />
+              <ActivityTimeline
+                leadId={lead.id}
+                refreshKey={refreshKey}
+                pendingEntry={pendingVoiceNote}
+                onDismissPending={() => setPendingVoiceNote(null)}
+              />
             </div>
 
             <div className="p-6 pt-0">
               <NoteCaptureForm
                 leadId={lead.id}
                 onNoteAdded={() => setRefreshKey((k) => k + 1)}
+                onRecordingStart={() => setPendingVoiceNote({ status: "transcribing" })}
+                onRecordingSettled={(result) =>
+                  setPendingVoiceNote(
+                    result.ok ? null : { status: "error", message: result.message },
+                  )
+                }
               />
             </div>
           </motion.div>

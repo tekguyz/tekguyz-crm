@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
-import { getAllContacts, type ContactLead } from "@/lib/leads/queries";
+import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
 
 export type LeadFormState = { error?: string } | null;
 
@@ -139,4 +139,12 @@ export async function updateLeadStatus(leadId: string, status: string): Promise<
 export async function fetchSearchableContacts(): Promise<ContactLead[]> {
   const { orgId } = await getCurrentOrg();
   return getAllContacts(orgId);
+}
+
+// Client-callable boundary for ProfileSheetController's ?leadId= deep link
+// (e.g. from a Resend notification email). RLS on the underlying query is
+// the actual tenant boundary — a leadId outside the caller's org simply
+// resolves to null here, same pattern as addManualNote's lead lookup.
+export async function fetchLeadById(leadId: string): Promise<Lead | null> {
+  return getLeadById(leadId);
 }
