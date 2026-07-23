@@ -23,8 +23,8 @@ export async function signUp(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "");
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const confirmUrl = new URL("/auth/confirm", siteUrl);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const confirmUrl = new URL("/auth/confirm", appUrl);
   if (next) confirmUrl.searchParams.set("next", next);
 
   const supabase = await createClient();

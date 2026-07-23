@@ -18,7 +18,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-hairline bg-canvas-pure">
       <div className="flex h-14 items-center border-b border-hairline px-4">
-        <span className="text-sm font-semibold tracking-tight">TekGuyz CRM</span>
+        <span className="text-sm font-semibold tracking-tight">TEKGUYZ CRM</span>
       </div>
 
       <nav className="flex-1 space-y-0.5 p-2">

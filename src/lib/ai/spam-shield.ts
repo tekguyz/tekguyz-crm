@@ -1,7 +1,7 @@
 import "server-only";
 import { GoogleGenAI, Type } from "@google/genai";
+import { GEMINI_SPAM_SHIELD_MODEL } from "@/lib/ai/models";
 
-const SPAM_SHIELD_MODEL = "gemini-3.5-flash";
 const SPAM_SHIELD_TIMEOUT_MS = 8000;
 
 const SYSTEM_PROMPT =
@@ -40,7 +40,7 @@ export async function evaluateLeadForSpam(
 
   const response = await withTimeout(
     ai.models.generateContent({
-      model: SPAM_SHIELD_MODEL,
+      model: GEMINI_SPAM_SHIELD_MODEL,
       contents: userContent,
       config: {
         systemInstruction: SYSTEM_PROMPT,

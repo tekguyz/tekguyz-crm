@@ -1,14 +1,9 @@
 import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { resolveOrgCredential } from "@/lib/credentials/resolve-org-credential";
+import { GEMINI_REPORT_MODEL } from "@/lib/ai/models";
 import type { OrgRevenueAggregate } from "@/lib/reports/aggregate-org-revenue";
 
-// Verified live against ai.google.dev on 2026-07-22, not assumed from the
-// roadmap text: the actual callable Pro-tier model id is
-// "gemini-3.1-pro-preview" — the roadmap's "gemini-3.1-pro" is not a real
-// model id (the older "gemini-3-pro-preview" has been retired and now
-// resolves to this one).
-const NARRATIVE_MODEL = "gemini-3.1-pro-preview";
 const NARRATIVE_TIMEOUT_MS = 15000;
 
 const SYSTEM_PROMPT =
@@ -40,7 +35,7 @@ export async function generateExecutiveNarrative(
     const ai = new GoogleGenAI({ apiKey });
     const response = await withTimeout(
       ai.models.generateContent({
-        model: NARRATIVE_MODEL,
+        model: GEMINI_REPORT_MODEL,
         contents: JSON.stringify(aggregatedData),
         config: {
           systemInstruction: SYSTEM_PROMPT,

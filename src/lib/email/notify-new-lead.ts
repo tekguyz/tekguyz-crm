@@ -2,12 +2,15 @@ import "server-only";
 import { Resend } from "resend";
 import { resolveOrgCredential } from "@/lib/credentials/resolve-org-credential";
 import { getOwnerAdminRecipients } from "@/lib/email/recipients";
+import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
 import type { Lead } from "@/lib/leads/queries";
 
 // Falls back to localhost for local/dev testing — must be set for a real
 // deployment, or the deep link in the notification email points nowhere
-// useful. (Same category of concern as Prompt 15's env-var production pass.)
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// useful. Trailing slash stripped (Prompt 15a) — this was the one file the
+// Prompt 14 fix didn't reach; it produced the exact double-slash deep-link
+// bug send-weekly-report.ts already had fixed, just never verified here.
+const APP_URL = trimTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
 const NOTIFICATION_FROM = "TEKGUYZ CRM <onboarding@resend.dev>";
 
 // Fire-and-forget from the caller's perspective — ingest-lead.ts wraps this

@@ -2,9 +2,9 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { resolveOrgCredential } from "@/lib/credentials/resolve-org-credential";
+import { GEMINI_TRANSCRIPTION_MODEL } from "@/lib/ai/models";
 import type { ActivityLog } from "@/lib/activity/queries";
 
-const TRANSCRIPTION_MODEL = "gemini-3.5-flash-lite";
 const TRANSCRIPTION_TIMEOUT_MS = 20000;
 const AUDIO_BUCKET = "audio-notes";
 
@@ -85,7 +85,7 @@ async function transcribeOrFallback(
     const ai = new GoogleGenAI({ apiKey });
     const response = await withTimeout(
       ai.models.generateContent({
-        model: TRANSCRIPTION_MODEL,
+        model: GEMINI_TRANSCRIPTION_MODEL,
         contents: [
           {
             role: "user",
