@@ -1,5 +1,6 @@
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getWebhookSecret } from "@/lib/organizations/queries";
+import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { OrgDetailsPanel } from "@/components/settings/OrgDetailsPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
@@ -13,6 +14,8 @@ export default async function SettingsPage() {
   // reason to even make the call (or risk it landing in the page payload)
   // for a plain MEMBER.
   const webhookSecret = canManageOrg ? await getWebhookSecret(orgId) : null;
+  const appUrl = trimTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+  const webhookUrl = webhookSecret ? `${appUrl}/api/v1/triage/${webhookSecret}` : null;
 
   return (
     <div className="space-y-6">
@@ -20,7 +23,7 @@ export default async function SettingsPage() {
         orgName={orgName}
         orgTimezone={orgTimezone}
         currencyFormat={currencyFormat}
-        webhookSecret={webhookSecret}
+        webhookUrl={webhookUrl}
         canEdit={canManageOrg}
       />
       <TeamPanel orgId={orgId} canManage={canManageOrg} />

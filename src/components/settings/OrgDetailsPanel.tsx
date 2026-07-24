@@ -22,13 +22,13 @@ export function OrgDetailsPanel({
   orgName,
   orgTimezone,
   currencyFormat,
-  webhookSecret,
+  webhookUrl,
   canEdit,
 }: {
   orgName: string;
   orgTimezone: string;
   currencyFormat: string;
-  webhookSecret: string | null;
+  webhookUrl: string | null;
   canEdit: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(updateOrgSettings, initialState);
@@ -112,18 +112,19 @@ export function OrgDetailsPanel({
         </dl>
       )}
 
-      {canEdit && webhookSecret && (
+      {canEdit && webhookUrl && (
         <div className="mt-4 border-t border-hairline pt-4">
-          <label className="mb-1 block text-xs text-ink-muted">Webhook secret</label>
+          <label className="mb-1 block text-xs text-ink-muted">Webhook URL</label>
           <p className="mb-2 text-xs text-ink-muted">
-            Used to authenticate inbound webhook requests once the ingestion endpoint is
-            built (Phase 4). Only owners and admins can view this.
+            Send inbound leads here (e.g. from Zapier) as a POST request — this URL is
+            tenant-scoped and authenticates the request on its own. Only owners and admins can
+            view this.
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-xs text-ink-main">
-              {webhookSecret}
+              {webhookUrl}
             </code>
-            <CopyButton text={webhookSecret} />
+            <CopyButton text={webhookUrl} />
           </div>
         </div>
       )}
