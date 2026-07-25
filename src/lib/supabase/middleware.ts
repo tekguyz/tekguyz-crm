@@ -35,6 +35,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute =
     path === "/login" ||
     path === "/signup" ||
+    path === "/forgot-password" ||
     path.startsWith("/auth/confirm") ||
     path.startsWith("/invite/");
 

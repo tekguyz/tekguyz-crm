@@ -39,6 +39,11 @@ export default async function LoginPage({
           required
           className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
         />
+        <p className="text-right text-sm">
+          <Link href="/forgot-password" className="text-accent underline">
+            Forgot password?
+          </Link>
+        </p>
         <button
           type="submit"
           className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
