@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { CommandBar } from "@/components/command/CommandBar";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 export function Header({
   orgName,
@@ -49,6 +50,7 @@ export function Header({
         >
           {userEmail.slice(0, 1) || "?"}
         </div>
+        <ThemeToggle />
         <form action={signOut}>
           <button
             type="submit"
