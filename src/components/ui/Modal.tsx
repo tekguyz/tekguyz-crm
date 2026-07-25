@@ -34,7 +34,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === dialogRef.current) onClose();
       }}
-      className="w-full max-w-md rounded-lg border border-hairline bg-canvas-pure p-6 text-ink-main shadow-elevation-2 backdrop:bg-ink-main/40"
+      className="fixed inset-0 m-auto max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-lg border border-hairline bg-canvas-pure p-6 text-ink-main shadow-elevation-2 backdrop:bg-ink-main/40"
     >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold">{title}</h2>
