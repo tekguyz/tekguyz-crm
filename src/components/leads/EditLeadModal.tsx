@@ -1,8 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type MouseEvent } from "react";
+import { toast } from "sonner";
 import { updateLead, archiveLead, unarchiveLead, type LeadFormState } from "@/lib/leads/actions";
 import { Modal } from "@/components/ui/Modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Lead } from "@/lib/leads/queries";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
 
@@ -37,6 +49,35 @@ export function EditLeadModal({
   const wasPending = useRef(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [nextActionLocal, setNextActionLocal] = useState(() => toDatetimeLocalValue(lead.next_action_at));
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
+
+  async function handleArchiveConfirm(e: MouseEvent<HTMLButtonElement>) {
+    // Radix's AlertDialogAction auto-closes on click (it's a styled
+    // Dialog.Close) unless the click handler calls preventDefault — needed
+    // here so the dialog stays open through the async call and only closes
+    // once archiveLead actually resolves, not optimistically on click.
+    e.preventDefault();
+    setArchiving(true);
+    try {
+      await archiveLead(lead.id);
+      toast.success(`${lead.client_name} archived.`);
+      setArchiveDialogOpen(false);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  async function handleUnarchive() {
+    setUnarchiving(true);
+    try {
+      await unarchiveLead(lead.id);
+      toast.success(`${lead.client_name} restored from archive.`);
+    } finally {
+      setUnarchiving(false);
+    }
+  }
 
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) {
@@ -176,28 +217,43 @@ export function EditLeadModal({
       </form>
 
       {lead.archived ? (
-        <form action={unarchiveLead.bind(null, lead.id)} className="mt-3 border-t border-hairline pt-3">
+        <div className="mt-3 border-t border-hairline pt-3">
           <button
-            type="submit"
-            className="text-sm text-accent underline"
+            type="button"
+            disabled={unarchiving}
+            onClick={handleUnarchive}
+            className="text-sm text-accent underline disabled:opacity-60"
           >
-            Unarchive lead
+            {unarchiving ? "Restoring…" : "Unarchive lead"}
           </button>
-        </form>
+        </div>
       ) : (
-        <form action={archiveLead.bind(null, lead.id)} className="mt-3 border-t border-hairline pt-3">
-          <button
-            type="submit"
-            onClick={(e) => {
-              if (!window.confirm(`Archive ${lead.client_name}? You can restore it later from the Archived filter in Contacts.`)) {
-                e.preventDefault();
-              }
-            }}
-            className="text-sm text-ink-muted underline transition-colors hover:text-ink-main"
-          >
-            Archive lead
-          </button>
-        </form>
+        <div className="mt-3 border-t border-hairline pt-3">
+          <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className="text-sm text-ink-muted underline transition-colors hover:text-ink-main"
+              >
+                Archive lead
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Archive {lead.client_name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You can restore this lead later from the Archived filter in Contacts.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction disabled={archiving} onClick={handleArchiveConfirm}>
+                  {archiving ? "Archiving…" : "Archive"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       )}
 
       <ProfileSheet lead={lead} open={profileOpen} onClose={() => setProfileOpen(false)} />
