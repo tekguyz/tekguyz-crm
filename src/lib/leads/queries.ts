@@ -16,10 +16,11 @@ export type Lead = {
   next_action_at: string;
   is_starred: boolean;
   ai_brief: string | null;
+  archived: boolean;
 };
 
 export const LEAD_COLUMNS =
-  "id, client_name, company, email, phone, website, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief";
+  "id, client_name, company, email, phone, website, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief, archived";
 
 export async function getSlaCriticalLeads(orgId: string): Promise<Lead[]> {
   const supabase = await createClient();
@@ -102,16 +103,19 @@ export type ContactLead = Lead & {
 
 const CONTACT_COLUMNS = `${LEAD_COLUMNS}, physical_address`;
 
-// A directory, not a pipeline view — every non-archived contact regardless of
-// outcome (WON/LOST/ABANDONED still belong in an address book), sorted
-// alphabetically rather than by SLA/revenue like the pipeline queries above.
-export async function getAllContacts(orgId: string): Promise<ContactLead[]> {
+// A directory, not a pipeline view — every contact regardless of outcome
+// (WON/LOST/ABANDONED still belong in an address book), sorted alphabetically
+// rather than by SLA/revenue like the pipeline queries above. `archived`
+// toggles between the default "Active" view and the "Archived" filter added
+// alongside the in-app Unarchive action — always one or the other, never
+// both mixed together, so the view a user is looking at is unambiguous.
+export async function getAllContacts(orgId: string, archived = false): Promise<ContactLead[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("leads")
     .select(CONTACT_COLUMNS)
     .eq("organization_id", orgId)
-    .eq("archived", false)
+    .eq("archived", archived)
     .order("client_name", { ascending: true });
 
   if (error) throw error;

@@ -66,6 +66,14 @@ export async function updateLead(
   const actualRevenueRaw = formData.get("actual_revenue");
   const actualRevenue = actualRevenueRaw ? Number(actualRevenueRaw) : null;
 
+  // Submitted as a full ISO string by EditLeadModal, converted client-side
+  // from the datetime-local input's local-timezone value — the server never
+  // has to guess a runtime timezone to interpret it correctly.
+  const nextActionAtRaw = String(formData.get("next_action_at") ?? "");
+  if (!nextActionAtRaw || Number.isNaN(Date.parse(nextActionAtRaw))) {
+    return { error: "Invalid follow-up date." };
+  }
+
   const supabase = await createClient();
 
   // Only stamp closed_at the first time an outcome is set, not on every edit.
@@ -97,6 +105,7 @@ export async function updateLead(
       actual_revenue: outcome ? actualRevenue : null,
       closed_at: closedAt,
       is_starred: formData.get("is_starred") === "on",
+      next_action_at: nextActionAtRaw,
     })
     .eq("id", leadId);
 
@@ -111,6 +120,33 @@ export async function updateLead(
 export async function archiveLead(leadId: string): Promise<void> {
   const supabase = await createClient();
   await supabase.from("leads").update({ archived: true }).eq("id", leadId);
+  revalidatePath("/", "layout");
+}
+
+// The in-app equivalent of what the webhook Resurrection Engine already does
+// automatically (lib/webhooks/ingest-lead.ts) when an archived lead's email
+// resubmits: archived -> false and status reset to NEW, not left at whatever
+// status it had when archived — same reasoning applies here, a "revived"
+// lead re-enters the pipeline as a fresh one rather than resuming mid-deal.
+// Logs a SYSTEM_ALERT for the same audit-trail reason the webhook path does.
+export async function unarchiveLead(leadId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .update({ archived: false, status: "NEW" })
+    .eq("id", leadId)
+    .select("organization_id")
+    .single();
+
+  if (error) throw error;
+
+  await supabase.from("activity_logs").insert({
+    lead_id: leadId,
+    organization_id: lead.organization_id,
+    log_type: "SYSTEM_ALERT",
+    content: "Lead manually restored from archive — status reset to New.",
+  });
+
   revalidatePath("/", "layout");
 }
 

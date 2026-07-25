@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signIn } from "@/lib/auth/actions";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default async function LoginPage({
   searchParams,
@@ -32,13 +33,7 @@ export default async function LoginPage({
           required
           className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
         />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          required
-          className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-        />
+        <PasswordInput name="password" placeholder="Password" required />
         <p className="text-right text-sm">
           <Link href="/forgot-password" className="text-accent underline">
             Forgot password?

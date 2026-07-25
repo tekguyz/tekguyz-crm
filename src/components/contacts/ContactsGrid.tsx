@@ -1,11 +1,17 @@
 import { ContactCard } from "@/components/contacts/ContactCard";
 import type { ContactLead } from "@/lib/leads/queries";
 
-export function ContactsGrid({ contacts }: { contacts: ContactLead[] }) {
+export function ContactsGrid({
+  contacts,
+  emptyMessage = "No contacts yet.",
+}: {
+  contacts: ContactLead[];
+  emptyMessage?: string;
+}) {
   if (contacts.length === 0) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-hairline text-sm text-ink-muted">
-        No contacts yet.
+        {emptyMessage}
       </div>
     );
   }
