@@ -3,10 +3,10 @@ import { AppShell } from "@/components/shell/AppShell";
 import { getCurrentOrg } from "@/lib/organizations/current";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { orgName, userEmail } = await getCurrentOrg();
+  const { orgName, userEmail, displayName } = await getCurrentOrg();
 
   return (
-    <AppShell orgName={orgName} userEmail={userEmail}>
+    <AppShell orgName={orgName} userEmail={userEmail} displayName={displayName}>
       {children}
     </AppShell>
   );

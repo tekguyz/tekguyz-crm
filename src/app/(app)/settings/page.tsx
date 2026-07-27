@@ -4,9 +4,11 @@ import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { OrgDetailsPanel } from "@/components/settings/OrgDetailsPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
+import { AccountPanel } from "@/components/settings/AccountPanel";
 
 export default async function SettingsPage() {
-  const { orgId, orgName, orgTimezone, currencyFormat, role } = await getCurrentOrg();
+  const { orgId, orgName, orgTimezone, currencyFormat, role, userEmail, displayName, notifyNewLead, notifyWeeklyReport } =
+    await getCurrentOrg();
   const canManageOrg = role === "OWNER" || role === "ADMIN";
 
   // Only fetched for OWNER/ADMIN — the RPC itself also re-checks role
@@ -28,6 +30,12 @@ export default async function SettingsPage() {
       />
       <TeamPanel orgId={orgId} canManage={canManageOrg} />
       <ApiKeysPanel canEdit={canManageOrg} />
+      <AccountPanel
+        userEmail={userEmail}
+        displayName={displayName}
+        notifyNewLead={notifyNewLead}
+        notifyWeeklyReport={notifyWeeklyReport}
+      />
     </div>
   );
 }

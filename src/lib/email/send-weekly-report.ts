@@ -32,7 +32,7 @@ export async function sendWeeklyReport(
     return;
   }
 
-  const recipients = await getOwnerAdminRecipients(organizationId);
+  const recipients = await getOwnerAdminRecipients(organizationId, "weekly_report");
   if (!recipients.length) {
     console.error(
       `[sendWeeklyReport] no OWNER/ADMIN recipients found for org ${organizationId} — skipping weekly report`,

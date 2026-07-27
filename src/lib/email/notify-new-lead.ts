@@ -25,7 +25,7 @@ export async function sendNewLeadNotification(organizationId: string, lead: Lead
     return;
   }
 
-  const recipients = await getOwnerAdminRecipients(organizationId);
+  const recipients = await getOwnerAdminRecipients(organizationId, "new_lead");
   if (!recipients.length) {
     console.error(
       `[sendNewLeadNotification] no OWNER/ADMIN recipients found for org ${organizationId} — skipping email for lead ${lead.id}`,

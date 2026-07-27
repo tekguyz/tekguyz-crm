@@ -9,9 +9,11 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 export function Header({
   orgName,
   userEmail,
+  displayName,
 }: {
   orgName: string;
   userEmail: string;
+  displayName: string | null;
 }) {
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -46,9 +48,9 @@ export function Header({
         </span>
         <div
           className="flex size-8 items-center justify-center rounded-full border border-hairline bg-canvas-soft text-xs font-medium uppercase"
-          title={userEmail}
+          title={displayName || userEmail}
         >
-          {userEmail.slice(0, 1) || "?"}
+          {(displayName || userEmail).slice(0, 1) || "?"}
         </div>
         <ThemeToggle />
         <form action={signOut}>

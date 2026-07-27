@@ -8,16 +8,18 @@ export function AppShell({
   children,
   orgName,
   userEmail,
+  displayName,
 }: {
   children: ReactNode;
   orgName: string;
   userEmail: string;
+  displayName: string | null;
 }) {
   return (
     <div className="flex h-screen bg-canvas-soft text-ink-main">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header orgName={orgName} userEmail={userEmail} />
+        <Header orgName={orgName} userEmail={userEmail} displayName={displayName} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
       <Suspense fallback={<ProfileSheetSkeleton />}>
