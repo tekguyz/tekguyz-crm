@@ -80,8 +80,11 @@ CREATE TABLE public.leads (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT check_valid_status CHECK (status IN ('NEW', 'DISCOVERY', 'QUOTED', 'ACTIVE')),
-    CONSTRAINT check_valid_outcome CHECK (outcome IS NULL OR outcome IN ('WON', 'LOST', 'ABANDONED')),
-    CONSTRAINT unique_tenant_client_email UNIQUE (organization_id, email)
+    CONSTRAINT check_valid_outcome CHECK (outcome IS NULL OR outcome IN ('WON', 'LOST', 'ABANDONED'))
+    -- Tenant-scoped email uniqueness is enforced by unique_tenant_client_email_ci,
+    -- a case-insensitive UNIQUE INDEX in Section 13 below, not an inline
+    -- table constraint — see that index's comment for why (Prompt 10's
+    -- email-case-sensitivity gap, migration 20260726120000).
 );
 
 -- 5. ORGANIZATION INVITES TABLE — NOT in the original Prompt 2 plan. Added as
@@ -388,6 +391,20 @@ CREATE INDEX idx_org_webhook_secret ON public.organizations(webhook_secret);
 CREATE UNIQUE INDEX unique_pending_invite_per_org_email
     ON public.organization_invites(organization_id, email)
     WHERE status = 'PENDING';
+
+-- Replaces the original inline `unique_tenant_client_email` table constraint
+-- (migration 20260726120000_case_insensitive_email.sql). Plain UNIQUE
+-- constraints on TEXT compare case-sensitively, so "Jane@X.com" and
+-- "jane@x.com" were previously two distinct leads in the same org — found
+-- while building CSV import (Prompt 10 addendum, docs/ADDENDA_LOG.md), which
+-- lowercases before this constraint ever sees a value; the webhook and
+-- manual lead-creation paths did not. Named with a `_ci` suffix rather than
+-- reusing the old name, so it's clear at a glance this is the
+-- case-insensitive version. Both orgs' lead data was wiped as part of this
+-- migration (0 real leads existed; the 20-lead TEKGUYZ Demo fixture was
+-- reseeded afterward) — no backfill/collision logic was needed or written.
+CREATE UNIQUE INDEX unique_tenant_client_email_ci
+    ON public.leads (organization_id, lower(email));
 ```
 
 **Migration note (reconciled):** the original note said organization creation "is enforced at the Server Action layer in the Prompt 2 build, not by a database trigger." In the actual build it's neither a bare Server Action insert nor a trigger — it's the `create_organization_with_owner` SECURITY DEFINER function above, atomic within a single Postgres transaction, called by (not implemented inside) the signup/onboarding Server Action. This still satisfies the original constraint — never a bare trigger, the owner membership row can never exist without its organization or vice versa — but the atomicity boundary is a DB function rather than application-level transaction code.
