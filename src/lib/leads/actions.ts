@@ -12,7 +12,11 @@ export async function createLead(
   formData: FormData,
 ): Promise<LeadFormState> {
   const clientName = String(formData.get("client_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  // Lowercased so it matches the DB's case-insensitive unique index
+  // (unique_tenant_client_email_ci) and every other ingestion path (CSV
+  // import, webhook) — same single-field fix, no lookup here to mismatch
+  // since this always inserts and lets the constraint reject a collision.
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!clientName || !email) {
     return { error: "Client name and email are required." };
@@ -52,7 +56,10 @@ export async function updateLead(
   formData: FormData,
 ): Promise<LeadFormState> {
   const clientName = String(formData.get("client_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  // Lowercased for the same reason as createLead — this function looks up
+  // the existing row by id (not email), so there's no lookup/write mismatch
+  // to fix here, only the stored value's casing.
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!clientName || !email) {
     return { error: "Client name and email are required." };
