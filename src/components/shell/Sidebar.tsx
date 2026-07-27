@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, KanbanSquare, Users, Settings } from "lucide-react";
+import { LayoutGrid, KanbanSquare, Users, Upload, Settings } from "lucide-react";
 import { SidebarQuickAction } from "@/components/shell/SidebarQuickAction";
 
 const NAV_ITEMS = [
   { href: "/", label: "Today", icon: LayoutGrid },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/import", label: "Import", icon: Upload },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
