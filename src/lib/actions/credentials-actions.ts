@@ -89,3 +89,45 @@ export async function saveOrganizationCredentials(
 
   return { success: true };
 }
+
+// Scoped to the two fields ApiKeysPanel actually renders a UI for — same
+// reasoning as credentialsFormSchema's own comment: api_key_openai/
+// token_resend/token_twilio stay unreachable from any client action until
+// there's a real caller and a real settings row for them.
+export type ManagedCredentialField = "api_key_gemini" | "api_key_anthropic";
+
+export type ClearCredentialState = { error?: string } | null;
+
+// A dedicated, explicit action — not a variant of saveOrganizationCredentials'
+// "blank field means leave unchanged" behavior. Clearing has to be something
+// the user deliberately asked for, never an accidental side effect of an
+// empty submit.
+export async function clearOrganizationCredential(
+  field: ManagedCredentialField,
+): Promise<ClearCredentialState> {
+  const { orgId, role } = await getCurrentOrg();
+
+  // Fast-fail before the RPC round-trip, same as saveOrganizationCredentials
+  // above — the real boundary is vault_clear_org_credential's own internal
+  // role check (this table has no RLS policies), which must be re-checked
+  // here too, not skipped just because clearing feels less sensitive than
+  // setting a key.
+  if (role !== "OWNER" && role !== "ADMIN") {
+    return { error: "Only owners and admins can clear API keys." };
+  }
+
+  // Same reason as vault_set_org_credential's call site: auth.uid() resolves
+  // to NULL under the service-role admin client, so this must go through the
+  // session-bound client for the RPC's role check to see a real caller.
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("vault_clear_org_credential", {
+    p_org_id: orgId,
+    p_field: field,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return null;
+}

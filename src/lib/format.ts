@@ -18,8 +18,41 @@ export function formatDueAt(nextActionAt: string, timeZone: string): string {
   }).format(new Date(nextActionAt));
 }
 
+// A reasonable default display locale per currency code — not a real
+// user-locale mapping (this app has no per-user locale setting), just enough
+// to get sane grouping/symbol-placement conventions for org.currency_format
+// values outside USD. Falls back to "en-US" for anything not listed.
+const CURRENCY_LOCALES: Record<string, string> = {
+  USD: "en-US",
+  EUR: "de-DE",
+  GBP: "en-GB",
+  CAD: "en-CA",
+  AUD: "en-AU",
+  NZD: "en-NZ",
+  JPY: "ja-JP",
+  CNY: "zh-CN",
+  HKD: "zh-HK",
+  SGD: "en-SG",
+  INR: "en-IN",
+  CHF: "de-CH",
+  SEK: "sv-SE",
+  NOK: "nb-NO",
+  DKK: "da-DK",
+  PLN: "pl-PL",
+  MXN: "es-MX",
+  BRL: "pt-BR",
+  ZAR: "en-ZA",
+  AED: "ar-AE",
+  ILS: "he-IL",
+  KRW: "ko-KR",
+  THB: "th-TH",
+  IDR: "id-ID",
+  PHP: "en-PH",
+};
+
 export function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
+  const locale = CURRENCY_LOCALES[currency] ?? "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,

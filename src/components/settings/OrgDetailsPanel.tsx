@@ -1,22 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
-import { updateOrgSettings, type OrgSettingsFormState } from "@/lib/organizations/actions";
+import { useActionState, useState, type MouseEvent } from "react";
+import { toast } from "sonner";
+import {
+  updateOrgSettings,
+  rotateWebhookSecret,
+  type OrgSettingsFormState,
+} from "@/lib/organizations/actions";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const initialState: OrgSettingsFormState = null;
-
-const TIMEZONES = [
-  "UTC",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Anchorage",
-  "Pacific/Honolulu",
-];
-
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD"];
 
 export function OrgDetailsPanel({
   orgName,
@@ -32,6 +37,28 @@ export function OrgDetailsPanel({
   canEdit: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(updateOrgSettings, initialState);
+  const [currentWebhookUrl, setCurrentWebhookUrl] = useState(webhookUrl);
+  const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
+  const [rotating, setRotating] = useState(false);
+
+  async function handleRotateConfirm(e: MouseEvent<HTMLButtonElement>) {
+    // Same "don't auto-close on click" override as EditLeadModal's archive
+    // confirm — stay open through the async call, only close on success.
+    e.preventDefault();
+    setRotating(true);
+    try {
+      const result = await rotateWebhookSecret();
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setCurrentWebhookUrl(result.webhookUrl ?? null);
+      toast.success("Webhook secret rotated — the old URL no longer works.");
+      setRotateDialogOpen(false);
+    } finally {
+      setRotating(false);
+    }
+  }
 
   return (
     <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
@@ -112,7 +139,7 @@ export function OrgDetailsPanel({
         </dl>
       )}
 
-      {canEdit && webhookUrl && (
+      {canEdit && currentWebhookUrl && (
         <div className="mt-4 border-t border-hairline pt-4">
           <label className="mb-1 block text-xs text-ink-muted">Webhook URL</label>
           <p className="mb-2 text-xs text-ink-muted">
@@ -122,10 +149,37 @@ export function OrgDetailsPanel({
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-xs text-ink-main">
-              {webhookUrl}
+              {currentWebhookUrl}
             </code>
-            <CopyButton text={webhookUrl} />
+            <CopyButton text={currentWebhookUrl} />
           </div>
+
+          <AlertDialog open={rotateDialogOpen} onOpenChange={setRotateDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className="mt-2 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft"
+              >
+                Rotate webhook secret
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Rotate webhook secret?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This immediately invalidates the current webhook URL. Any integration still
+                  POSTing to the old URL — Zapier, a form provider, anything — will start
+                  failing the moment you confirm, until it&apos;s updated with the new URL.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction disabled={rotating} onClick={handleRotateConfirm}>
+                  {rotating ? "Rotating…" : "Rotate secret"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </section>
