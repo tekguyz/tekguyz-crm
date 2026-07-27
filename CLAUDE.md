@@ -1,5 +1,16 @@
 # TEKGUYZ CRM: TECHNICAL ARCHITECTURE & MASTER SCHEMA
 
+## Reference Index
+
+This file was restructured on 2026-07-26 — it had grown to 741 lines / ~150KB, past the point where reading it in full every session (this file's own standing discipline) was practical. Nothing was deleted; the bulk of it moved to two companion docs:
+
+- **`docs/SCHEMA_REFERENCE.md`** — the full live database schema: every table's DDL, every RLS policy (with its paired `WITH CHECK`), every `SECURITY DEFINER` RPC, every index, plus the reconciled migration notes and the Prompt 7 `activity_logs` addendum. Open this before any migration, RLS policy, or RPC work — it's the ground truth for what the database actually looks like.
+- **`docs/ADDENDA_LOG.md`** — the full build history: every dated addendum from Prompt 11 through the CSV Import Wizard (Prompts 9–10), verbatim, plus the complete pre-2026-07-26 text of the Known Gaps section. Open this before touching credentials/vault/webhook code specifically, when asked to explain why a past decision was made, or when the one-line disposition in this file's own Known Gaps section below isn't enough detail.
+
+What stays in *this* file: Section 1 (design system + operational rules + the multi-tenant security model, which is permanent law), the roadmap, the two standing-discipline sections, and Known Gaps — kept as short, current dispositions with a pointer to the full story in `ADDENDA_LOG.md`. New addenda go to `docs/ADDENDA_LOG.md` by default now, not here — this file only gets edited when something becomes a permanent rule/pattern or a Known Gaps disposition changes.
+
+---
+
 ## 1. CORE MECHANICS & ARCHITECTURE
 
 ### File Bloat Prevention
@@ -43,7 +54,7 @@ Following a Principal Architect audit of the original schema, five structural ga
 
 1. **Membership-based tenant resolution.** A user's access to an organization is never assumed or hardcoded — it's resolved through an `organization_members` table (user_id ↔ organization_id ↔ role). RLS policies call a `SECURITY DEFINER` helper, `private.current_org_ids()`, rather than referencing a literal UUID or tautological condition. (Lives in a dedicated `private` schema, never added to the API-exposed schema list, rather than `auth` — hosted Supabase does not allow creating objects in the `auth` schema itself.)
 2. **RLS with paired `WITH CHECK` clauses.** Every write policy validates both the row being touched (`USING`) and the row being written (`WITH CHECK`), preventing a request from reassigning a row into a different tenant's scope.
-3. **Access-controlled credentials, service-role only, encrypted at rest via Supabase Vault (as of Prompt 13a).** BYO LLM/integration keys and tokens live in a dedicated `organization_credentials` table with `anon` and `authenticated` grants fully revoked and zero RLS policies, so service-role (used only from Server Actions) is the sole path in — but the table itself no longer stores the secret value at all. Prompt 13's plaintext `TEXT` columns (confirmed empty, zero rows ever written) were replaced in Prompt 13a with nullable `UUID` columns (`*_secret_id`) pointing into `vault.secrets`; the real value only ever exists inside Supabase Vault, reachable exclusively through two `SECURITY DEFINER` RPCs (`vault_set_org_credential`, `authenticated`-gated with an internal OWNER/ADMIN role check; `vault_get_org_credential`, `service_role`-gated only). Verified live: the `authenticated` role's own attempt to call `vault_get_org_credential` fails with "permission denied," and the stored column value is a UUID, never the raw key. This is now real encryption, not just access control — re-verify against the live schema before describing it any other way, since this doc has been wrong about it before (see the Prompt 12/13 addenda below, both superseded by Prompt 13a).
+3. **Access-controlled credentials, service-role only, encrypted at rest via Supabase Vault (as of Prompt 13a).** BYO LLM/integration keys and tokens live in a dedicated `organization_credentials` table with `anon` and `authenticated` grants fully revoked and zero RLS policies, so service-role (used only from Server Actions) is the sole path in — but the table itself no longer stores the secret value at all. Prompt 13's plaintext `TEXT` columns (confirmed empty, zero rows ever written) were replaced in Prompt 13a with nullable `UUID` columns (`*_secret_id`) pointing into `vault.secrets`; the real value only ever exists inside Supabase Vault, reachable exclusively through two `SECURITY DEFINER` RPCs (`vault_set_org_credential`, `authenticated`-gated with an internal OWNER/ADMIN role check; `vault_get_org_credential`, `service_role`-gated only). Verified live: the `authenticated` role's own attempt to call `vault_get_org_credential` fails with "permission denied," and the stored column value is a UUID, never the raw key. This is now real encryption, not just access control — re-verify against the live schema before describing it any other way, since this doc has been wrong about it before (see the Prompt 12/13 addenda in `docs/ADDENDA_LOG.md`, both superseded by Prompt 13a).
 4. **Per-tenant webhook secret.** `organizations.webhook_secret` is a unique, server-generated, rotatable token that resolves inbound webhook traffic to the correct tenant. The ingestion route is tenant-scoped by this secret, never by a payload-supplied `organization_id`.
 5. **Explicit revenue/outcome tracking.** `leads` carries `outcome` (WON / LOST / ABANDONED), `closed_at`, and `actual_revenue`, so the analytics cron can distinguish realized revenue from abandoned or lost pipeline — rather than inferring outcome from the `archived` flag alone.
 
@@ -51,623 +62,37 @@ Following a Principal Architect audit of the original schema, five structural ga
 
 ---
 
-## 2. PREMIUM MULTI-TENANT POSTGRESQL SCHEMA
+## 2. 15-PHASE TECHNICAL ROADMAP
 
-This section is the live schema, reconciled directly against the Supabase project — not a snapshot of the original Prompt 2 plan. Table/column existence and RPC signatures below were confirmed against the project's live PostgREST OpenAPI root (`/rest/v1/`); full DDL (policies, function bodies, indexes, constraints — none of which PostgREST introspection exposes) comes from the migration files actually applied, in `supabase/migrations/`. No direct Postgres/pg_catalog access (no Supabase CLI, no DB connection string) was available at the time of this reconciliation, so this was as close to "dump the live database" as achievable without one — if a policy or function was ever hand-edited via the dashboard SQL Editor outside a migration file, this block would not catch that drift. **Note: an `activity_logs` migration (table, RLS, index) was applied directly via Supabase MCP during Prompt 7, after this reconciliation — see the Prompt 7 addendum below the SQL block.**
-
-```sql
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgsodium";
-CREATE EXTENSION IF NOT EXISTS "supabase_vault"; -- added Prompt 13a; pgsodium above is its dependency
-
--- 1. ORGANIZATIONS TABLE (unchanged from the original Prompt 2 plan)
-CREATE TABLE public.organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    webhook_secret UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
-    timezone TEXT NOT NULL DEFAULT 'UTC',
-    currency_format TEXT NOT NULL DEFAULT 'USD',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 2. ORGANIZATION MEMBERS TABLE (unchanged)
-CREATE TABLE public.organization_members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL DEFAULT 'MEMBER',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_valid_role CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
-    CONSTRAINT unique_org_member UNIQUE (organization_id, user_id)
-);
-
--- 3. ORGANIZATION CREDENTIALS TABLE — column shape changed in Prompt 13a.
---    Originally five plain TEXT columns (shown as struck-through history
---    below); replaced with UUID pointers into vault.secrets once Prompt 13a
---    became the first feature to actually write real secrets here. See the
---    Prompt 13a addendum for the two SECURITY DEFINER RPCs
---    (vault_set_org_credential / vault_get_org_credential) that are now the
---    only path to read or write a value — full DDL in
---    supabase/migrations/20260722140000_vault_encrypt_credentials.sql.
-CREATE TABLE public.organization_credentials (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL UNIQUE REFERENCES public.organizations(id) ON DELETE CASCADE,
-    api_key_gemini_secret_id UUID REFERENCES vault.secrets(id),
-    api_key_openai_secret_id UUID REFERENCES vault.secrets(id),
-    api_key_anthropic_secret_id UUID REFERENCES vault.secrets(id),
-    token_resend_secret_id UUID REFERENCES vault.secrets(id),
-    token_twilio_secret_id UUID REFERENCES vault.secrets(id),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 4. LEADS TABLE (unchanged — The Central Sales & Operations Ledger)
-CREATE TABLE public.leads (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-    client_name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT DEFAULT NULL,
-    company TEXT DEFAULT NULL,
-    website TEXT DEFAULT NULL,
-    physical_address TEXT DEFAULT NULL,
-    social_google_business TEXT DEFAULT NULL,
-    social_facebook TEXT DEFAULT NULL,
-    social_instagram TEXT DEFAULT NULL,
-    lead_source TEXT DEFAULT NULL,
-    service_category TEXT DEFAULT NULL,
-    estimated_revenue NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    status TEXT NOT NULL DEFAULT 'NEW',
-    outcome TEXT DEFAULT NULL,
-    closed_at TIMESTAMPTZ DEFAULT NULL,
-    actual_revenue NUMERIC(12, 2) DEFAULT NULL,
-    next_action_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
-    ai_brief TEXT DEFAULT NULL,
-    is_starred BOOLEAN NOT NULL DEFAULT FALSE,
-    archived BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_valid_status CHECK (status IN ('NEW', 'DISCOVERY', 'QUOTED', 'ACTIVE')),
-    CONSTRAINT check_valid_outcome CHECK (outcome IS NULL OR outcome IN ('WON', 'LOST', 'ABANDONED')),
-    CONSTRAINT unique_tenant_client_email UNIQUE (organization_id, email)
-);
-
--- 5. ORGANIZATION INVITES TABLE — NOT in the original Prompt 2 plan. Added as
---    necessary product infrastructure once org creation went live (orgs were
---    otherwise permanently single-user). No Resend integration exists yet
---    (that's Phase 4), so creating an invite does not send email — the
---    inviter copies the accept-link and shares it themselves.
-CREATE TABLE public.organization_invites (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-    email TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'MEMBER',
-    invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    token UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
-    status TEXT NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
-    CONSTRAINT check_valid_invite_role CHECK (role IN ('ADMIN', 'MEMBER')),
-    CONSTRAINT check_valid_invite_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REVOKED'))
-);
-
--- 6. TENANT RESOLUTION FUNCTION (used by every RLS policy in this file)
-CREATE SCHEMA IF NOT EXISTS private;
-
-CREATE OR REPLACE FUNCTION private.current_org_ids()
-RETURNS SETOF UUID
-LANGUAGE sql SECURITY DEFINER STABLE
-AS $$
-    SELECT organization_id FROM public.organization_members
-    WHERE user_id = auth.uid();
-$$;
-
--- 7. LEADS TIMESTAMP TRIGGER (unchanged)
-CREATE OR REPLACE FUNCTION public.sync_modified_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_update_leads_timestamp
-    BEFORE UPDATE ON public.leads
-    FOR EACH ROW
-    EXECUTE FUNCTION public.sync_modified_timestamp();
-
--- 8. ORGANIZATION CREATION RPC — built differently than the original Prompt 2
---    migration note specified (see the reconciled note at the end of this
---    section). SECURITY DEFINER, called from the signup/onboarding Server
---    Action; reads auth.uid() internally rather than accepting a
---    caller-supplied user id, so it can only ever make the calling user the
---    OWNER of a brand-new org.
-CREATE OR REPLACE FUNCTION public.create_organization_with_owner(p_name TEXT)
-RETURNS UUID
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_org_id UUID;
-BEGIN
-    IF auth.uid() IS NULL THEN
-        RAISE EXCEPTION 'authentication required';
-    END IF;
-
-    INSERT INTO public.organizations (name)
-    VALUES (p_name)
-    RETURNING id INTO v_org_id;
-
-    INSERT INTO public.organization_members (organization_id, user_id, role)
-    VALUES (v_org_id, auth.uid(), 'OWNER');
-
-    RETURN v_org_id;
-END;
-$$;
-
--- 9. INVITE FLOW RPCs — NOT in the original Prompt 2 plan (see table 5 note).
-
-CREATE OR REPLACE FUNCTION public.get_invite_preview(p_token UUID)
-RETURNS TABLE(organization_name TEXT, email TEXT, role TEXT, status TEXT, expires_at TIMESTAMPTZ)
-LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = public
-AS $$
-    SELECT o.name, i.email, i.role, i.status, i.expires_at
-    FROM public.organization_invites i
-    JOIN public.organizations o ON o.id = i.organization_id
-    WHERE i.token = p_token;
-$$;
-
-CREATE OR REPLACE FUNCTION public.accept_organization_invite(p_token UUID)
-RETURNS UUID
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_invite RECORD;
-    v_caller_email TEXT;
-BEGIN
-    IF auth.uid() IS NULL THEN
-        RAISE EXCEPTION 'authentication required';
-    END IF;
-
-    SELECT email INTO v_caller_email FROM auth.users WHERE id = auth.uid();
-
-    SELECT * INTO v_invite
-    FROM public.organization_invites
-    WHERE token = p_token
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'invite not found';
-    END IF;
-
-    IF v_invite.status <> 'PENDING' THEN
-        RAISE EXCEPTION 'invite is no longer pending';
-    END IF;
-
-    IF v_invite.expires_at < NOW() THEN
-        RAISE EXCEPTION 'invite has expired';
-    END IF;
-
-    IF lower(v_invite.email) <> lower(v_caller_email) THEN
-        RAISE EXCEPTION 'this invite was sent to a different email address';
-    END IF;
-
-    INSERT INTO public.organization_members (organization_id, user_id, role)
-    VALUES (v_invite.organization_id, auth.uid(), v_invite.role)
-    ON CONFLICT (organization_id, user_id) DO NOTHING;
-
-    UPDATE public.organization_invites
-    SET status = 'ACCEPTED'
-    WHERE id = v_invite.id;
-
-    RETURN v_invite.organization_id;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.get_organization_members(p_org_id UUID)
-RETURNS TABLE(user_id UUID, email TEXT, role TEXT)
-LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = public
-AS $$
-    SELECT m.user_id, u.email, m.role
-    FROM public.organization_members m
-    JOIN auth.users u ON u.id = m.user_id
-    WHERE m.organization_id = p_org_id
-      AND p_org_id IN (SELECT private.current_org_ids());
-$$;
-
--- 10. WEBHOOK SECRET ROLE GATE — NOT in the original Prompt 2 plan.
-CREATE OR REPLACE FUNCTION public.get_org_webhook_secret(p_org_id UUID)
-RETURNS UUID
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_role TEXT;
-    v_secret UUID;
-BEGIN
-    SELECT role INTO v_role
-    FROM public.organization_members
-    WHERE organization_id = p_org_id
-      AND user_id = auth.uid();
-
-    IF v_role IS NULL OR v_role NOT IN ('OWNER', 'ADMIN') THEN
-        RAISE EXCEPTION 'not authorized';
-    END IF;
-
-    SELECT webhook_secret INTO v_secret
-    FROM public.organizations
-    WHERE id = p_org_id;
-
-    RETURN v_secret;
-END;
-$$;
-
--- 11. PRODUCTION DATA ROLE ACCESS PROVISIONING
-ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
-
-GRANT USAGE ON SCHEMA private TO authenticated;
-GRANT EXECUTE ON FUNCTION private.current_org_ids() TO authenticated;
-
-GRANT SELECT, INSERT, UPDATE ON public.organizations TO authenticated;
-GRANT SELECT, INSERT ON public.organization_members TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.leads TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.organization_invites TO authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.create_organization_with_owner(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_organization_with_owner(TEXT) TO authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.get_invite_preview(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_invite_preview(UUID) TO anon, authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.accept_organization_invite(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.accept_organization_invite(UUID) TO authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.get_organization_members(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_organization_members(UUID) TO authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.get_org_webhook_secret(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_org_webhook_secret(UUID) TO authenticated;
-
--- NOTE: organization_credentials receives NO grants to anon/authenticated.
--- Access is service_role only, via Server Actions.
-
--- 12. ROW LEVEL SECURITY (RLS) MULTI-TENANT ISOLATION POLICIES
-ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.organization_credentials ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.organization_invites ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members read own organizations" ON public.organizations
-    FOR SELECT USING (id IN (SELECT private.current_org_ids()));
-
-CREATE POLICY "Owners and admins update their organization" ON public.organizations
-    FOR UPDATE
-    USING (
-        id IN (SELECT private.current_org_ids())
-        AND EXISTS (
-            SELECT 1 FROM public.organization_members
-            WHERE organization_id = organizations.id
-              AND user_id = auth.uid()
-              AND role IN ('OWNER', 'ADMIN')
-        )
-    )
-    WITH CHECK (
-        id IN (SELECT private.current_org_ids())
-        AND EXISTS (
-            SELECT 1 FROM public.organization_members
-            WHERE organization_id = organizations.id
-              AND user_id = auth.uid()
-              AND role IN ('OWNER', 'ADMIN')
-        )
-    );
-
-CREATE POLICY "Members read own membership rows" ON public.organization_members
-    FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
-
--- NOTE: organization_members has no authenticated INSERT policy. Membership
--- rows are only ever written by the SECURITY DEFINER functions above
--- (create_organization_with_owner, accept_organization_invite), which bypass
--- RLS by design — there is no direct client-side insert path.
-
-CREATE POLICY "Members read tenant leads" ON public.leads
-    FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
-
-CREATE POLICY "Members create tenant leads" ON public.leads
-    FOR INSERT WITH CHECK (organization_id IN (SELECT private.current_org_ids()));
-
-CREATE POLICY "Members write tenant leads" ON public.leads
-    FOR UPDATE
-    USING (organization_id IN (SELECT private.current_org_ids()))
-    WITH CHECK (organization_id IN (SELECT private.current_org_ids()));
-
-CREATE POLICY "Members read tenant invites" ON public.organization_invites
-    FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
-
-CREATE POLICY "Owners and admins create tenant invites" ON public.organization_invites
-    FOR INSERT
-    WITH CHECK (
-        organization_id IN (SELECT private.current_org_ids())
-        AND EXISTS (
-            SELECT 1 FROM public.organization_members
-            WHERE organization_id = organization_invites.organization_id
-              AND user_id = auth.uid()
-              AND role IN ('OWNER', 'ADMIN')
-        )
-    );
-
--- "Revoke" is implemented as an UPDATE (status -> 'REVOKED'), not a DELETE —
--- invite rows are never hard-deleted, consistent with the Resurrection
--- Engine's no-hard-deletes stance elsewhere in this document.
-CREATE POLICY "Owners and admins revoke tenant invites" ON public.organization_invites
-    FOR UPDATE
-    USING (
-        organization_id IN (SELECT private.current_org_ids())
-        AND EXISTS (
-            SELECT 1 FROM public.organization_members
-            WHERE organization_id = organization_invites.organization_id
-              AND user_id = auth.uid()
-              AND role IN ('OWNER', 'ADMIN')
-        )
-    )
-    WITH CHECK (
-        organization_id IN (SELECT private.current_org_ids())
-        AND EXISTS (
-            SELECT 1 FROM public.organization_members
-            WHERE organization_id = organization_invites.organization_id
-              AND user_id = auth.uid()
-              AND role IN ('OWNER', 'ADMIN')
-        )
-    );
-
--- NOTE: organization_credentials has RLS enabled but intentionally NO
--- policies for anon/authenticated — service_role (which bypasses RLS) is the
--- only path in.
-
--- 13. PERFORMANCE INDEXES
-CREATE INDEX idx_leads_tenant_status ON public.leads(organization_id, status);
-CREATE INDEX idx_leads_sla_deadline ON public.leads(organization_id, next_action_at) WHERE archived = FALSE;
-CREATE INDEX idx_leads_starred_nodes ON public.leads(organization_id) WHERE is_starred = TRUE;
-CREATE INDEX idx_leads_outcome_revenue ON public.leads(organization_id, outcome, closed_at);
-CREATE INDEX idx_org_webhook_secret ON public.organizations(webhook_secret);
-CREATE UNIQUE INDEX unique_pending_invite_per_org_email
-    ON public.organization_invites(organization_id, email)
-    WHERE status = 'PENDING';
-```
-
-**Migration note (reconciled):** the original note said organization creation "is enforced at the Server Action layer in the Prompt 2 build, not by a database trigger." In the actual build it's neither a bare Server Action insert nor a trigger — it's the `create_organization_with_owner` SECURITY DEFINER function above, atomic within a single Postgres transaction, called by (not implemented inside) the signup/onboarding Server Action. This still satisfies the original constraint — never a bare trigger, the owner membership row can never exist without its organization or vice versa — but the atomicity boundary is a DB function rather than application-level transaction code.
-
-**Prompt 7 addendum (applied via Supabase MCP `apply_migration`, disclosed after the fact):** an `activity_logs` table, its RLS policies, and an index were applied directly to the live database during Prompt 7 — the one exception to the "never call `apply_migration` directly" rule, made before that rule was explicitly stated. Matches `supabase/migrations/20260707215320_activity_logs.sql` on disk exactly. Structure: `id UUID PK`, `lead_id UUID FK -> leads`, `organization_id UUID FK -> organizations`, `log_type TEXT` (constrained to `WEBHOOK`, `MANUAL_NOTE`, `AUDIO_TRANSCRIPT`, `SYSTEM_ALERT`), `content TEXT`, `audio_url TEXT NULL`, `created_at TIMESTAMPTZ`. RLS scoped via `private.current_org_ids()`, same pattern as every other tenant-scoped table. Verify exact column/constraint names against `supabase/migrations/20260707215320_activity_logs.sql` directly if precision matters for a future migration that references this table.
-
----
-
-## 3. 15-PHASE TECHNICAL ROADMAP
+Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narrative for every prompt with a "— shipped, see docs/ADDENDA_LOG.md" tag below lives in that file; prompts tagged "no written addendum" shipped before this project's addenda-writing discipline started (Prompt 11 onward) and have no dedicated narrative on file, only what's inferable from later addenda that reference them.
 
 **Phase 1: SaaS Omni-Shell Navigation Layout & Database Security**
-- Prompt 1: Initialize the complete multi-tenant platform App Shell layout tracking a fixed vertical left navigation sidebar, a dedicated sidebar footer Quick-Action button container, and a top horizontal utility header bar using pure Tailwind v4 OKLCH theme tokens.
-- Prompt 2: Execute the full multi-tenant Postgres database schema migration script, including membership-based tenant resolution, vaulted service-role-only credentials, per-tenant webhook secrets, revenue/outcome tracking, and RLS policies with paired WITH CHECK clauses.
+- Prompt 1: Initialize the complete multi-tenant platform App Shell layout tracking a fixed vertical left navigation sidebar, a dedicated sidebar footer Quick-Action button container, and a top horizontal utility header bar using pure Tailwind v4 OKLCH theme tokens. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 2: Execute the full multi-tenant Postgres database schema migration script, including membership-based tenant resolution, vaulted service-role-only credentials, per-tenant webhook secrets, revenue/outcome tracking, and RLS policies with paired WITH CHECK clauses. — shipped; full schema in `docs/SCHEMA_REFERENCE.md`.
 
 **Phase 2: Action Dashboard & Responsive Pipeline Workspace**
-- Prompt 3: Implement the complete "Today's Agenda" core focal sub-view layout components, splitting data sections into an SLA Critical queue, a high-value priority track, and a starred account bookmark workspace.
-- Prompt 4: Construct the desktop multi-column Kanban board and its drag/reorder state controller, using responsive Tailwind layout tokens.
-- Prompt 5: Construct the mobile-first prioritized Focus List, sharing its data adapter with the Kanban board from Prompt 4.
-- Prompt 6: Create the document-style "All Contacts" directory card grid layout, mapping every address, phone, and email variable to immediate interactive communication link shortcuts (tel:, sms:, mailto:, Google Maps URL deep links).
+- Prompt 3: Implement the complete "Today's Agenda" core focal sub-view layout components, splitting data sections into an SLA Critical queue, a high-value priority track, and a starred account bookmark workspace. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 4: Construct the desktop multi-column Kanban board and its drag/reorder state controller, using responsive Tailwind layout tokens. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 5: Construct the mobile-first prioritized Focus List, sharing its data adapter with the Kanban board from Prompt 4. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 6: Create the document-style "All Contacts" directory card grid layout, mapping every address, phone, and email variable to immediate interactive communication link shortcuts (tel:, sms:, mailto:, Google Maps URL deep links). — shipped (pre-addenda-discipline; no written addendum).
 
 **Phase 3: Decoupled Sheets, Search Palettes & Onboarding Wizards**
-- Prompt 7: Build out the interactive motion/react customer slide-over profile sheet, decoupling layout states into a separate layout shell component, a markdown executive brief module, and an activity log history stream.
-- Prompt 8: Implement the global keyboard-intercepted CMD+K Command Bar overlay portal, establishing rapid fuzzy search capabilities across tenant contact rows to trigger profile sheets.
-- Prompt 9: Build the CSV Import/Export Migration Wizard's upload and column-mapping UI using PapaParse.
-- Prompt 10: Build the CSV wizard's Zod validation layer and optimized database batch-insert Server Action.
+- Prompt 7: Build out the interactive motion/react customer slide-over profile sheet, decoupling layout states into a separate layout shell component, a markdown executive brief module, and an activity log history stream. — shipped; the `activity_logs` migration addendum is in `docs/SCHEMA_REFERENCE.md`, no separate build narrative on file.
+- Prompt 8: Implement the global keyboard-intercepted CMD+K Command Bar overlay portal, establishing rapid fuzzy search capabilities across tenant contact rows to trigger profile sheets. — shipped (pre-addenda-discipline; no written addendum); see Known Gaps for its performance-at-scale note.
+- Prompt 9: Build the CSV Import/Export Migration Wizard's upload and column-mapping UI using PapaParse. — shipped 2026-07-25 (import only; export deliberately excluded, own follow-up), see `docs/ADDENDA_LOG.md` § Prompt 9 addendum.
+- Prompt 10: Build the CSV wizard's Zod validation layer and optimized database batch-insert Server Action. — shipped 2026-07-26, see `docs/ADDENDA_LOG.md` § Prompt 10 addendum.
 
 **Phase 4: Inbound Verification Webhooks & Multi-LLM Actions**
-- Prompt 11: Construct the hardened, secret-gated `/api/v1/triage/[webhook_secret]` POST ingestion route, configuring rate limiting, a strict Zod schema check, and tenant resolution via the per-organization webhook secret.
-- Prompt 12: Layer in the automated `gemini-3.5-flash` AI Spam Shield text verification pass and dispatch deep-linked Resend notification emails on verified inbound leads.
-- Prompt 13: Create the multi-tenant BYO API Key configuration form interface (writing to the vaulted `organization_credentials` table via Server Action) alongside the combined note-capture component with browser audio recording mechanics and optimistic "Transcribing…" UI, verifying credential presence before invoking `gemini-3.1-flash-lite` voice transcriptions.
-- Prompt 13a: Replace `organization_credentials`'s plaintext columns with real Supabase Vault encryption, superseding Prompt 13's plain-`TEXT` implementation before any real secret was ever written to it.
+- Prompt 11: Construct the hardened, secret-gated `/api/v1/triage/[webhook_secret]` POST ingestion route, configuring rate limiting, a strict Zod schema check, and tenant resolution via the per-organization webhook secret. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 11 addendum.
+- Prompt 12: Layer in the automated `gemini-3.5-flash` AI Spam Shield text verification pass and dispatch deep-linked Resend notification emails on verified inbound leads. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 12 addendum.
+- Prompt 13: Create the multi-tenant BYO API Key configuration form interface (writing to the vaulted `organization_credentials` table via Server Action) alongside the combined note-capture component with browser audio recording mechanics and optimistic "Transcribing…" UI, verifying credential presence before invoking `gemini-3.1-flash-lite` voice transcriptions. — shipped, superseded in part by 13a, see `docs/ADDENDA_LOG.md` § Prompt 13 addendum.
+- Prompt 13a: Replace `organization_credentials`'s plaintext columns with real Supabase Vault encryption, superseding Prompt 13's plain-`TEXT` implementation before any real secret was ever written to it. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 13a addendum.
 
 **Phase 5: Analytical Operations & Production Hardening**
-- Prompt 14: Engineer an asynchronous serverless cron route utilizing `gemini-3.1-pro` to sweep active lead logs, aggregate projected-vs-realized monthly revenue metrics (using the outcome/actual_revenue fields), and compile a weekly markdown executive diagnostic report delivered via Resend.
-- Prompt 15: Perform a complete app-wide optimization pass to deploy global React error boundary components, mount skeleton loading fallbacks, and verify environment variable states for live production delivery on Vercel.
+- Prompt 14: Engineer an asynchronous serverless cron route utilizing `gemini-3.1-pro` to sweep active lead logs, aggregate projected-vs-realized monthly revenue metrics (using the outcome/actual_revenue fields), and compile a weekly markdown executive diagnostic report delivered via Resend. — shipped (actual model id is `gemini-3.1-pro-preview`, not the roadmap's string — see the addendum), see `docs/ADDENDA_LOG.md` § Prompt 14 addendum.
+- Prompt 15: Perform a complete app-wide optimization pass to deploy global React error boundary components, mount skeleton loading fallbacks, and verify environment variable states for live production delivery on Vercel. — shipped across two addenda, see `docs/ADDENDA_LOG.md` § Prompt 15a and § Prompt 15b addenda.
 
 ---
-
-## Prompt 11 addendum (Hardened Webhook Ingestion Route)
-Built the public `/api/v1/triage/[webhook_secret]` POST route per the Phase 4 spec: `lib/supabase/service-role.ts`, `lib/webhooks/resolve-tenant.ts`, `lib/webhooks/rate-limit.ts`, `lib/webhooks/ingest-lead.ts`, `lib/validation/webhook-payload-schema.ts`, and the thin route handler itself (paths are `src/lib/...` and `src/app/api/...` — this repo's actual code root is `src/`, not the bare `lib/`/`app/` paths the prompt text used). All live-tested end to end against the real Supabase project (new-lead creation, non-archived resubmission as upsert, archived resubmission as resurrection with a `SYSTEM_ALERT` log, Zod 400s, malformed-secret 404, and the 30/min rate limit tripping a 429 with `Retry-After`) — test fixtures were created and then hard-deleted afterward via a throwaway script using the app's own service-role key, never via Supabase MCP.
-
-- **Two service-role clients now exist, deliberately separate.** `src/lib/supabase/admin.ts` was already present (unused, pre-staged — almost certainly for Prompt 13's credentials-vault Server Action) before this prompt started; it has no import restriction. `src/lib/supabase/service-role.ts` is new and is the one actually scoped to `lib/webhooks/*` per this prompt's isolation requirement. Do not merge these into one client — they exist to bound two different elevated-access surfaces separately. If Prompt 13 needs elevated access, it should use `admin.ts`, not `service-role.ts`.
-- **Fixed a middleware bug that would have completely broken this route.** `src/lib/supabase/middleware.ts` redirected *any* unauthenticated request to `/login`, with no carve-out for `/api/*` — meaning the "public, unauthenticated" webhook endpoint would have 307'd to a login page instead of ever reaching the route handler. Added an `isApiRoute` (`path.startsWith("/api/")`) bypass alongside the existing `isAuthRoute` check. This is now the standing pattern: API routes own their own auth (secret-gated, cron-secret-gated, etc.) and are never subject to the cookie-session redirect that page routes use.
-- **`zod` added as a dependency** — it wasn't in `package.json` before this prompt despite being referenced by the roadmap for the CSV wizard (Prompts 9–10); this is the first prompt to actually install and use it.
-- **Refined the "read-only MCP tools" rule from Session & Verification Discipline:** `execute_sql` was used *only* for SELECT statements throughout this prompt's verification, even though nothing in the stated rule technically forbids DML writes through it — test fixture writes/deletes went through a disposable local script using the app's own `SUPABASE_SECRET_KEY` (i.e., the exact code path the app itself uses) instead. Treat `execute_sql` as SELECT-only in practice, not just for schema DDL.
-
-## Prompt 12 addendum (AI Spam Shield & Resend Notification Dispatch)
-Layered the AI verification pass and notification dispatch onto Prompt 11's ingestion pipeline: `lib/credentials/resolve-org-credential.ts`, `lib/ai/spam-shield.ts`, `lib/email/notify-new-lead.ts`, and edits to `lib/webhooks/ingest-lead.ts` (all under `src/`, same root-path note as Prompt 11). Live-tested against the real Supabase project and the real Gemini/Resend APIs: a spammy payload got auto-archived with a `SYSTEM_ALERT` carrying the AI's reasoning; a legitimate payload passed verification (real `gemini-3.5-flash` classification, not just fail-open) and reached the notification-send call without error; and the fail-open path was independently verified by pointing a second server boot at a blanked `PLATFORM_GEMINI_API_KEY` via a temporary gitignored `.env.local` (never the real `.env`) — the lead still reached the database, un-archived, with the expected fail-open `SYSTEM_ALERT`. All test fixtures were created and hard-deleted afterward via the same throwaway-script pattern established in Prompt 11, never via Supabase MCP.
-
-- **`resolveOrgCredential` uses `lib/supabase/admin.ts`, not `lib/webhooks/service-role.ts`.** This is the first real caller of `admin.ts` (previously unused/pre-staged). Consistent with the boundary Prompt 11 set up: `service-role.ts` stays imported only by `lib/webhooks/*`; any other elevated-access need — this credential resolver, the Resend notification's recipient lookup — goes through `admin.ts` instead.
-- **Built the `?leadId=` deep-link controller that didn't actually exist.** Prior context claimed `components/profile/profile-sheet-controller.tsx` was "the canonical deep-link pattern used everywhere" — it was not; `ProfileSheet` was only ever opened from local component state in `EditLeadModal` and `CommandBar`, with no URL-param wiring anywhere in the codebase. Since this prompt's own measurable outcome requires the notification email's deep link to actually open the correct profile sheet, built `src/components/leads/profile/ProfileSheetController.tsx` (reads `?leadId=` via `useSearchParams`, fetches via a new `fetchLeadById` action, renders `ProfileSheet`) and mounted it once in `AppShell.tsx` inside a `Suspense` boundary, so it's live on every authenticated page. This is the first time that URL param is real; treat it as canonical going forward, not just documented as if it already were.
-- **Verified the deep link in a real authenticated browser**, not just by code review: since no login credentials were available, used the Supabase Admin API (`auth.admin.generateLink`) to mint a legitimate magic-link sign-in for the admin account, resolved it against this app's own `/auth/confirm?token_hash=...` route (the PKCE-style flow this app actually uses — the implicit hash-fragment flow Supabase's own `action_link` produces does **not** work here, since Next.js middleware redirects unauthenticated requests server-side before any client JS can process a URL hash), and combined the sign-in with the deep link in one request via `next=/?leadId=<id>`. Confirmed via `document.body.innerText` (the portalled `ProfileSheet` isn't inside `<main>`, so `get_page_text`'s article/main extraction misses it — check `document.body.innerText` directly when verifying portalled UI in this app).
-- **`organization_credentials` has no real encryption wired up yet.** Confirmed by reading the migration directly: the columns are plain `text`, and the migration's own comment says Vault/pgsodium encryption is "finalized when this table is first written to" — no row has ever been written (Prompt 13's BYO-key form is the first feature that will). `resolveOrgCredential` reads the column as plain text today, correctly for the current state; if Prompt 13 introduces real column-level encryption, this read will need to change to call a decrypt function/RPC instead. Flagged in Known Gaps below.
-- **Notification recipients resolved via OWNER/ADMIN org members, not a dedicated field.** `organizations` has no notification-email column. `notify-new-lead.ts` queries `organization_members` for OWNER/ADMIN `user_id`s, then resolves each to an email via the service-role Auth Admin API (`auth.admin.getUserById`) — `auth.users` isn't exposed via PostgREST even to service_role, so this is the only path to an email address from just a `user_id`.
-- **`@google/genai` and `resend` added as dependencies** — neither existed before this prompt.
-- **Fixed a pre-existing gitignore gap while here:** `tsconfig.tsbuildinfo` (a build artifact) was committed in the Prompt 11 push by accident; added it to `.gitignore` since it was showing as permanent diff noise.
-
-## Prompt 13 addendum (BYO API Key Settings & Voice Memo Capture)
-Built the API keys settings panel and voice-memo recording/transcription. File-tree verification (required before writing code, per the prompt) found real drift from the prompt's assumptions — reported in full before proceeding, summarized here. Both features are live-tested end to end against the real Supabase project, real Gemini API, and real Storage bucket: settings save/mask/reject-non-admin (detailed further down), plus a full record → upload → transcribe → timeline-update cycle driven through the actual UI using a synthetic Web Audio tone in place of a real microphone (`navigator.mediaDevices.getUserMedia` overridden to return a `MediaStreamAudioDestinationNode`'s stream — a fresh one per call, since a single shared stream's track ends after the first `MediaRecorder.stop()` and silently breaks every subsequent attempt), covering the optimistic "Transcribing…" state, a successful real transcription, mic-permission denial, and the no-Gemini-credential fail-open path (audio preserved, flagged content, verified via a temporary blanked-key `.env.local` restart same as Prompt 12's pattern). All test fixtures (lead, activity_logs rows, storage objects, a throwaway MEMBER user) were deleted afterward.
-
-- **`app/(app)/settings/page.tsx` already existed as one unified page with stacked panels** (`OrgDetailsPanel`, `TeamPanel`), not a `settings/` directory of sub-routes. Followed that convention: added `src/components/settings/ApiKeysPanel.tsx` as a third panel on the same page, not a new `/settings/api-keys` route. No nav change needed — one "Settings" link already existed.
-- **The `audio-notes` storage bucket already existed** — created out-of-band, not by any migration in this repo — as `public = true` with **zero** `storage.objects` policies. A public bucket serves reads to anyone with the path regardless of any policy, since "public" bypasses read-side RLS entirely; it was empty (0 objects) so no real exposure occurred, but this had to be fixed, not just layered on top of. `supabase/migrations/20260722100000_audio_notes_storage.sql` flips it private (idempotent upsert, also correct on a fresh project) and adds tenant-scoped SELECT/INSERT policies keyed on the path's first segment (`organization_id`) against `private.current_org_ids()`.
-- **React Hook Form was not used**, despite the prompt naming it explicitly. Every existing form in this codebase (`CreateLeadModal`, `EditLeadModal`, `OrgDetailsPanel`, `InviteMemberForm`) uses native `<form action={serverAction}>` + `useActionState` with server-side Zod validation, and RHF was used nowhere. Flagged this to the user before writing code; they confirmed staying with the native pattern. `ApiKeysPanel.tsx` follows it — no new dependency added.
-- **`getCredentialStatus` takes no `organizationId` argument**, despite the prompt's file-level spec naming one. It's called directly from a client component on mount (as the prompt's own component-anatomy section specifies), which means a client-supplied org id can't be trusted for authorization — a MEMBER (or a user from an unrelated org) could otherwise probe whether *any* org had configured a key. It derives the org from the caller's own session via `getCurrentOrg()` instead, matching how every other client-callable action in this app resolves its tenant scope.
-- **`lib/activity/actions.ts` stayed a thin re-export** (48 lines pre-edit); the storage-upload/credential-resolution/Gemini-transcription pipeline went into `lib/activity/audio-transcription.ts` instead, per the prompt's own density rule — it's a meaningfully different concern (async external API pipeline) from the file's existing simple CRUD wrappers, independent of raw line count.
-- **Optimistic "Transcribing…" state required a small `ProfileSheet.tsx` edit not in the prompt's file list.** `ActivityTimeline` and `NoteCaptureForm` are siblings under `ProfileSheet`, not parent/child — the pending-state has to live one level up to bridge them. Added one `useState` in `ProfileSheet` plus two new callback props (`onRecordingStart`, `onRecordingSettled`) on `NoteCaptureForm` and a `pendingEntry`/`onDismissPending` pair on `ActivityTimeline`. This is a direct, minimal consequence of the existing component split, not scope creep.
-- **Audio playback added beyond the prompt's explicit file list**, via a small `getActivityLogs` change: `audio_url` is stored as the private-bucket storage *path*, and resolved to a short-lived signed URL (`createSignedUrl`, 1hr) at read time, rendered as `<audio controls>` in `ActivityTimeline`. Necessary to make the prompt's own fallback requirement ("don't lose the recording just because transcription failed") actually mean something — an uploaded-but-unreachable file would make that fallback pointless.
-- **Encryption status, stated accurately per this prompt's explicit instruction:** `organization_credentials` values are plain `TEXT`, written and read via `lib/supabase/admin.ts` (service-role) since the table has zero RLS policies for `anon`/`authenticated` — access control is real and is the only protection; at-rest encryption is not implemented. Do not describe this table as "vaulted"/"encrypted" in any future addendum without that being independently re-verified true at the time.
-- **Model name confirmed live before use**, not assumed: `gemini-3.5-flash-lite` was tested directly against the real Gemini API before being written into `audio-transcription.ts` — it's real and callable.
-- **New verification technique worth keeping:** to test that a Server Action's authorization check is real (not just client-side UI hiding), a raw hand-crafted `fetch` replicating Next's RSC action-invocation wire protocol is unreliable — it fails on protocol-encoding details unrelated to the app's own logic, producing a false negative. Same problem calling a `"use server"` export directly from a plain Route Handler — Next's `"use server"` transform intercepts the call and fails to resolve an action id outside a real invocation context. The reliable approach: temporarily neutralize just the client-side conditional that hides the form (e.g. `{!canEdit ? (...) : (...)}` → `{!canEdit && false ? (...) : (...)}`), submit through the real, unmodified React action-invocation path, observe the server's actual response, then revert the one-line change immediately. This is how `saveOrganizationCredentials`'s OWNER/ADMIN check was confirmed live against a real MEMBER session (server returned "Only owners and admins can update API keys." with the DB left untouched) after two failed protocol-forgery attempts gave inconclusive 500s.
-
-## Prompt 13a addendum (Vault-Encrypted BYO API Key Configuration)
-Replaced `organization_credentials`'s plaintext columns with real Supabase Vault encryption before any real secret was ever written to the table (still zero rows at the start of this prompt, confirmed directly). Migration: `supabase/migrations/20260722140000_vault_encrypt_credentials.sql`, applied by the human per the standing DDL rule. Edited files: `src/lib/credentials/resolve-org-credential.ts`, `src/lib/actions/credentials-actions.ts`. No new UI was built — Prompt 13's `ApiKeysPanel.tsx`/settings page/nav entry already existed and needed no changes; only the storage mechanism underneath them changed.
-
-- **Verified Vault's exact live signatures before writing the migration, not from memory of the docs.** `vault.create_secret(new_secret, new_name, new_description, new_key_id)`, `vault.update_secret(secret_id, new_secret, ...)`, and — the one place assumption would have silently broken things — `vault.decrypted_secrets`'s plaintext column is named `decrypted_secret`, not `secret` (that's the *encrypted* column, present on the same view). `supabase_vault` (0.3.1) was already installed on this project. `vault.secrets` has no unique constraint on `name`, so the `org_id:field` naming used for Vault-UI identifiability can't collide.
-- **Two wrapper RPCs are the entire boundary, per the original prompt's design.** `vault_set_org_credential(p_org_id, p_field, p_value)` re-checks OWNER/ADMIN via `auth.uid()` internally (this table still has zero RLS policies) and rotates in place via `vault.update_secret` if a `*_secret_id` already exists, or creates one via `vault.create_secret` otherwise — explicit `IF`/`ELSIF` branches per field, no dynamic SQL. `vault_get_org_credential(p_org_id, p_field)` has no role check by design (it's the AI-call resolver path, called by `resolve-org-credential.ts` under service-role, not directly by a user action).
-- **Found and closed a grant gap the prompt's own instructions anticipated but didn't fully explain why it mattered.** Supabase auto-grants `EXECUTE` on new `public`-schema functions to `service_role` (and, per default privileges, would to `authenticated`/`anon` too) independent of Phase 1's `ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC` — confirmed live: `get_org_webhook_secret`'s actual ACL includes `service_role` even though only `authenticated` was ever explicitly granted in its migration. Without an explicit `REVOKE ALL ... FROM public, anon, authenticated, service_role` before the targeted `GRANT`, `vault_get_org_credential` would have been reachable by `authenticated` by default. Live ACL after migration confirms it's now `{postgres, service_role}` only, and `vault_set_org_credential` is `{postgres, authenticated}` only.
-- **`saveOrganizationCredentials` had to switch from the admin (service-role) client to the session-bound client** (`@/lib/supabase/server.ts`) to call `vault_set_org_credential` — `auth.uid()` resolves to `NULL` under a service-role JWT, and the RPC's role check would reject every call. Same pattern `get_org_webhook_secret` already established in `lib/organizations/queries.ts`; `getCredentialStatus` stays on the admin client since it only needs a `*_secret_id IS NOT NULL` presence check, unrelated to `auth.uid()`.
-- **`resolve-org-credential.ts` edited, not rewritten** — internals swapped from a raw column `SELECT` to `.rpc('vault_get_org_credential', ...)` via the admin client; exported signature/return shape (`{ value, source }`) unchanged, so Prompt 12's `spam-shield.ts`/`notify-new-lead.ts` and Prompt 13's `audio-transcription.ts` needed zero edits — confirmed by grep, all three still call it identically.
-- **Live-verified all four of the prompt's measurable outcomes**, not just by reading the grants: minted a real session for the admin OWNER via `auth.admin.generateLink` + `verifyOtp` (same technique as the Prompt 12 addendum's deep-link test), called `vault_set_org_credential` as that real authenticated user, confirmed the same authenticated session's call to `vault_get_org_credential` fails with "permission denied for function," confirmed the stored column is a UUID structurally distinct from the raw key, confirmed `service_role`'s call to `vault_get_org_credential` returns the exact original value, and used that resolved value in a live call to the real Gemini API (200 OK) to prove the round trip isn't silently corrupting the secret. Test fixture (one Vault secret + one `organization_credentials` row using the real `PLATFORM_GEMINI_API_KEY` as a stand-in org key, reusing the same real key rather than a fake one specifically so the live-Gemini-call outcome would be genuine) was cleaned up afterward.
-- **One necessary exception to the `execute_sql` SELECT-only rule, disclosed here per the Prompt 7 precedent**: cleaning up the test Vault secret required `DELETE FROM vault.secrets` via `execute_sql`. There is no other path — `vault` is not exposed via PostgREST/service-role client at all, by design, so the app's own key (the established cleanup pattern from Prompts 11–13) genuinely cannot reach it. This is narrower than a general carve-out: it applies only to deleting Vault-internal rows that have no client-facing surface whatsoever, not to any other table.
-
-## Prompt 14 addendum (Weekly Executive Revenue Report Cron)
-Built the weekly cron sweep per the Phase 5 spec: `src/app/api/cron/weekly-report/route.ts`, `src/lib/reports/aggregate-org-revenue.ts`, `src/lib/reports/generate-executive-narrative.ts`, `src/lib/email/send-weekly-report.ts`, plus `vercel.json` (did not exist before this prompt — created fresh with a single Monday-morning `crons` entry, `0 13 * * 1`). One existing file changed: `src/lib/email/notify-new-lead.ts`.
-
-- **Model name did not match the roadmap, confirmed live before writing it in, not assumed correct.** The roadmap says `gemini-3.1-pro`; that string is not a real callable model id. The actual live id (confirmed directly against `ai.google.dev`'s model docs on 2026-07-22) is `gemini-3.1-pro-preview` — the older `gemini-3-pro-preview` has been retired and now resolves to it. Written into `generate-executive-narrative.ts` as `NARRATIVE_MODEL`. Same discipline as the Prompt 13 addendum's `gemini-3.5-flash-lite` correction — always verify against the live model list, never trust roadmap text or a prior note's guess.
-- **Recipient resolution extracted to a shared helper**, since this prompt gave `notify-new-lead.ts`'s previously-inline `getNotificationRecipients` a second caller. Moved to `src/lib/email/recipients.ts` as `getOwnerAdminRecipients` (same OWNER/ADMIN-via-`organization_members`-then-`auth.admin.getUserById` logic, byte-for-byte); `notify-new-lead.ts` now imports it instead of defining its own copy. Any future Resend-sending feature should import this too, not re-implement it.
-- **Cross-tenant isolation is structural, not just careful querying.** `aggregateOrgRevenue`, `generateExecutiveNarrative`, and `sendWeeklyReport` all take a single `organizationId` and every query inside `aggregateOrgRevenue` explicitly filters on it — there is no all-orgs query anywhere that gets split in application code. The route's loop calls all three functions to completion for one org before moving to the next; nothing is batched or Promise.all'd across orgs.
-- **Current calendar month is computed in UTC**, not per-org timezone, consistent with the existing "instant comparison, timezone-agnostic" pattern `getSlaCriticalLeads` already established (see the comment in `src/lib/leads/queries.ts`) — `organizations.timezone` exists but nothing in this codebase reads it for date-boundary math yet. Revisit only if per-org-timezone month boundaries actually matter to a real customer.
-- **Narrative failures are swallowed inside `generateExecutiveNarrative`, not in the route.** No credential, a Gemini error, and a timeout all return `null` from that function (logged, never thrown) — matching `audio-transcription.ts`'s "fallback lives inside the pipeline function" pattern rather than `spam-shield.ts`'s "let the caller catch it" pattern, since here a narrative failure has one universal fallback (a plain-language note in the email body) rather than several different caller-specific responses. `sendWeeklyReport` fills in that fallback text, including a distinct "quiet month" variant when the org's aggregate is all-zero.
-- **Plain-text email body, per the prompt's own explicit decision** — no markdown-to-HTML render step. `send-weekly-report.ts`'s `text:` field is the entire body; do not add HTML rendering here without deliberately revisiting that decision.
-- **`.env` remains fully inaccessible to every tool in this session** (`Read`, `Edit`, and direct `Bash` reads of the file are all denied by the permission classifier — confirmed it blocks even an indirect `fs.readFileSync('.env')` from inside a throwaway Node process, not just a literal path argument to a tool call). `NEXT_PUBLIC_APP_URL` and `CRON_SECRET` were set by the human directly in `.env` and in the Vercel project's env vars, per the Known Gaps entry this prompt originally left open.
-- **Live-tested end to end once both env vars were set, via a temporary local-only harness route** (`src/app/api/test-harness-p14/route.ts`, deleted immediately after use — never committed intentionally, though see the note below) rather than a standalone script, specifically so the running dev server's own `process.env` (auto-loaded by Next from `.env`) could supply `CRON_SECRET`/`PLATFORM_RESEND_API_KEY` to authenticate real calls without those values ever being read by, or displayed to, the calling agent. Verified: (1) a request with no `Authorization` header and one with a wrong bearer value both get real `401`s from the actual route; (2) two fixture orgs — one with a WON/open/LOST/ABANDONED lead in each bucket, one with zero leads — plus the real pre-existing org all got `processed`/sent with zero cross-contamination, confirmed by temporarily logging the exact composed email body and the genuine Resend-issued message id per org (the platform Resend key is send-only, so Resend's list/read API isn't usable for this — a real returned message id was the strongest available proof instead); (3) both zero-activity orgs got a coherent Gemini-written "quiet month" narrative rather than being skipped; (4) all test fixtures (orgs, cascaded members/leads) were deleted afterward, confirmed via SQL that only the real org remains. All temporary instrumentation and the harness route itself were reverted/deleted before this session ended.
-- **An external, unrelated auto-commit landed on `main` mid-session** (`4afb3da`, three "forced graph sync" empty commits from `origin`) — not created by any `git commit` this agent ran; the human confirmed it was their own action (adding the two env vars) coinciding with some separate auto-sync mechanism. Merged cleanly (the remote commits were empty diffs) and pushed to `origin/main` as commit `cef004b`, which is what Vercel actually deployed. Mentioned here only because a future session should not assume a commit on `main` was necessarily made by this codebase's own agent-driven process.
-- **Deployed and confirmed live**: polled `https://tekguyz-crm.vercel.app/api/cron/weekly-report` until the new build was live, then confirmed both the missing-header and wrong-secret cases return real `401`s in production. Did not re-run the authorized path against production (that would send a second live report email to the real org's inbox with no new information — already proven correct against the same code, locally, against the same real database).
-
-## Prompt 15a addendum (Production Infrastructure Hardening)
-Closed the four gaps this prompt named, all directly informed by real incidents earlier in this build. New files: `src/lib/utils/trim-trailing-slash.ts`, `src/lib/ai/models.ts`, `src/lib/env/validate-env.ts`, `src/instrumentation.ts`, `src/lib/reports/report-sends.ts`, `supabase/migrations/20260722150000_report_sends_tracking.sql`. Edited: `src/lib/email/notify-new-lead.ts`, `src/lib/email/send-weekly-report.ts`, `src/lib/ai/spam-shield.ts`, `src/lib/activity/audio-transcription.ts`, `src/lib/reports/generate-executive-narrative.ts`, `src/app/api/cron/weekly-report/route.ts`.
-
-- **File-tree drift from the prompt's own stated assumption, confirmed before writing code, per this file's standing discipline.** The prompt said "flat `src/app/` routes (no `(dashboard)` route group) — confirm this against the actual structure before assuming." It's wrong: `src/app/(app)/` and `src/app/(auth)/` route groups exist and always have (contacts/pipeline/settings live under `(app)`, login/signup/onboarding under `(auth)`). Didn't affect this prompt's actual file targets (none of them are routes), but flagging since a future prompt that trusts this specific claim without re-checking would place a new route wrong.
-- **The residual trailing-slash bug (Known Gaps, carried since Prompt 14) is now fixed.** `notify-new-lead.ts` was the one file explicitly left untouched last time ("only `send-weekly-report.ts` was asked to be fixed"); both files now import `trimTrailingSlash` from the new shared helper instead of each having its own regex (or, in `notify-new-lead.ts`'s case, none at all). Full codebase sweep for the bug class (grep for every `process.env.*` feeding a constructed URL/path) found only these two call sites plus `src/lib/auth/actions.ts`'s `NEXT_PUBLIC_SITE_URL` usage — that one is immune by construction (`new URL(path, base)` normalizes a trailing slash on `base` regardless), so it was left alone rather than routed through the helper for no functional reason.
-- **Discovered a second, differently-named "app URL" env var already live in the codebase**: `src/lib/auth/actions.ts` builds the signup email-confirmation redirect from `NEXT_PUBLIC_SITE_URL`, not `NEXT_PUBLIC_APP_URL` — a separate var this file never previously documented. Live-checked against the real `.env` (see below): **it is not actually set**, meaning production signups today silently fall back to `new URL("/auth/confirm", "http://localhost:3000")` — a real, currently-live bug in the same family as the ones this prompt exists to close, just not one anyone had hit yet. Deliberately **not** added to `validate-env.ts`'s hard-fail list (see that file's own comment) — doing so would have turned a silent fallback into an immediate boot-time outage with no way to supply the missing value from inside this change. Logged here and in Known Gaps instead; fix by setting `NEXT_PUBLIC_SITE_URL` in `.env` and in every Vercel scope, then add it to `validate-env.ts`'s required list in the same change.
-- **Gemini model centralization confirmed all three existing ids are still correct, not stale** — re-verified 2026-07-22 against `ai.google.dev`'s docs/changelog and independent pricing aggregators (OpenRouter, artificialanalysis.ai, getdeploying.com, pricepertoken.com), not carried forward from each one's own original prompt: `gemini-3.5-flash` (Spam Shield), `gemini-3.5-flash-lite` (transcription — its GA announcement landed literally the day before this check, 2026-07-21), and `gemini-3.1-pro-preview` (weekly narrative, still preview-tier and still the correct id). No model string changed; the value of this prompt's work is that a future swap is now a one-file edit (`src/lib/ai/models.ts`) instead of a grep.
-- **New risk surfaced during that re-verification, not yet acted on**: Google shipped a parameter deprecation on 2026-07-21 — `temperature`/`top_p`/`top_k` are now ignored (soon to 400) specifically for **Gemini 3.6 Flash and 3.5 Flash-Lite**, with sampling replaced by a "configurable reasoning effort" model. This does not affect any of our three current ids today (`spam-shield.ts`'s `temperature: 0.1` runs on plain `gemini-3.5-flash`, not `3.6-flash` or `-lite`; `generate-executive-narrative.ts`'s `temperature: 0.4` runs on `3.1-pro-preview`) — but `audio-transcription.ts`'s model (`gemini-3.5-flash-lite`) is one of the two named. It doesn't pass `temperature`/`top_p`/`top_k` today, so nothing to fix, but if a future prompt ever adds sampling config to that call, this is why it won't do anything.
-- **Env var validation deliberately excludes the platform BYO fallback keys not on the prompt's explicit list** (`PLATFORM_OPENAI_API_KEY`, `PLATFORM_ANTHROPIC_API_KEY`, `PLATFORM_TWILIO_TOKEN`) — none of them have a real caller anywhere in this codebase yet (confirmed by grep; `resolve-org-credential.ts`'s map is the only place they're referenced), so requiring them at boot would be validating a scenario that can't currently happen.
-- **`src/instrumentation.ts` guards `validateEnv()` to `process.env.NEXT_RUNTIME === "nodejs"`** — `register()` also fires under the Edge runtime (middleware's runtime), which shouldn't bundle or run code expecting server secrets it doesn't carry.
-- **Live-verified both directions of the env check locally**, not just by reading the code: confirmed a clean `npm run dev` boot succeeds with the real `.env` as-is; then wrote a temporary gitignored `.env.local` with `CRON_SECRET=` (blank) — same "temporary, never-the-real-`.env`" pattern established in Prompt 12 — and confirmed the server fails to boot with `Error [MissingEnvVarError]: Missing required environment variable(s): CRON_SECRET (...)`, naming the exact var; deleted the override file immediately after and reconfirmed clean boot. This is what surfaced the `NEXT_PUBLIC_SITE_URL` gap above — the first version of `validate-env.ts` included it and crashed the real dev server on the first run.
-- **Cron idempotency guard (`report_sends` table) — migration applied by the human, confirmed live** via `list_tables`: `public.report_sends` exists with the exact expected shape (`organization_id`, `week_start date`, `sent_at`, RLS enabled, 0 rows). The route logic itself is still only typecheck/lint-verified, not yet exercised against a real double-trigger — do that with a disposable test org (never the Vercel dashboard "Run" button) before fully trusting it, per the Known Gaps entry.
-- **Follow-up verification session (same day, after the human applied the migration and adjusted the Supabase Auth Redirect URLs allowlist) confirmed two of three requested checks and found a real, unrelated gap on the third.** (1) `report_sends` existence — confirmed live, see above. (2) Local auth-redirect check — **did not** confirm as expected; see the new Known Gaps entry on the Redirect URLs wildcard bug. (3) Production auth-redirect check — confirmed correct: `auth.admin.generateLink` with `redirectTo: "https://tekguyz-crm.vercel.app/auth/confirm"` (the exact real production confirm path) resolved exactly as requested, no fallback. All three checks used a self-cleaning technique — `generateLink` immediately followed by `admin.deleteUser` on the resulting test account, via a temporary local-only harness route (same disclosed pattern as Prompt 14's), deleted immediately after use — no lasting fixtures, no real email sent to any inbox.
-- **Second follow-up: `NEXT_PUBLIC_SITE_URL` eliminated entirely, not just documented as a gap.** Grepped every reference — exactly one real call site (`src/lib/auth/actions.ts:26`) — and confirmed it was never a genuinely separate concept from `NEXT_PUBLIC_APP_URL`: this codebase has exactly one public origin, no separate marketing/site domain, so two differently-named vars for the same value was redundant naming (likely a leftover from whatever Supabase auth-helpers scaffold originally used `SITE_URL` as its convention, never reconciled with this app's own later `APP_URL` naming). `actions.ts`'s `signUp` now reads `NEXT_PUBLIC_APP_URL` like every other call site; `validate-env.ts`'s comment updated to match. This closes the "not set anywhere, silently falls back to localhost" gap **by design** rather than by leaving it to Supabase's Site-URL-fallback coincidence — the redirect production emails use is now always the same var every other feature already depends on and that `validate-env.ts` already hard-requires.
-- **Re-ran the exact same `generateLink` self-cleaning technique post-consolidation and found one more real, previously-undocumented fact**: this project's local `.env` has `NEXT_PUBLIC_APP_URL` set to `https://tekguyz-crm.vercel.app/` (production, not `http://localhost:3000`) — confirmed by having the harness route echo `process.env.NEXT_PUBLIC_APP_URL` directly (safe; it's a `NEXT_PUBLIC_` var, meant to be public). This isn't a new bug introduced by this consolidation — `notify-new-lead.ts`/`send-weekly-report.ts` already read this same var and were already producing production-domain deep links when run locally, before this session touched anything; the consolidation just means `actions.ts` now does the same, consistently, instead of independently defaulting to `localhost` via its own now-removed fallback var. **Confirmed via the real app-computed value** (`new URL("/auth/confirm", "https://tekguyz-crm.vercel.app/")` → `https://tekguyz-crm.vercel.app/auth/confirm`, correctly free of a double slash despite the source var's own trailing slash, reconfirming `actions.ts` was always immune to the trailing-slash bug class by construction): Supabase honored this exact URL with zero fallback. **The Redirect URLs `/**` fix is confirmed working for real paths** — `http://localhost:3000/auth/confirm` and `http://localhost:3000/` are now both honored exactly (no fallback); only a bare origin with no trailing slash (`http://localhost:3000`, which the app never actually requests — it always redirects to a specific path) still falls back, an expected `/**`-pattern edge case with no real consequence. Production's exact confirm path is still honored too, independently reconfirmed. **Not yet re-verified**: production's *own* Vercel-scope value of `NEXT_PUBLIC_APP_URL` post-consolidation, since this fix is still an uncommitted local change — re-check once deployed, per the standing manual Vercel checklist below. **Worth deciding, not silently changed**: whether local `.env`'s `NEXT_PUBLIC_APP_URL` should actually be `http://localhost:3000` for local-dev convenience (so locally-triggered emails/redirects point at the running dev server instead of production) — this is an intentional-or-not environment value this file can't and shouldn't change on its own.
-- **Manual Vercel checklist (cannot be verified by this codebase itself)**: before the next production deploy, open Vercel → Settings → Environment Variables and confirm, for **every** scope actually deployed to (not just Production): `NEXT_PUBLIC_APP_URL` and the other vars in `validate-env.ts`'s required list. (`NEXT_PUBLIC_SITE_URL` no longer needs checking — it's eliminated, see the Known Gaps entry.) This project has already had one real incident of the same var name holding different values across Production/Preview scopes (Prompt 14) — that class of drift is structurally invisible to any check running inside a single build, and is now a slightly *higher*-stakes check than before, since `NEXT_PUBLIC_APP_URL` drives one more feature (signup redirects) than it used to. The Supabase → Authentication → URL Configuration `/**` fix for the localhost Redirect URLs entry has already been applied and re-confirmed working — no further action needed there.
-
-## Prompt 15b addendum (UI Resilience & Final Go-Live Triage)
-Added global error boundaries and design-system-matched skeleton loading states, then forced an explicit, dated disposition on every accumulated Known Gaps item — see the rewritten Known Gaps section below, which is now the authoritative, current-as-of-this-prompt record rather than an accumulating log.
-
-- **Route structure re-confirmed before placing any boundary, per this file's own standing discipline** (and this prompt's explicit instruction to do so): `src/app/(app)/` and `src/app/(auth)/` route groups are real, same as every prompt since 15a found. Error/loading boundaries were placed accordingly — see below.
-- **Boundaries built**: `src/app/global-error.tsx` (root, own `<html>`/`<body>` per Next's requirement, system font stack since next/font can't be trusted to have run if the root layout itself is failing), `src/app/error.tsx` (root fallback — actually only ever fires for the `(auth)` tree and `invite/[token]`, since `(app)` has its own more specific one), `src/app/(app)/error.tsx` (the real "main app tree" boundary — placed inside the route group, not at the bare path the prompt's own file list literally named, so "back to Today" is always contextually correct), `src/app/(app)/pipeline/error.tsx` (Pipeline-specific copy — a failed fetch there would otherwise look like an empty, lead-free Kanban board, which is worse than a clear error). Contacts and the Profile Sheet were deliberately left on the shared `(app)/error.tsx` — a failed contacts grid or profile fetch doesn't have the same "looks like a false empty state" problem Pipeline has.
-- **Skeletons built** (`src/components/ui/Skeleton.tsx` primitive + one `loading.tsx` per segment with a meaningfully slow fetch): root (`src/app/loading.tsx`, deliberately neutral — covers `(app)/layout.tsx`'s own `getCurrentOrg()` fetch and the `(auth)` tree, before Sidebar/Header even exist to shape a fallback around), `(app)/loading.tsx` (Today/Agenda's 3-column shape — not explicitly named in the prompt's file list, but added for symmetry since `TodayPage` runs the same kind of `Promise.all` fetch Pipeline/Contacts/Settings do), `(app)/pipeline/loading.tsx` (both the desktop Kanban-column shape and the mobile Focus-List-section shape, same `lg:` split as the real components), `(app)/contacts/loading.tsx` (matches `ContactsGrid`'s responsive card grid), `(app)/settings/loading.tsx` (three stacked panel skeletons, each shaped like its real panel — form-field rows vs. list rows — rather than one repeated block).
-- **`ProfileSheetController`'s Suspense fallback was genuinely `fallback={null}`** (a blank gap, confirmed by reading `AppShell.tsx`) — replaced with `ProfileSheetSkeleton.tsx`, shaped like the real slide-over (header/brief/timeline/note-form regions). Worth noting for accuracy: this boundary exists because `useSearchParams()` requires one for static-rendering opt-out, not because of a slow data fetch — in practice it resolves within the same tick as hydration, so the fallback is rarely if ever visible for a perceptible moment. Still fixed as asked, since "rarely visible" isn't "never," and the old value was a real blank-gap bug on the rare frame it did show.
-- **Live-verified, not just read from the component** — all via a real authenticated session (see below), not a code walkthrough: forced a real thrown error in `PipelinePage` and confirmed `(app)/pipeline/error.tsx`'s tailored "Couldn't load your pipeline" copy rendered, with a working `reset()` (clicking "Try again" re-ran the page and correctly re-showed the error, since the forced throw was still in place) and a working "Back to Today" link; forced the same in `SettingsPage` and confirmed the generic `(app)/error.tsx` copy rendered instead (proving the Pipeline-specific boundary really is more specific, not just differently worded); forced a 20s artificial delay in `pipeline/page.tsx`, `contacts/page.tsx`, and `(app)/page.tsx` in turn and screenshotted mid-delay (see the technique note below) to confirm each route's real skeleton renders — not a generic box, not a spinner — including a light-mode pass to confirm the tokens hold up in both themes. All temporary throws/delays were reverted immediately after each check; `git status`/`git diff --stat` confirmed zero residual diff in any page file afterward.
-- **New verification technique worth keeping**: this session's `navigate`/`computer` tools block until the full page load (including any streamed/delayed content) completes, which makes it impossible to screenshot an in-between loading state via a normal navigation — by the time the tool call returns, the 20-second delay has already elapsed and the real content is what gets captured. `javascript_tool` executing `window.location.href = '/path'` returns as soon as the assignment statement completes (navigation begins asynchronously afterward, not awaited by the JS execution), so following it with an immediate `computer` screenshot reliably catches the loading boundary mid-flight. Client-side `<Link>` transitions could NOT be used for this same test — React defers showing a Suspense fallback during a transition when old content can stay visible, so a soft nav app to a 20-second-delayed page kept rendering the *previous* page's real content for the entire delay instead of the new route's skeleton. Only a hard/full navigation reliably exercises a route's `loading.tsx`; keep that in mind for any future loading-state verification in this app.
-- **Authenticated test session used a different technique than Prompts 12/13a's `generateLink`+magic-link approach**, because this environment's browser tool denied cross-origin navigation to Supabase's own domain (the `auth.admin.generateLink` action link's target) — confirmed by two separate `navigate` attempts, both denied, including with `force: true`. Fell back to creating a throwaway `MEMBER` user (`p15b-verify@example.com`, own known password) attached to the real org, then signed in through the app's own real `/login` form (same-origin, no external navigation needed) — same "throwaway user, deleted afterward" discipline as Prompt 13's addendum, just via password sign-in instead of a magic link. Both the `organization_members` row and the `auth.users` row were deleted immediately after verification; confirmed via SQL that the count is back to 0.
-- **One more narrow, disclosed `execute_sql` DML exception**, extending the precedent set in the Prompt 13a addendum (which carved out `vault.secrets` specifically): cleaning up the throwaway test user required `DELETE FROM auth.users` — `auth.users` isn't exposed via PostgREST or the app's own service-role client in a way that supports admin deletion outside a running Next.js process with `SUPABASE_SECRET_KEY` loaded, and standing up a temporary harness route just to call `admin.deleteUser()` would have been more invasive than the single scoped DELETE. Narrower than a general carve-out: applies only to deleting a test fixture row with zero other client-facing path, same spirit as the vault exception, not a green light for arbitrary `auth`-schema writes.
-- **`get_advisors` (security + performance) run fresh as part of the Known Gaps triage below** — see that section for the full breakdown; everything it flagged is either already-intentional-by-design, a non-issue at current scale, or (Leaked Password Protection) blocked on a Supabase plan tier this project isn't on.
-
-## Production Gaps Sweep addendum (2026-07-24)
-A consolidated pass over five open threads: CSV import wizard reachability, two real contact-form/webhook integration gaps, missing favicon/media assets, a missing-pages audit, and closing the Prompt 15 verification loop. Edited: `src/app/(app)/settings/page.tsx`, `src/components/settings/OrgDetailsPanel.tsx`, `src/app/api/v1/triage/[webhook_secret]/route.ts`. New: `src/lib/webhooks/cors.ts`, `src/app/icon.png`, `src/app/apple-icon.png`. Replaced: `src/app/favicon.ico` (was still the stock create-next-app placeholder). Renamed app to TEKGUYZ CRM (prior session).
-
-- **Section 1 (CSV Import Wizard) turned up a bigger finding than "built but unreachable," per this file's own Known Gaps entry above** — Prompts 9–10 were never built at all, confirmed exhaustively (working tree, full git history across all branches, and dangling/unreachable objects via `git fsck`, all empty). Stopped and flagged this to the human before continuing, per this sweep's own explicit instruction to stop on a surprise finding rather than paper over it. Human's direction: do the deeper git-history check (done, see the Known Gaps entry), document it properly (done), then continue — do not build it in this pass.
-- **Section 2a's premise was also wrong, in a smaller way worth recording**: a webhook secret UI already existed in `OrgDetailsPanel.tsx` (wired from `settings/page.tsx`'s existing `getWebhookSecret` call) — it wasn't missing, but it displayed the bare secret UUID rather than the ready-to-paste webhook URL, and its description text was stale ("once the ingestion endpoint is built (Phase 4)" — Phase 4 has been live in production since Prompt 11). Fixed by computing the full URL server-side (`${trimTrailingSlash(NEXT_PUBLIC_APP_URL)}/api/v1/triage/${webhookSecret}`, same helper Prompt 15a introduced) and passing `webhookUrl` instead of the raw secret; updated the copy to describe the live endpoint. `webhookSecret` prop removed entirely from `OrgDetailsPanel` (confirmed via grep it had no other callers) rather than kept alongside the new prop.
-- **Section 2b (CORS) matched its premise exactly** — zero CORS handling existed. Added `src/lib/webhooks/cors.ts` (single static allowed origin, `https://tekguyz.com` — confirmed live via browser navigation that the real site resolves at that exact origin with no `www.` redirect, so no reason to allow both) and an `OPTIONS` handler plus headers on every `POST` response in the triage route. **Verified two ways, not just by reading the header logic**: (1) raw `curl` against local dev to confirm the exact header values Server-side (OPTIONS → 204 with all four CORS headers; POST → same headers alongside the normal 400/404/429/200 body); (2) genuine browser-enforced cross-origin `fetch()` tests — navigated the Browser pane to the real `https://tekguyz.com` and ran `fetch()` against the local triage endpoint from that actual origin (succeeded, response readable — confirms the allowlist admits the real caller), then navigated to `https://example.com` and ran the identical `fetch()` (failed with `TypeError: Failed to fetch` — confirms the allowlist actually restricts, not just present-but-permissive). Both test requests used a body that fails Zod validation (empty object) specifically so no real lead/DB write ever occurred regardless of whether CORS let the response through — confirmed via the `"Invalid payload"` response body both times.
-- **Section 3**: `src/app/favicon.ico` existed but was still literally the stock `create-next-app` template icon from the initial commit, never replaced — confirmed via `file` showing the standard multi-size Next.js/Vercel default ICO, never touched since `99c7618`. No `icon.png`/`apple-icon.png` existed at all. Rather than invent a placeholder, fetched the three real files directly from the live `tekguyz.com` site (`favicon.ico`, `icon.png` 96×96, `apple-icon.png` 180×180 — confirmed by inspecting that site's own `<link rel="icon">` tags) via `curl`, since it's the real, current brand mark and exactly the asset shapes Next.js's Metadata API convention expects. Verified live: reloaded the local dev server and confirmed Next.js auto-generated all three `<link>` tags with correct `rel`/`sizes`/`type` attributes, no manual metadata code needed.
-- **Section 4 audit results — two of three "confirm before assuming missing" items turned out to already fully exist, confirmed by reading the real components, not by trusting the roadmap:**
-  - **Team invite creation UI: EXISTS**, fully wired — `TeamPanel.tsx` renders `InviteMemberForm` (email + role select, submits to the real `createInvite` server action) for Owner/Admin, plus `CopyInviteLinkButton`/`RevokeInviteButton` for pending invites. Nothing to build.
-  - **Organization settings UI (timezone/currency): EXISTS** — `OrgDetailsPanel.tsx`'s edit form (Owner/Admin only) already has a timezone `<select>` and currency `<select>`, submitting to the real `updateOrgSettings` server action. Nothing to build.
-  - **Password reset flow: GENUINELY MISSING, and not "magic-link-only by design" either** — confirmed by reading `login/page.tsx` (plain email+password form, no "forgot password" link) and grepping the entire codebase for `resetPasswordForEmail`/"forgot password"/"reset password" (zero matches anywhere). The app is email+password sign-in only, with **no recovery path of any kind** — a user who forgets their password today has no self-service way back in. This is a real, unflagged-until-now gap, not a deliberate design choice with a known tradeoff. Not built in this pass (same "flag clearly, scope as its own follow-up" treatment as the other two Section 4 items would have gotten had they actually been missing) — added to Known Gaps below. **Built and shipped 2026-07-25 — see the Password Reset Flow addendum below; the Known Gaps entry this created has its own fresh disposition there, this bullet is now historical.**
-- **Section 5** — see the rewritten Prompt 14/15a env-var entry above in Known Gaps for the full re-verification; summary: `NEXT_PUBLIC_SITE_URL`→`NEXT_PUBLIC_APP_URL` consolidation confirmed committed and pushed (was previously flagged as possibly still local-only), the three-variant redirect test re-run live against both local and production with fresh results rather than trusted from memory, and Leaked Password Protection reconfirmed still off with its correct disposition (paid-tier-only, not an oversight).
-- **All temporary verification harness routes deleted immediately after use** (`test-harness-gaps-sweep`), same standing discipline as every other prompt in this build — confirmed via `git status` showing no leftover files.
-
-## Password Reset Flow addendum (2026-07-25)
-Built the "forgot password" flow flagged as genuinely missing in the 2026-07-24 gaps sweep. New: `src/app/(auth)/forgot-password/page.tsx`, `src/app/(auth)/reset-password/page.tsx`, `src/lib/validation/reset-password-schema.ts`. Edited: `src/lib/auth/actions.ts` (added `requestPasswordReset`, `resetPassword`), `src/lib/supabase/middleware.ts` (added `/forgot-password` to the unauthenticated allowlist), `src/app/(auth)/login/page.tsx` ("Forgot password?" link), and — the one file edit that wasn't originally scoped — `src/app/auth/confirm/route.ts`.
-
-- **Followed the app's real `(auth)`-tree convention, not the prompt's literal spec.** The prompt asked for React Hook Form + Zod match validation; every page in `(auth)/` (login, signup, onboarding) already uses a plain server-component form + a redirect-based server action, with zero client-side state library — RHF has never been used anywhere in this codebase and was explicitly rejected once already (Prompt 13 addendum). `forgot-password`/`reset-password` match that exact pattern instead: `requestPasswordReset`/`resetPassword` are redirect-based actions (not `useActionState`, which is the *Settings*-panel pattern, a different part of the app), with Zod (`reset-password-schema.ts`) used only for the password-confirmation match check, mirroring how `credentials-schema.ts` already uses Zod inside a native-form action elsewhere in this app.
-- **Reused the existing `/auth/confirm` handler rather than adding a new route**, since it already verified any `EmailOtpType` and already honored a `next` redirect param — `requestPasswordReset` sets `redirectTo: \`${APP_URL}/auth/confirm?next=/reset-password\`` (same `NEXT_PUBLIC_APP_URL`, no new env var) so a successful recovery verification lands on `/reset-password` with a real, cookie-backed session already established, and that page's `resetPassword` action just calls `updateUser({ password })` against it — no token handling of its own.
-- **That reuse surfaced a real, previously-undetected bug in `/auth/confirm`, not a new problem this feature introduced.** The route only ever read `token_hash`+`type` from the query string. Confirmed live: `admin.generateLink` (the technique used to verify redirects throughout Prompts 12–15b) always produces the *implicit* hash-fragment shape (`#access_token=...`) regardless of type — signup, magiclink, or recovery — which a server route can never read (fragments never reach the server). A **real** end-user flow through this app's own SSR client (`resetPasswordForEmail`, and by the same client configuration almost certainly `signUp` too) is PKCE-configured and redirects with a `code=` param instead, which `/auth/confirm` had zero handling for — every real recovery link would have silently failed with "Invalid or expired confirmation link." This means every prior addendum's "verified live" claim about `/auth/confirm` (Prompt 12, the Prompt 15a/15b redirect sweeps) was real and correct for what it actually tested — allowlist matching and the `token_hash` path — but none of those tests exercised the `code`-based path a real user's browser actually hits, because `admin.generateLink` structurally can't produce one. Fixed by adding `exchangeCodeForSession(code)` as a first-checked branch, `token_hash` handling left completely unchanged.
-- **Verified end to end with a real disposable mailinator inbox, not `generateLink`** — the first two attempts at this genuinely failed (one to expired admin-generated hash-fragment links, one to what turned out to be the missing `code` handling above; both closed before this was called done), which is exactly why this one was pushed all the way through with a real email instead of trusting the faster-but-non-representative admin-link technique. Confirmed: (1) the email genuinely arrives from `Supabase Auth <noreply@mail.app.supabase.io>`, not this app's Resend integration; (2) requesting a reset for a real address and a nonexistent one produce byte-identical UI copy; (3) `/forgot-password` loads while logged out; (4) the real redirect link resolves to `/auth/confirm?code=...&next=%2Freset-password` (confirming the bug above, and confirming the fix once patched); (5) full click-through — real email → `/reset-password` loads with a live session → new password set → redirected to `/` → signed out → signed back in with the *new* password successfully.
-- **Signup-path regression check is code-level, not live-email-verified, and that gap is disclosed rather than papered over.** By the time this was reached, this session's own test volume had triggered Supabase's email rate limit, blocking a real `signUp()` confirmation email. The fix is additive (`token_hash` branch untouched) and `signUp`/`resetPasswordForEmail` share the identical PKCE-configured client, so it should carry over — but that is reasoning, not a live-verified fact for that specific path, and is recorded as such rather than claimed as confirmed. Revisit with a real signup email once the rate limit has cleared.
-- **All test fixtures (throwaway users across three separate mailinator addresses, one `example.com` signup-check user) and every temporary harness route were deleted immediately after use** — confirmed via SQL count and `git status`, same standing discipline as every other prompt in this build.
-
-## Signup-confirmation live-email re-check attempt (2026-07-25, later same day)
-Attempted to close the Password Reset Flow addendum's one remaining open item (live-email verification of the signup-confirmation path) — the rate limit had **not** cleared. A fresh, unique disposable signup attempt against a clean `/signup` load returned a real `429: email rate limit exceeded` (`error_code: over_email_send_rate_limit`) from Supabase Auth. `get_logs` (auth service) showed repeated `over_email_send_rate_limit` hits across the same session (08:31, 08:32, 09:07 UTC) — consistent with Supabase's free-tier default auth-email rate limit (roughly 2/hour on the built-in mailer), not something that reliably clears within a single active testing session. Confirmed no orphaned `auth.users` row was left behind (clean failure — Supabase rejects before persisting). **Disposition: still deferred, not fixed.** Per instruction, stopped rather than working around it blind (e.g. hammering retries, or reaching for Vault/dashboard changes to raise the limit unasked). The Known Gaps entry for this item is unchanged — still open. Whoever revisits this should either wait for a long quiet window with zero other signup/reset attempts, or configure custom SMTP for Supabase Auth (which lifts this limit entirely) before trying again.
-
-## TEKGUYZ Demo Seed Data (2026-07-25)
-Built a dedicated, disposable "TEKGUYZ Demo" organization with realistic mock data for design evaluation, entirely separate from the real TEKGUYZ tenant. New: `scripts/seed/create-demo-org.ts`, `scripts/seed/reset-demo-org.ts`, `scripts/seed/lib/{env,clients,demo-org,demo-data,safety}.ts`. Edited: `package.json` (added `tsx` devDependency, `seed:demo`/`seed:demo:reset` scripts).
-
-- **`create_organization_with_owner` needs a real `auth.uid()`, which a service-role JWT can't provide** (resolves `NULL`, per the Prompt 13a addendum) — so `ensureDemoOrg()` creates a disposable, internal-only owner user (`tekguyz.demo.owner@example.com`, fixed known password, `email_confirm: true` so no email is sent — sidesteps the Supabase auth rate-limit issue above entirely) via the admin API, then signs in as that user with the anon-key client and calls the real RPC. This is the same "org never exists without an owner" path real signups use, never a raw insert.
-- **Everything else (leads, activity_logs, org lookups, the wipe) goes through the service-role admin client directly**, same pattern `ingest-lead.ts`/`audio-transcription.ts` already use — no need for an authenticated member session for ordinary CRUD, only for the owner-creating RPC specifically.
-- **Idempotency**: `create-demo-org.ts` looks up the org by name first; if it exists and already has leads, it's a no-op (prints a pointer to the reset script instead of duplicating). `reset-demo-org.ts` always wipes (`leads` delete; `activity_logs.lead_id` has `ON DELETE CASCADE`, confirmed in `20260707215320_activity_logs.sql`, so no separate delete needed) then reseeds fresh — safe to run repeatedly during design work. Both live-tested: re-running `create-demo-org.ts` correctly skipped (found 20 existing leads); `reset-demo-org.ts` correctly deleted 20 and reseeded 20 fresh.
-- **Real-org safety is a runtime assertion, not just careful querying.** `wipeDemoLeads` re-fetches the org by id immediately before the delete and refuses to proceed unless its name is exactly `"TEKGUYZ Demo"` — never trusts a passed-in id alone. Both scripts also print a lead-count snapshot for every non-demo org (`reportNonDemoOrgSafety`) before and after running, so there's a printed record, not just an assumption, that the real TEKGUYZ org (`95c1bc71-2645-4e35-a9f6-078993f1c586`, 0 leads) was untouched. Confirmed live across three consecutive runs (create, re-run, reset).
-- **20 leads, hand-authored not randomly generated**, so the mix is deliberately controlled: 16 open (5 NEW / 4 DISCOVERY / 4 QUOTED / 3 ACTIVE, all `outcome IS NULL` so they populate Agenda/Kanban/Focus List) + 4 closed (2 WON with `actual_revenue` set, 1 LOST, 1 ABANDONED — visible only in Contacts, per the documented Contacts Directory Scope rule). Within the open set: 5 overdue `next_action_at` (drives SLA Critical + "Going Cold" dashed styling), 5 starred, 14 of 20 total with a populated `ai_brief` (6 without, to see both states). Real-sounding local-service businesses across 10 varied US metros and 10 service categories (HVAC, roofing, solar, landscaping, auto detailing, plumbing, pest control, painting, electrical, pressure washing) — not Lorem Ipsum. Phone numbers use the NANPA-reserved `555-01XX` fictional-use range.
-- **19 activity_logs across 7 of the 20 leads** ("a handful," not every lead) — a mix of `WEBHOOK` (JSON-payload-shaped content, mirroring `ingest-lead.ts`'s real format), `MANUAL_NOTE`, and `SYSTEM_ALERT` (reusing the real "AI Spam Shield skipped — no Gemini credential configured" message `ingest-lead.ts` actually produces, since this demo org genuinely has no credential configured). Deliberately did not add `AUDIO_TRANSCRIPT` entries — out of scope of what was asked for.
-- **Live-verified by actually looking at every named view, not just checking row counts**: signed in as the demo owner through the real `/login` form and walked Today (SLA Critical/High-Value/Starred all populated with the intended leads), Pipeline (both the desktop Kanban at 1400px and the mobile Focus List at 718px — confirmed status counts, star icons, dashed "Going Cold" borders), Contacts (all 20 including the 4 closed ones, `tel:`/`sms:`/`mailto:`/Maps links all resolving correctly off the seeded data), and a full Profile Sheet (Diane Castillo — Executive Brief text rendered, three-entry chronological timeline showing the webhook JSON, both notes, correctly ordered). Settings also incidentally confirmed working against the new org (webhook URL, Team showing the demo owner as OWNER, API Keys panel).
-- **Flagged, not decided, per the prompt's explicit instruction: Prompt 14's weekly revenue cron sweeps every organization, including this one.** `create-demo-org.ts` prints an explicit note about this on every seed run. No `is_demo` exclusion flag was added — that's a real product decision (cron scope) that belongs to the human, not something to assume silently either way. Revisit before this demo org sits around long enough for a weekly report email to actually land.
-
-## Settings & Configuration Inventory (audited 2026-07-25)
-A ground-up audit of every configurable value in the app, derived from the **live schema** (`information_schema.columns` for all of `public`) and the **actual codebase** (grep/file-read per item) — not from the roadmap and not from prior claims in this file. Every "Exists?" verdict below traces to a specific check. No Launch Checklist section existed at audit time, so **this inventory is the prioritized pre-design list**; the P0/P1 items below are the ones to work through before design work begins.
-
-**Route classification** (every file under `src/app/`, 25 total):
-- **Settings/config-like (5)**: `/settings` (`(app)/settings/page.tsx` — the *only* settings route, one flat page with three stacked panels), `/onboarding` (org creation), `/invite/[token]` (invite acceptance), `/forgot-password` + `/reset-password` (credential management, both in the `(auth)` tree).
-- **Functional (3)**: `/` (Today/Agenda), `/pipeline`, `/contacts`.
-- **Infrastructure, not user-facing (17)**: `api/cron/weekly-report`, `api/v1/triage/[webhook_secret]`, `auth/confirm`, plus 9 `error.tsx`/`loading.tsx`/`global-error.tsx` boundaries and 3 layouts.
-- **Structural finding**: every settings surface in this app is **org-scoped**. There is no account/user-level settings surface of any kind — see category D below.
-
-| Category | Item | Exists? | Current Location | Recommended Location | Priority |
-|---|---|---|---|---|---|
-| Lead data | `next_action_at` (SLA date) | **YES — built 2026-07-25** | `EditLeadModal` (datetime-local field, alongside Status) → `updateLead` | Correct | Done |
-| Lead data | Archived lead recovery | **YES — built 2026-07-25** | Contacts "Active"/"Archived" filter tabs + `unarchiveLead` on `EditLeadModal` | Correct | Done |
-| Team | Change a member's role | **NO** | `TeamPanel.tsx:26` renders role as plain text; no action exists | `TeamPanel` | **P1** |
-| Team | Remove a member / leave org | **NO** | — | `TeamPanel` | **P1** |
-| Account | Change password while signed in | **NO link** | `/reset-password` is reachable when authenticated but linked from nowhere in-app | New Account panel on `/settings` | **P1** |
-| Org | `webhook_secret` rotation | **NO** | View+copy only (`OrgDetailsPanel`); schema calls it "rotatable" | `OrgDetailsPanel` | **P1** |
-| Appearance | Theme toggle | **YES — built 2026-07-25** | `ThemeToggle.tsx` → `Header` | Header (correct — persistent chrome) | Done |
-| Auth | Password visibility toggle | **YES — built 2026-07-25** | `PasswordInput.tsx` on login + reset-password | Correct | Done |
-| Org | `name` / `timezone` / `currency_format` | YES | `OrgDetailsPanel` (Owner/Admin) | Correct | — |
-| Org | Webhook URL display | YES | `OrgDetailsPanel` + `CopyButton` | Correct | — |
-| Team | Invite / copy link / revoke | YES | `TeamPanel`, `InviteMemberForm`, `CopyInviteLinkButton`, `RevokeInviteButton` | Correct | — |
-| Integrations | Gemini + Anthropic keys | YES | `ApiKeysPanel` | Correct | — |
-| Integrations | OpenAI / Resend / Twilio keys | **NO UI** | 3 of 5 `*_secret_id` vault columns have no form field | `ApiKeysPanel`, when each gets a real caller | P2 |
-| Integrations | Clear/remove a key | **NO** | Blank field = "keep unchanged" at both RPC and form layer | `ApiKeysPanel` | P2 *(already in Known Gaps, 2026-07-22)* |
-| Org | Org switcher (multi-org) | **NO** | `getCurrentOrg` does `.limit(1).maybeSingle()` — arbitrary first membership; Sidebar has 4 nav items, no switcher | Sidebar or Header | P2 |
-| Lead data | `physical_address` | **NO edit UI** | Display-only (`ContactCard` Maps link); written only by webhook | `EditLeadModal` | P2 |
-| Lead data | `ai_brief` | **NO edit/generate UI** | Display-only (`ProfileSheet`→`ExecutiveBrief`) | Generate action on `ProfileSheet` | P2 |
-| Account | Change email / display name / delete account | **NO** | No route, no action, no column (`Header` avatar is `userEmail.slice(0,1)`) | New Account panel on `/settings` | P2 |
-| Account | Notification preferences | **NO** | No column; every OWNER/ADMIN gets weekly + new-lead email unconditionally via `getOwnerAdminRecipients` | Account or Org panel | P2 |
-| Lead data | `social_google_business` / `social_facebook` / `social_instagram` | **Dead columns** | Zero references anywhere in `src/` — not in `LEAD_COLUMNS`, no form, never rendered | Decide: build UI or drop the columns | P3 |
-| Formatting | `formatCurrency` locale | Partial | `format.ts:22` hardcodes `"en-US"`; respects the currency *code* but not locale conventions | `format.ts` | P3 |
-| Org | Timezone/currency option lists | Partial | 7 US-only zones + 5 currencies hardcoded in `OrgDetailsPanel.tsx:9-19` | `OrgDetailsPanel` | P3 |
-| Lead data | `lead_source` / `service_category` | Free text | Plain inputs in both modals; no managed vocabulary | Org-level taxonomy, if it ever matters | P3 |
-
-- **Corrects a stale claim in this file.** The Prompt 14 addendum says `organizations.timezone` "exists but nothing in this codebase reads it for date-boundary math yet." Half of that is now wrong: `timezone` **is** read, by `formatDueAt(next_action_at, orgTimezone)` in `LeadCard`/`KanbanCard`/`FocusListCard` (display formatting). The still-accurate part is that it is **not** used for month-boundary math in `aggregate-org-revenue.ts` / `report-sends.ts`, which remain deliberately UTC. `currency_format` is likewise genuinely read, via `formatCurrency`.
-- **The two P0s are both real-usage blockers, not polish.** `next_action_at` drives the entire "Going Cold" SLA mechanic that Section 1 of this file describes as core — and with no edit control, every lead is permanently pinned to `created_at + 24h`, so the SLA Critical queue fills up and can never be cleared. Archive is a one-way trip with no confirmation: `EditLeadModal`'s "Archive lead" button submits immediately, and the only route back is asking the customer to re-submit the public webhook form.
-
-## Theme Toggle addendum (2026-07-25)
-Resolved the open theme-toggle question definitively, then built it — the one build sanctioned inside an otherwise audit-only pass. New: `src/components/shell/ThemeToggle.tsx`. Edited: `src/components/shell/Header.tsx` (import + one placement).
-
-- **Confirmed genuinely absent before building, not assumed.** `next-themes`'s `ThemeProvider` was mounted at `src/app/layout.tsx:31` (`attribute="class" defaultTheme="system" enableSystem`) and `globals.css` has a complete `.dark` token set — but a grep for `useTheme|setTheme|resolvedTheme` across all of `src/` returned **zero** matches outside that provider import, and `Header.tsx` (66 lines) and `AppShell.tsx` (28 lines) were both read in full with no theme control in either. Net effect: dark mode was fully implemented and **completely unreachable** — locked to the OS setting with no user override.
-- **Placed in the Header, which is the correct location per standard convention** — a frequently-toggled display preference belongs in persistent chrome, not behind a navigation to `/settings`. It sits between the avatar and sign-out, styled with the exact class string the existing sign-out button uses, so it reads as part of the same control cluster.
-- **Three-state cycle (System → Light → Dark), deliberately not a two-state switch.** Since the provider is configured `enableSystem` with `defaultTheme="system"`, "follow the OS" is a real state; a binary toggle would call `setTheme("light"|"dark")` on first click and permanently destroy it, with no way back short of clearing `localStorage`.
-- **Mount guard is required, not defensive boilerplate** — the server cannot know the client's stored/OS theme, so rendering the real icon pre-hydration guarantees a mismatch. Renders an identically-sized placeholder until mounted, so there's no layout shift either.
-- **Live-verified the full cycle in the real app**, not by reading the component: clicked through all three states and confirmed via `document.documentElement.className` + `localStorage` at each step — System (`stored:"system"`, html `dark` from OS) → Light (html `light`) → Dark (`stored:"dark"`) → back to System, with `aria-label` correct at every step. Persistence confirmed across a hard reload (`stored:"light"` → html `light` after reboot). Console checked for hydration warnings: none. `tsc --noEmit` and `npm run lint` both clean.
-
-## P0 Fixes & Password Visibility addendum (2026-07-25)
-Fixed both P0s from the same-day settings/IA audit (`next_action_at` had no edit UI; archived leads had no in-app recovery path), plus a password show/hide toggle. Edited: `src/lib/leads/queries.ts`, `src/lib/leads/actions.ts`, `src/components/leads/EditLeadModal.tsx`, `src/app/(app)/contacts/page.tsx`, `src/components/contacts/ContactsGrid.tsx`, `src/app/(auth)/login/page.tsx`, `src/app/(auth)/reset-password/page.tsx`. New: `src/components/ui/PasswordInput.tsx`.
-
-- **`archived` added to `LEAD_COLUMNS` and the `Lead` type** — needed by `EditLeadModal` to decide Archive vs. Unarchive, and by `getAllContacts`'s new second parameter to filter either state. Every other query that already explicitly filters `.eq("archived", false)` (`getSlaCriticalLeads`, `getHighValueLeads`, `getStarredLeads`, `getPipelineLeads`) is unaffected — the extra selected column is unused there, harmless.
-- **`next_action_at`'s local↔UTC conversion happens entirely client-side, by design.** A `datetime-local` input's value string carries no timezone — parsing it on the server would mean guessing the *runtime's* timezone (Vercel's Node functions default to UTC, which is not necessarily the user's timezone), silently corrupting the offset for any user not in UTC. Instead `EditLeadModal` keeps the visible `datetime-local` input unnamed (so it never lands in `FormData`) and derives a hidden `next_action_at` ISO field via a real browser `Date` object, which correctly knows the browser's actual offset. `updateLead` just validates the ISO string it receives (`Number.isNaN(Date.parse(...))`) — no timezone logic on the server at all.
-- **Unarchive matches the webhook Resurrection Engine's own behavior, confirmed by reading `ingest-lead.ts` first, not assumed.** That path does `{ archived: false, status: "NEW" }` on reactivation (never resumes at whatever status the lead had when archived) and logs a `SYSTEM_ALERT`. `unarchiveLead` in `lib/leads/actions.ts` does the identical update and logs `"Lead manually restored from archive — status reset to New."` — same log_type, same audit-trail reasoning, so a lead's timeline reads consistently regardless of which path revived it.
-- **Contacts' archived filter is a `?archived=true` search param with two `<Link>` tabs, not client state.** No `"use client"` needed for the toggle itself — `ContactsPage` already reads `searchParams` (same pattern `login`/`signup` already use), and plain `<Link>` navigation is enough to flip which `getAllContacts` call runs server-side. Deliberately never shows both active and archived leads mixed together — it's always exactly one or the other, so which set a user is looking at is unambiguous.
-- **Archive confirmation is a plain `window.confirm()` in the button's `onClick`, calling `e.preventDefault()` on cancel** — `EditLeadModal` is already a client component, so no new abstraction was needed. Verified both branches live, and confirmed the automated browser environment's `confirm()` auto-dismisses (returns `false`) by default: the first click was silently blocked (no archive POST fired, confirmed via `read_network_requests`), proving the cancel path works; `window.confirm` was then temporarily monkey-patched to return `true` via `javascript_tool` (test-only, never touched app code) to verify the accept path archives correctly.
-- **Password toggle scoped to exactly the three pages named, not generalized to every password field.** `/forgot-password` was checked and confirmed to have **no password field at all** (email-only "request a link" form) — nothing to add there, the instruction's premise was slightly off for that one page. `/signup` has an identical unstyled-toggle password field and was **not** touched, since it wasn't in the named scope — flagging here rather than silently leaving an inconsistency: if password visibility is wanted app-wide, `signup/page.tsx`'s password input is a one-line swap to the same `PasswordInput` component.
-- **`PasswordInput` is a small self-contained client component**, not a generalized form-field wrapper — takes `name`/`placeholder`/`required`/`minLength` and owns its own styling (matching the exact input classes used everywhere else in the `(auth)` tree) rather than accepting a `className` override, since every current caller wants identical styling and a prop for that would be unused optionality.
-- **Live-verified all four outcomes**, not just that the code compiles: (1) changed Amanda Chu's overdue `next_action_at` to a future date, saved, reloaded Today, confirmed she left SLA Critical and appeared in High-Value with the new date; (2) archived Devon Marsh (confirm-cancel blocked it, confirm-accept archived it), found him under Contacts' new Archived tab, clicked Unarchive, confirmed he reappeared in Active with status reset to "New" and the SYSTEM_ALERT log entry present in his timeline; (3) confirmed the eye icon toggles plaintext/masked on `/login` and both fields on `/reset-password`; (4) confirmed `/forgot-password` has no password field to toggle. `tsc --noEmit` and `npm run lint` both clean throughout.
-
-## AlertDialog & Toast addendum (2026-07-25)
-Replaced the `window.confirm()` archive flow with a real shadcn/ui `AlertDialog`, and added a `sonner`-based toast wired to just the archive/unarchive actions. New: `src/lib/utils/cn.ts`, `src/components/ui/alert-dialog.tsx`, `src/components/ui/sonner.tsx`. Edited: `src/app/globals.css` (added `tw-animate-css` import), `src/app/layout.tsx` (mounts `<Toaster />`), `src/components/ui/Modal.tsx`, `src/components/leads/EditLeadModal.tsx`. New dependencies: `@radix-ui/react-alert-dialog`, `sonner`, `clsx`, `tailwind-merge`, `tw-animate-css`.
-
-- **No `components.json` existed** — this is the first shadcn/ui component in the app. Deliberately did **not** run the interactive `shadcn init` wizard: this project already has a complete, documented OKLCH token system (`--canvas-pure`, `--ink-main`, `--hairline`, `--accent`, etc.), and shadcn's init scaffolds its own default CSS-variable theme (`--background`, `--foreground`, ...) plus a `components.json` aliasing scheme that assumes those defaults. Installed only the underlying packages (`@radix-ui/react-alert-dialog`, `sonner`, `clsx`, `tailwind-merge`, `tw-animate-css`) and hand-wrote `alert-dialog.tsx`/`sonner.tsx` matching shadcn's actual current source structure (Radix primitives, `data-slot` attributes, the same component API), but with every class mapped onto this app's own tokens instead of shadcn's defaults — same override relationship every other piece of UI in this app already has with its underlying library.
-- **Confirmed "sonner over Toast" by querying the live registry, not from memory, per the prompt's explicit "don't assume."** `npx shadcn@latest search @shadcn` lists `@shadcn/sonner` under `ui`; there is no `toast` entry at all anymore — the old Toast primitive isn't just deprecated, it's absent from the current registry. Settles this definitively.
-- **Found and fixed a real rendering bug, not just a styling task: a native `<dialog>` (this app's existing `Modal.tsx`) and a Radix `Portal`-based component can't naturally stack correctly together.** `showModal()` promotes the native dialog into the browser's "top layer," which always renders above the entire normal document — including anything Radix portals to `document.body`, regardless of z-index. First attempt at wiring the AlertDialog into `EditLeadModal`'s archive footer rendered it **into the DOM correctly but completely invisibly**, behind the still-open edit modal — confirmed via `document.querySelectorAll('[data-slot="alert-dialog-content"]')` returning true while the screenshot showed nothing. Fixed by adding `ModalPortalContext` to `Modal.tsx` (exposes the dialog's own DOM node via context) and having `AlertDialogContent` portal into that node instead of `document.body` when present — keeps the confirmation dialog in the same top-layer stacking context as its parent, where normal DOM-order/z-index rules apply again. Falls back to Radix's own `document.body` default for any future `AlertDialog` used outside this app's `Modal`.
-- **Archive's confirm button calls `archiveLead` directly (not via `<form action>`), so a toast can fire after it actually resolves.** `AlertDialogAction` is a styled `Dialog.Close` under the hood and auto-closes on click unless the handler calls `event.preventDefault()` — done here specifically so the dialog stays open through the async call and only closes on success, rather than optimistically on click. Unarchive has no confirmation step (unchanged from the P0 Fixes addendum) but was also switched from a form-bound action to a direct call, purely so its toast has something to fire after.
-- **Toast usage deliberately scoped to exactly these two actions, per the prompt's explicit instruction — `<Toaster />` itself is mounted once at the root layout, but that's infrastructure, not usage.** The mount point is inert until something calls `toast()`; today only `handleArchiveConfirm`/`handleUnarchive` in `EditLeadModal` do. Rolling toasts out to other actions (save, invite, etc.) is a separate, later decision.
-- **Live-verified in the real app, not by reading the component**: confirmed the pre-fix bug empirically (DOM present, screenshot empty) before writing the `ModalPortalContext` fix; after the fix, clicked through Cancel (dialog closes, lead stays active, confirmed via a fresh screenshot) and Archive-confirm (dialog closes, lead disappears from Active, toast reads "Carlos Mendoza archived." with a success icon); confirmed the archived lead persists under Contacts' Archived tab across a fresh page load; clicked Unarchive and confirmed the toast reads "Carlos Mendoza restored from archive." and the lead reappears in Active. Checked both dark and light theme rendering of the AlertDialog (via the existing `ThemeToggle`) — tokens hold up in both. `tsc --noEmit` and `npm run lint` both clean throughout.
 
 ## Build discipline
 Build one phase at a time. After each phase, STOP — run the dev server, apply that phase's migration to the real Supabase project, and manually verify it works before starting the next phase. Never generate more than one phase ahead of what's been verified.
@@ -677,31 +102,26 @@ Build one phase at a time. After each phase, STOP — run the dev server, apply 
 - **Maintain the Known Gaps section for anything intentionally deferred.** If a limitation, missing enforcement, or scoped-out edge case is accepted on purpose (not just forgotten), it gets a bullet there so it doesn't silently get assumed complete in a later session.
 - **Build the current unit in isolation unless the roadmap already documents a shared requirement.** When a feature's design could anticipate a future consumer, default to building the current piece standalone. Only build shared infrastructure ahead of time when this file's own roadmap text already explicitly calls for the sharing (e.g. Prompt 5 explicitly says it shares its data adapter with Prompt 4's Kanban board — that's a documented requirement, not an inference). Anticipating unstated future needs is scope creep; following a requirement already written down here is not.
 - **`preview_click` can silently no-op on state-changing buttons while still reporting success.** Any such result needs a network/DOM cross-check before being trusted; `button.click()` via `preview_eval` is the reliable fallback. This is a standing verification habit, not a one-time observation.
-- **Update CLAUDE.md proactively, without being asked,** whenever a durable architectural decision, a newly-discovered constraint, a scope decision, or a permanent verification habit is established during a session — not just when explicitly instructed to. If genuinely unsure whether something is "durable enough" to warrant an entry, default to logging it rather than omitting it; a stale-but-present entry is easier to prune later than a decision that only ever existed in a chat that got cleared.
-- **Supabase MCP tool-access rule:** read-only MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT-only queries) may be used freely for self-verification. Anything that writes schema (`apply_migration`, any DDL) must never be called directly — write the migration SQL file and hand it to the human to apply themselves. (One exception occurred and was disclosed before this rule was explicitly stated — see the Prompt 7 addendum in section 2; it stands going forward without exception. A second, narrower standing exception exists for the `vault` schema specifically: it has no client-facing surface at all — not PostgREST, not the service-role client — so cleaning up a test fixture's Vault secret has no path except `execute_sql` DML. See the Prompt 13a addendum. This does not extend to any `public`-schema table, which must still go through the app's own service-role key per Prompt 11's pattern.)
+- **Update CLAUDE.md proactively, without being asked,** whenever a durable architectural decision, a newly-discovered constraint, a scope decision, or a permanent verification habit is established during a session — not just when explicitly instructed to. If genuinely unsure whether something is "durable enough" to warrant an entry, default to logging it rather than omitting it; a stale-but-present entry is easier to prune later than a decision that only ever existed in a chat that got cleared. **As of the 2026-07-26 restructure: new dated addenda go to `docs/ADDENDA_LOG.md`, not this file** — append them there in the same verbatim, dated-section style as everything already in that file. Only touch this file itself for a permanent rule/pattern change or a Known Gaps disposition update.
+- **Supabase MCP tool-access rule:** read-only MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT-only queries) may be used freely for self-verification. Anything that writes schema (`apply_migration`, any DDL) must never be called directly — write the migration SQL file and hand it to the human to apply themselves. (One exception occurred and was disclosed before this rule was explicitly stated — see the Prompt 7 addendum in `docs/SCHEMA_REFERENCE.md`; it stands going forward without exception. A second, narrower standing exception exists for the `vault` schema specifically: it has no client-facing surface at all — not PostgREST, not the service-role client — so cleaning up a test fixture's Vault secret has no path except `execute_sql` DML. See the Prompt 13a addendum in `docs/ADDENDA_LOG.md`. This does not extend to any `public`-schema table, which must still go through the app's own service-role key per Prompt 11's pattern.)
 
 ## Known Gaps
-**Every item below carries an explicit, dated disposition as of Prompt 15b (2026-07-22) — fixed, or consciously deferred with a stated reason. None of these are silently carried forward; a future prompt should treat an undated bullet here as stale and re-triage it.**
+Each bullet below is a current, one-line disposition. Full discovery narrative, live-verification detail, and historical context for every item — including the complete pre-2026-07-26 text of this section — lives in `docs/ADDENDA_LOG.md` under "Known Gaps — Full Historical Record" and in the addendum each pointer names. Treat an item here with no date as stale and re-triage it.
 
-- **The CSV Import/Export Migration Wizard (roadmap Prompts 9–10) was never actually built — confirmed genuinely missing, not just unreachable, during a 2026-07-24 production gaps sweep.** The roadmap's Phase 3 section describes it as part of the 15-phase plan, which reads as if it shipped, but nothing backs that up: no `ImportWizardLayout`, `CsvUploadDropzone`, or `ColumnMappingTable` anywhere in `src/`; `papaparse` was never added to `package.json` (confirmed by direct read); no route, nav link, or button anywhere in the app references an import feature (confirmed by grep for `import`/`wizard`/`csv` case-insensitively across `src/`); and critically, `CLAUDE.md` has a detailed addendum for every other completed prompt from 11 onward (11, 12, 13, 13a, 14, 15a, 15b) but **none for Prompt 9 or 10** — every other shipped prompt in this build left a paper trail, these two didn't. **Went further than the working tree**: searched the full git history for `**/CsvUpload*`, `**/ImportWizard*`, `**/ColumnMapping*` across all branches (`git log --all --diff-filter=A`) — zero hits. Ran `git fsck --unreachable` to check for orphaned/dangling commits that might hold a deleted attempt — found a few (two identical duplicate "Initial commit" trees from what's almost certainly the same "forced graph sync" incident noted in the Prompt 14 addendum, plus a stray index/WIP autostash), diffed their full file trees against the real initial commit, and confirmed byte-for-byte identical, zero CSV/wizard/import files in any of them. This is a genuine build gap, not a rebuild-from-scratch-vs-recover-a-deleted-commit question — there is nothing to recover. **Disposition (2026-07-24): flagged, not fixed in this pass.** Deliberately not built as part of the same sweep that discovered it — this is real, scoped feature work (upload UI, column-mapping UI, PapaParse integration, Zod validation layer, batch-insert Server Action) that deserves its own prompt, not a bolt-on. Revisit as a dedicated Prompt 9/10 rebuild whenever CSV import/export is actually needed.
-- **Password reset flow — built and shipped 2026-07-25.** Was genuinely absent (not "magic-link-only by design"), flagged 2026-07-24, built the next day: `/forgot-password` + `/reset-password`, reusing the existing `/auth/confirm` handler. **Disposition (2026-07-25): fixed.** Live-verified end to end with a real disposable mailinator inbox — real email from Supabase Auth, click-through, new password set, login with it succeeded. See the Password Reset Flow addendum above for the full build, including a real bug this surfaced in `/auth/confirm` (it never handled the `code` param a real PKCE-flow link redirects with — fixed alongside this).
-- **Signup-confirmation path not live-email-verified after the `/auth/confirm` PKCE fix above.** The fix only *adds* a `code`-handling branch; the pre-existing `token_hash` branch (what signup confirmation was already tested against, in the Prompt 12 addendum) is untouched, and `signUp`/`resetPasswordForEmail` share the identical PKCE-configured SSR client, so it should carry over — but this session's own test volume triggered Supabase's email rate limit before a real signup email could be sent to confirm it live. **Disposition (2026-07-25): consciously deferred, not skipped.** The reasoning above is sound but is reasoning, not a live-verified fact for this specific path. Revisit with one real signup + real email click-through once the rate limit has cleared — cheap to check, shouldn't be left unconfirmed indefinitely given `/auth/confirm` is the single shared gate for every email-based auth flow in this app.
-- **`leads.next_action_at` had no edit UI anywhere — P0, found in the 2026-07-25 settings/IA audit, fixed same day.** The "Going Cold" SLA rule is described in Section 1 of this file as a core mechanic, and `next_action_at` is read in 8 places — but was **written** only by the DB default, the webhook ingest path, and the demo seed script. **Disposition (2026-07-25): fixed.** `EditLeadModal` now has a "Follow-up due" `datetime-local` field alongside Status; the local-timezone value is converted to a full ISO string client-side (the browser's real `Date` object knows the user's actual offset, so the server never has to guess a runtime timezone from an offset-less string) and submitted via a hidden field, validated in `updateLead`. Live-verified end to end, not just that it saves: changed an overdue lead's date from the past to a future date, saved, reloaded Today — the lead disappeared from SLA Critical and reappeared in High-Value with the new date/time. See the P0 Fixes addendum below.
-- **Archiving a lead was a one-way trip with no in-app recovery — P0, found in the 2026-07-25 audit, fixed same day.** `archiveLead` sets `archived: true` and all read queries filtered `.eq("archived", false)`; the only un-archive path in the codebase was the webhook Resurrection Engine. **Disposition (2026-07-25): fixed.** Contacts now has "Active"/"Archived" filter tabs (`?archived=true`, additive to the existing directory, not a new page); `EditLeadModal` conditionally renders "Unarchive lead" on archived leads, which resets `archived: false` and `status: "NEW"` — matching the webhook Resurrection Engine's own reset behavior — and logs a `SYSTEM_ALERT` for the same audit-trail reason the webhook path does. The existing "Archive lead" button now requires a `window.confirm()` before submitting. Live-verified end to end: archived a lead (confirm-cancel correctly blocked it, confirm-accept archived it), found it under the Archived tab, unarchived it, confirmed it reappeared in Active with status reset to "New" and the SYSTEM_ALERT log entry present in its timeline. See the P0 Fixes addendum below.
-- **No account-level (user-scoped) settings surface exists at all — P1/P2, found in the 2026-07-25 audit.** Every settings item in the app is org-scoped; there is no route, panel, action, or column for changing your own password while signed in (P1 — `/reset-password` is reachable when authenticated but is linked from nowhere in-app; the only in-app link is `/forgot-password` from the logged-out login page), changing your email, setting a display name (the `Header` avatar is `userEmail.slice(0,1)`), notification preferences (every OWNER/ADMIN gets weekly + new-lead email unconditionally via `getOwnerAdminRecipients`), or deleting an account. **Disposition (2026-07-25): flagged, not fixed.** See the Settings & Configuration Inventory above for the full table.
-- **Team management is view-only beyond invites — P1, found in the 2026-07-25 audit.** `TeamPanel.tsx:26` renders each member's role as plain text; grep confirms no `updateMemberRole` or `removeMember` action exists anywhere. There is no way to promote/demote a member, remove one, or leave an org. Invite create/copy/revoke all work. **Disposition (2026-07-25): flagged, not fixed.** Interacts with the `leads`-role-enforcement gap below — both become real at the same moment (the first genuine MEMBER invite).
-- **`organizations.webhook_secret` is documented as rotatable but has no rotation UI or action — P1, found in the 2026-07-25 audit.** Section 2 of this file calls it "a unique, server-generated, rotatable token"; `OrgDetailsPanel` displays and copies the derived URL, and grep for `rotate` across `src/` returns zero. If the secret ever leaks, the only remedy today is a manual SQL update. **Disposition (2026-07-25): flagged, not fixed.**
-- **Three of five `organization_credentials` vault columns have no UI, and three `leads` social columns are entirely dead — P2/P3, found in the 2026-07-25 audit.** `ApiKeysPanel` exposes only Gemini and Anthropic; `api_key_openai_secret_id`, `token_resend_secret_id`, and `token_twilio_secret_id` have no form field (consistent with the Prompt 15a finding that none of those providers has a real caller yet). Separately, `social_google_business` / `social_facebook` / `social_instagram` have **zero** references anywhere in `src/` — not in `LEAD_COLUMNS`, no form input, never rendered. **Disposition (2026-07-25): flagged, not fixed.** The credential fields are correctly deferred until each provider has a caller; the three social columns need an actual decision — build the UI or drop the columns — rather than sitting as permanent dead schema.
-- **`organization_credentials` has no "clear this key" control.** Both the RPC layer (`vault_set_org_credential`) and the settings form treat an empty field submission as "leave unchanged" — there is no way, through the app, to actually remove a configured key/rotate it back to unset (only rotate it to a new value). **Disposition (2026-07-22): consciously deferred.** Confirmed live via SQL that the org has zero real credentials configured today (the sole `organization_credentials` row has all five `*_secret_id` columns null — a harmless leftover from an earlier prompt's test fixture, not a real configured key). Rotation already covers the realistic "wrong key" scenario; full de-configuration has no real operational need yet with a single org and no configured providers. Revisit if a real customer explicitly needs to fully de-provision a key.
-- **`leads` CRUD has zero role enforcement** — any MEMBER has full read/write/create parity with OWNER/ADMIN. **Disposition (2026-07-22): consciously deferred.** Confirmed live via SQL: exactly one row exists in `organization_members` today — the OWNER (`admin@tekguyz.com`) — zero MEMBER-role users exist in production. The gap has zero real exposure right now; it's purely theoretical until a second user is actually invited. Revisit before (not after) the first real MEMBER invite goes out, since that's the moment this stops being theoretical.
-- **Command palette (Prompt 8) does a full client-side fetch + fuse.js fuzzy match, no pagination or debounce.** **Disposition (2026-07-22): consciously deferred.** Confirmed live via SQL: 0 leads exist in the real org today. Trivially fast at this volume by construction — there's nothing to paginate or debounce yet. Revisit once real contact volume grows large enough to matter (rough threshold: low hundreds of contacts), not on a calendar schedule.
-- **Mobile AppShell/Sidebar has no responsive collapse.** Originally deferred (2026-07-22) against a stated trigger: "before any client-facing mobile demo, or before Focus List becomes the primary mobile view in production." **Disposition (2026-07-25): still not built, but the trigger itself is now being reconsidered, not newly discovered.** This isn't a fresh finding — it's the same known gap, with an open question about *when* to address it: likely alongside the upcoming Claude Design pass (a broader visual/UX treatment) rather than as an isolated patch beforehand. Deliberately not building a standalone mobile fix now — doing so ahead of that pass risks solving it twice, once quickly and once properly. Revisit once the Claude Design pass's scope and timing are settled; until then this stays an open, actively-tracked decision rather than a scheduled-but-ignored one.
-- **`get_advisors` (security + performance) run fresh via Supabase MCP as part of this triage (2026-07-22).** Findings, triaged:
-  - **Leaked Password Protection is confirmed DISABLED** (`auth_leaked_password_protection`, WARN) — this resolves the open question from earlier in the build (it was recommended as a dashboard toggle; whether it was actually flipped was previously unverifiable by any tool). **Disposition (2026-07-22): consciously deferred, not an oversight.** Confirmed with the human: this feature requires a paid Supabase plan, and this project is on the free tier. Not actionable today regardless of intent. Revisit only if/when the project upgrades off the free tier — at that point this advisor warning becomes the trigger to actually flip it, not before.
-  - Several `SECURITY DEFINER` functions flagged as callable by `anon`/`authenticated` (`get_invite_preview`, `accept_organization_invite`, `create_organization_with_owner`, `get_org_webhook_secret`, `get_organization_members`, `vault_set_org_credential`) — all **by design**, each documented in section 2's schema notes with its own internal auth/role check (e.g. `get_org_webhook_secret` re-checks OWNER/ADMIN, `vault_set_org_credential` re-checks role via `auth.uid()`). Not a new finding, no action needed. **`vault_set_org_credential` specifically live-tested, not just code-reviewed, on 2026-07-25**: created a genuine throwaway MEMBER-role user, attached to "TEKGUYZ Demo" (never the real org) via a service-role fixture insert, signed in through the real anon-key client, and called `vault_set_org_credential(p_org_id, 'api_key_gemini', ...)` as that authenticated MEMBER session. Result: rejected with `"not authorized"`, exactly matching the function's internal `v_role not in ('OWNER','ADMIN')` check — and independently confirmed via `organization_credentials` that zero rows were written for the org, so the rejection has no side effects either. All test fixtures (user, membership) deleted immediately after, confirmed via SQL (`leftover_users: 0`, `leftover_memberships: 0`). This is the one item in this bullet's list that's now backed by a live adversarial test rather than a code read; the other five remain code-reviewed only.
-  - `rls_enabled_no_policy` on `organization_credentials` and `report_sends` — **by design**, same pattern as documented elsewhere in this file: RLS enabled, zero policies, service-role-only access. Not a new finding.
-  - Unindexed FKs (5 on `organization_credentials`'s secret-id columns, 1 each on `organization_invites.invited_by` and `organization_members.user_id`) and 3 `auth_rls_initplan` re-evaluation warnings (RLS policies calling `auth.<function>()` instead of `(select auth.<function>())`) — real, valid Postgres/Supabase best-practice suggestions, but **consciously deferred**: at today's real scale (1 org, 1 member, 0 leads — confirmed live), none of these have any measurable performance impact. Revisit if row counts grow into the thousands, per Supabase's own guidance on when these patterns start to matter.
-  - 5 "unused index" INFO notices on `leads`/`activity_logs` — expected, not a design mistake: these indexes were built for known query patterns (SLA queue, starred workspace, outcome/revenue reporting) that simply haven't run against real production traffic yet (0 leads today). Not actionable; they'll show usage once real data and usage exist.
-- **Prompt 14/15a env-var and Redirect-URL gaps — fully closed, re-confirmed live 2026-07-24 (Production Gaps Sweep), not assumed from prior notes.** The weekly-report cron's `APP_URL` double-slash bug is fixed in both files via the shared `trimTrailingSlash` helper; `NEXT_PUBLIC_SITE_URL` is eliminated (consolidated into `NEXT_PUBLIC_APP_URL`) — **this consolidation is confirmed committed and pushed** (`git show HEAD:src/lib/auth/actions.ts` on `origin/main` shows the `NEXT_PUBLIC_APP_URL` read, commit `4601c4c`; local `HEAD` and `origin/main` confirmed identical via `git fetch` + `git rev-parse`), closing the "still uncommitted" note this entry previously carried. **Re-ran the exact three-variant redirect test (bare origin / with path / with trailing slash) against both local and production fresh, via a temporary self-cleaning `generateLink`+`deleteUser` harness — not an assumption the earlier fix pattern still holds:** production honors all three variants exactly (bare origin, `/auth/confirm`, and `/` all resolve with zero fallback); local honors `/auth/confirm` and `/` exactly, with only the bare-origin-no-path shape falling back to the Site URL default — the same harmless edge case found before, since the app never actually requests a redirect with no path. Local `.env`'s `NEXT_PUBLIC_APP_URL` is confirmed set to `http://localhost:3000` (the human set this after the earlier follow-up flagged it pointing at production) — local dev now self-references instead of silently linking to production.
-- **Manual, human-only checklist (cannot be verified by this codebase or any MCP tool):**
-  1. If/when this project ever upgrades off Supabase's free tier, enable Leaked Password Protection (Authentication → Policies/Providers) — confirmed still OFF as of 2026-07-24, and confirmed with the human this is a paid-tier-only feature, not an oversight. This is the one item in this whole file that needs a human dashboard action, not a code fix.
+- **CSV Import/Export Wizard (Prompts 9–10).** ✅ Import: fully built and live-verified (2026-07-26). ⬜ Export: deliberately deferred as its own follow-up — shares no machinery with import. Full history: `docs/ADDENDA_LOG.md` § Prompt 9 addendum, § Prompt 10 addendum, § Production Gaps Sweep addendum.
+- **Password reset flow.** ✅ Fixed 2026-07-25 — `/forgot-password` + `/reset-password`, live-verified end to end with a real email. Full history: `docs/ADDENDA_LOG.md` § Password Reset Flow addendum.
+- **Signup-confirmation path, post `/auth/confirm` PKCE fix.** ⬜ Consciously deferred — the fix should carry over by construction, but is not live-email-verified due to Supabase's auth rate limit. Full history: `docs/ADDENDA_LOG.md` § Signup-confirmation live-email re-check attempt.
+- **`leads.next_action_at` had no edit UI (P0).** ✅ Fixed 2026-07-25, live-verified (an overdue lead correctly moved out of SLA Critical after editing). Full history: `docs/ADDENDA_LOG.md` § P0 Fixes & Password Visibility addendum.
+- **Archiving a lead was a one-way trip with no recovery (P0).** ✅ Fixed 2026-07-25 — Contacts Active/Archived tabs + Unarchive, live-verified. Full history: `docs/ADDENDA_LOG.md` § P0 Fixes & Password Visibility addendum.
+- **No account-level (user-scoped) settings surface exists.** ⬜ Flagged, not fixed (2026-07-25) — no in-app change-password link, email change, display name, notification prefs, or account deletion. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
+- **Team management is view-only beyond invites.** ⬜ Flagged, not fixed (2026-07-25) — no role change or member removal. Becomes urgent at the first real MEMBER invite, same trigger as the `leads` role-enforcement gap below. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
+- **`organizations.webhook_secret` has no rotation UI**, despite being documented as rotatable. ⬜ Flagged, not fixed (2026-07-25) — only remedy today is a manual SQL update. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
+- **3 of 5 `organization_credentials` vault columns have no UI; 3 `leads` social columns are entirely dead.** ⬜ Credential fields correctly deferred (no real caller yet for OpenAI/Resend/Twilio). Social columns (`social_google_business`/`social_facebook`/`social_instagram`) need an actual build-or-drop decision. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
+- **Email case-sensitivity is inconsistent across ingestion paths.** ⬜ Flagged, not fixed (2026-07-26) — CSV import lowercases at the Zod layer; the webhook path and the manual `createLead`/`updateLead` actions don't, so a case-mismatched resubmission can create a duplicate lead or silently miss the Resurrection Engine. Fix needs a pre-backfill collision check on existing rows before touching `webhook-payload-schema.ts`. Full history: `docs/ADDENDA_LOG.md` § Prompt 10 addendum.
+- **`organization_credentials` has no "clear this key" control** (only rotate-to-new-value). ⬜ Consciously deferred (2026-07-22) — zero real credentials configured today, no operational need yet. Full history: `docs/ADDENDA_LOG.md` § Known Gaps Full Historical Record.
+- **`leads` CRUD has zero role enforcement** — any MEMBER has full CRUD parity with OWNER/ADMIN. ⬜ Consciously deferred (2026-07-22) — theoretical until the first real MEMBER invite goes out; revisit before that, not after. Full history: `docs/ADDENDA_LOG.md` § Known Gaps Full Historical Record.
+- **Command palette (Prompt 8) has no pagination or debounce.** ⬜ Consciously deferred (2026-07-22) — trivial at 0-lead current scale; revisit around low hundreds of contacts. Full history: `docs/ADDENDA_LOG.md` § Known Gaps Full Historical Record.
+- **Mobile AppShell/Sidebar has no responsive collapse.** ⬜ Deferred (2026-07-25) — likely folded into the upcoming Claude Design pass rather than patched standalone; timing still an open decision, not ignored. Full history: `docs/ADDENDA_LOG.md` § Known Gaps Full Historical Record.
+- **`get_advisors` (security + performance) findings.** Mostly by-design or non-issues at current scale (unindexed FKs, `auth_rls_initplan` warnings, unused indexes, RLS-enabled-no-policy on service-role-only tables); Leaked Password Protection is off, blocked on a paid Supabase plan. `vault_set_org_credential`'s role check has been live adversarially tested (rejected a real throwaway MEMBER session correctly). Full history: `docs/ADDENDA_LOG.md` § Known Gaps Full Historical Record (2026-07-22 triage) and § Prompt 15b addendum.
+- **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24 — `trimTrailingSlash` applied everywhere, `NEXT_PUBLIC_SITE_URL` eliminated in favor of `NEXT_PUBLIC_APP_URL`, all three redirect-URL variants verified in both local and production. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
+- **Manual, human-only checklist:** enable Leaked Password Protection (Authentication → Policies/Providers) once this project is off Supabase's free tier — confirmed off as of 2026-07-24, correctly not actionable today. The only item in this file that needs a human dashboard action, not a code fix.
