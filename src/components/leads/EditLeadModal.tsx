@@ -143,6 +143,39 @@ export function EditLeadModal({
           </div>
         </div>
 
+        <div>
+          <label className={labelClass}>Physical address</label>
+          <input
+            name="physical_address"
+            defaultValue={lead.physical_address ?? ""}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="border-t border-hairline pt-3">
+          <label className={labelClass}>Social profiles</label>
+          <div className="space-y-2">
+            <input
+              name="social_google_business"
+              defaultValue={lead.social_google_business ?? ""}
+              placeholder="Google Business Profile URL"
+              className={inputClass}
+            />
+            <input
+              name="social_facebook"
+              defaultValue={lead.social_facebook ?? ""}
+              placeholder="Facebook URL"
+              className={inputClass}
+            />
+            <input
+              name="social_instagram"
+              defaultValue={lead.social_instagram ?? ""}
+              placeholder="Instagram URL"
+              className={inputClass}
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Status</label>
