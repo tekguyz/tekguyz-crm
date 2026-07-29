@@ -93,8 +93,10 @@ export async function createTask(
 // lead's still-open tasks so none linger pointing at a dead lead, and logs a
 // single SYSTEM_ALERT summarizing the count.
 //
-// Extracted here rather than inlined into archiveLead because
-// lib/leads/actions.ts is at 197 lines against this project's 200-line cap.
+// Extracted here rather than inlined into archiveLead for file-size reasons
+// (lib/leads/actions.ts was at the 200-line cap). archiveLead itself has since
+// moved to lib/leads/archive-actions.ts; this helper stays here because it
+// owns `tasks`, not because of where its caller lives.
 //
 // Deliberately NEVER throws and never rethrows. Archiving the lead is the
 // primary action; a task-cleanup failure must not block it or roll it back,

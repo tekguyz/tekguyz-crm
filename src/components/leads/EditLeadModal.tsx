@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
-import { updateLead, archiveLead, unarchiveLead, type LeadFormState } from "@/lib/leads/actions";
+import { updateLead, type LeadFormState } from "@/lib/leads/actions";
+import { archiveLead, unarchiveLead } from "@/lib/leads/archive-actions";
 import { Modal } from "@/components/ui/Modal";
 import {
   AlertDialog,
@@ -64,6 +65,15 @@ export function EditLeadModal({
       await archiveLead(lead.id);
       toast.success(`${lead.client_name} archived.`);
       setArchiveDialogOpen(false);
+    } catch (err) {
+      // archiveLead genuinely throws since it was hardened with
+      // .select().single() — before that a denied write silently no-op'd and
+      // this reported a false success. Deliberately keeps the dialog open
+      // (setArchiveDialogOpen is only called on the success path above) so the
+      // user can simply retry. Friendly copy rather than the raw PostgREST
+      // message, which is unreadable; the real error still reaches the console.
+      console.error("[archiveLead]", err);
+      toast.error(`Couldn't archive ${lead.client_name} — please try again.`);
     } finally {
       setArchiving(false);
     }
@@ -74,6 +84,11 @@ export function EditLeadModal({
     try {
       await unarchiveLead(lead.id);
       toast.success(`${lead.client_name} restored from archive.`);
+    } catch (err) {
+      // Same gap as the archive path above — unarchiveLead has always thrown
+      // on error, so this handler could already produce an unhandled rejection.
+      console.error("[unarchiveLead]", err);
+      toast.error(`Couldn't restore ${lead.client_name} — please try again.`);
     } finally {
       setUnarchiving(false);
     }

@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
-import { closeTasksForArchivedLead } from "@/lib/tasks/actions";
+
+// NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
+// split out on 2026-07-28 to bring this file back under the 200-line cap.
+// Deliberately NOT re-exported from here — EditLeadModal was their only
+// caller, so importing them directly from the new module leaves one touch
+// point and no indirection to keep in sync.
 
 export type LeadFormState = { error?: string } | null;
 
@@ -127,60 +132,6 @@ export async function updateLead(
 
   revalidatePath("/", "layout");
   return null;
-}
-
-// Archiving is this app's only "delete", so it also closes the lead's open
-// tasks — nothing should linger in the org-wide Tasks Due list pointing at an
-// archived lead. One direction only: tasks closed this way stay closed if the
-// lead is later unarchived (explicit v1 non-goal).
-//
-// `.select().single()` chained per the standard adopted after the
-// rotateWebhookSecret silent-no-op fix — the previous bare `.update().eq()`
-// discarded its result, so an RLS-denied archive reported success. It also
-// yields the organization_id the SYSTEM_ALERT needs, as unarchiveLead does.
-export async function archiveLead(leadId: string): Promise<void> {
-  const supabase = await createClient();
-
-  const { data: lead, error } = await supabase
-    .from("leads")
-    .update({ archived: true })
-    .eq("id", leadId)
-    .select("organization_id")
-    .single();
-
-  if (error) throw error;
-
-  // Never throws by construction — cleanup must not roll back the archive.
-  await closeTasksForArchivedLead(leadId, lead.organization_id);
-
-  revalidatePath("/", "layout");
-}
-
-// The in-app equivalent of what the webhook Resurrection Engine already does
-// automatically (lib/webhooks/ingest-lead.ts) when an archived lead's email
-// resubmits: archived -> false and status reset to NEW, not left at whatever
-// status it had when archived — same reasoning applies here, a "revived"
-// lead re-enters the pipeline as a fresh one rather than resuming mid-deal.
-// Logs a SYSTEM_ALERT for the same audit-trail reason the webhook path does.
-export async function unarchiveLead(leadId: string): Promise<void> {
-  const supabase = await createClient();
-  const { data: lead, error } = await supabase
-    .from("leads")
-    .update({ archived: false, status: "NEW" })
-    .eq("id", leadId)
-    .select("organization_id")
-    .single();
-
-  if (error) throw error;
-
-  await supabase.from("activity_logs").insert({
-    lead_id: leadId,
-    organization_id: lead.organization_id,
-    log_type: "SYSTEM_ALERT",
-    content: "Lead manually restored from archive — status reset to New.",
-  });
-
-  revalidatePath("/", "layout");
 }
 
 const VALID_STATUSES = new Set(["NEW", "DISCOVERY", "QUOTED", "ACTIVE"]);
