@@ -7,14 +7,14 @@ This file was restructured on 2026-07-26 — it had grown to 741 lines / ~150KB,
 - **`docs/SCHEMA_REFERENCE.md`** — the full live database schema: every table's DDL, every RLS policy (with its paired `WITH CHECK`), every `SECURITY DEFINER` RPC, every index, plus the reconciled migration notes and the Prompt 7 `activity_logs` addendum. Open this before any migration, RLS policy, or RPC work — it's the ground truth for what the database actually looks like.
 - **`docs/ADDENDA_LOG.md`** — the full build history: every dated addendum from Prompt 11 through the CSV Import Wizard (Prompts 9–10), verbatim, plus the complete pre-2026-07-26 text of the Known Gaps section. Open this before touching credentials/vault/webhook code specifically, when asked to explain why a past decision was made, or when the one-line disposition in this file's own Known Gaps section below isn't enough detail.
 
-What stays in *this* file: Section 1 (design system + operational rules + the multi-tenant security model, which is permanent law), the roadmap, the two standing-discipline sections, and Known Gaps — kept as short, current dispositions with a pointer to the full story in `ADDENDA_LOG.md`. New addenda go to `docs/ADDENDA_LOG.md` by default now, not here — this file only gets edited when something becomes a permanent rule/pattern or a Known Gaps disposition changes.
+What stays in *this* file: Section 1 (design system + operational rules + the multi-tenant security model, which is permanent law), the closed 15-phase roadmap, the post-launch feature-work status list (§ 3), the two standing-discipline sections, and Known Gaps — kept as short, current dispositions with a pointer to the full story in `ADDENDA_LOG.md`. New addenda go to `docs/ADDENDA_LOG.md` by default now, not here — this file only gets edited when something becomes a permanent rule/pattern, a post-launch initiative's status changes, or a Known Gaps disposition changes.
 
 ---
 
 ## 1. CORE MECHANICS & ARCHITECTURE
 
 ### File Bloat Prevention
-To keep components highly maintainable under LLM context windows, monolithic files are prohibited. Features like the customer profile view are split cleanly at the same directory level into a layout shell file, a brief component, an immutable timeline viewer, and an isolated note-capture form module.
+To keep components highly maintainable under LLM context windows, monolithic files are prohibited. Features like the customer profile view are split cleanly at the same directory level into a layout shell file, a brief component, an immutable timeline viewer, and an isolated note-capture form module. **Per-file cap: 200 lines** (raised from 150 on 2026-07-28) — split a file into a sibling at the same directory level rather than inlining further once it would cross that line.
 
 ### UI/UX Design System (Notion High-Voltage)
 The interface mimics a document-driven desk in bright daylight: minimalist and structurally restrained. Full source spec: `docs/DESIGN.md` — but its color tokens are superseded by the overridden palette below; every other table (Elevation & Depth, Border Radius Scale, Spacing System, Typography Hierarchy) is followed as written.
@@ -62,7 +62,9 @@ Following a Principal Architect audit of the original schema, five structural ga
 
 ---
 
-## 2. 15-PHASE TECHNICAL ROADMAP
+## 2. 15-PHASE TECHNICAL ROADMAP (Initial Build — Complete)
+
+This roadmap covered the initial build only, Prompts 1–15 (Phases 1–5 below); it closed out with Prompt 15b (see `docs/ADDENDA_LOG.md`). All work since has been post-launch feature work, tracked as its own named initiative per feature rather than as a continuation of this numbered list — see § 3 below. Do not add new prompts to this list; a new feature gets its own initiative section instead.
 
 Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narrative for every prompt with a "— shipped, see docs/ADDENDA_LOG.md" tag below lives in that file; prompts tagged "no written addendum" shipped before this project's addenda-writing discipline started (Prompt 11 onward) and have no dedicated narrative on file, only what's inferable from later addenda that reference them.
 
@@ -91,6 +93,14 @@ Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narr
 **Phase 5: Analytical Operations & Production Hardening**
 - Prompt 14: Engineer an asynchronous serverless cron route utilizing `gemini-3.1-pro` to sweep active lead logs, aggregate projected-vs-realized monthly revenue metrics (using the outcome/actual_revenue fields), and compile a weekly markdown executive diagnostic report delivered via Resend. — shipped (actual model id is `gemini-3.1-pro-preview`, not the roadmap's string — see the addendum), see `docs/ADDENDA_LOG.md` § Prompt 14 addendum.
 - Prompt 15: Perform a complete app-wide optimization pass to deploy global React error boundary components, mount skeleton loading fallbacks, and verify environment variable states for live production delivery on Vercel. — shipped across two addenda, see `docs/ADDENDA_LOG.md` § Prompt 15a and § Prompt 15b addenda.
+
+---
+
+## 3. Post-Launch Feature Work
+
+Each initiative below is tracked as its own named, numbered prompt sequence — not a continuation of the 15-phase roadmap in § 2, which is closed. Full build narrative for every shipped prompt lives in `docs/ADDENDA_LOG.md`; this list is just current status.
+
+- **Task/Calendar (4 prompts planned).** ⬜ In progress. Prompt 1 (`tasks` table: schema, RLS mirroring `leads`' no-role-enforcement shape, indexes) — ✅ shipped 2026-07-28. Prompt 2 (`TasksSection` in the Profile Sheet: add/list/toggle-complete, Open/Completed filter) — ✅ shipped 2026-07-28. Prompts 3–4 (calendar view) — not started. Full history: `docs/ADDENDA_LOG.md` § Task/Calendar addendum — Prompts 1 & 2.
 
 ---
 
