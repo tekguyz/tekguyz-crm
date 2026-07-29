@@ -410,3 +410,54 @@ CREATE UNIQUE INDEX unique_tenant_client_email_ci
 **Migration note (reconciled):** the original note said organization creation "is enforced at the Server Action layer in the Prompt 2 build, not by a database trigger." In the actual build it's neither a bare Server Action insert nor a trigger — it's the `create_organization_with_owner` SECURITY DEFINER function above, atomic within a single Postgres transaction, called by (not implemented inside) the signup/onboarding Server Action. This still satisfies the original constraint — never a bare trigger, the owner membership row can never exist without its organization or vice versa — but the atomicity boundary is a DB function rather than application-level transaction code.
 
 **Prompt 7 addendum (applied via Supabase MCP `apply_migration`, disclosed after the fact):** an `activity_logs` table, its RLS policies, and an index were applied directly to the live database during Prompt 7 — the one exception to the "never call `apply_migration` directly" rule, made before that rule was explicitly stated. Matches `supabase/migrations/20260707215320_activity_logs.sql` on disk exactly. Structure: `id UUID PK`, `lead_id UUID FK -> leads`, `organization_id UUID FK -> organizations`, `log_type TEXT` (constrained to `WEBHOOK`, `MANUAL_NOTE`, `AUDIO_TRANSCRIPT`, `SYSTEM_ALERT`), `content TEXT`, `audio_url TEXT NULL`, `created_at TIMESTAMPTZ`. RLS scoped via `private.current_org_ids()`, same pattern as every other tenant-scoped table. Verify exact column/constraint names against `supabase/migrations/20260707215320_activity_logs.sql` directly if precision matters for a future migration that references this table.
+
+**Task/Calendar addendum (2026-07-28, `supabase/migrations/20260728120000_tasks_table.sql`, applied by the human per the standing DDL rule — not via MCP):** a `tasks` table, lead-scoped, mirroring `leads`' RLS shape exactly (plain `organization_id IN (SELECT private.current_org_ids())`, paired `WITH CHECK` on INSERT/UPDATE, **no role-based `EXISTS` check** — zero role enforcement is deliberate v1 scope, same precedent as `leads`). Re-verified against the live database (not just the migration file) via direct `pg_indexes`/`pg_trigger`/`pg_policies` queries on 2026-07-28 — all match exactly.
+
+```sql
+CREATE TABLE public.tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    lead_id UUID NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT NULL,
+    due_at TIMESTAMPTZ NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at TIMESTAMPTZ DEFAULT NULL,
+    created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Tenant members select their tasks" ON public.tasks
+    FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
+
+CREATE POLICY "Tenant members insert their tasks" ON public.tasks
+    FOR INSERT WITH CHECK (organization_id IN (SELECT private.current_org_ids()));
+
+CREATE POLICY "Tenant members update their tasks" ON public.tasks
+    FOR UPDATE
+    USING (organization_id IN (SELECT private.current_org_ids()))
+    WITH CHECK (organization_id IN (SELECT private.current_org_ids()));
+
+-- No DELETE policy and no DELETE grant — completion is a state flip
+-- (completed = true), not a row removal, matching the Resurrection Engine's
+-- no-hard-deletes stance and activity_logs' immutability. Consequence: no
+-- role, including OWNER, can delete a task row from the app; only
+-- service-role can (used only for this session's own test-fixture cleanup).
+
+CREATE INDEX idx_tasks_org_due ON public.tasks(organization_id, due_at) WHERE completed = FALSE;
+CREATE INDEX idx_tasks_lead_id ON public.tasks(lead_id, completed);
+
+CREATE TRIGGER trigger_update_tasks_timestamp
+    BEFORE UPDATE ON public.tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION public.sync_modified_timestamp();
+
+GRANT SELECT, INSERT, UPDATE ON public.tasks TO authenticated;
+```
+
+Reuses `private.current_org_ids()` and `public.sync_modified_timestamp()` as-is — no new helper function. Full build narrative (step-zero verification, the adversarial cross-tenant RLS test, the Tasks Due agenda query's defense-in-depth `leads!inner` filter, and the archive-side auto-close in Prompt 4) lives in `docs/ADDENDA_LOG.md` under the three "Task/Calendar addendum" sections.
+
+**Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` was added to this file, in scope for the work that just shipped; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.
