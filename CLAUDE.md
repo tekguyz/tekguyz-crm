@@ -100,7 +100,7 @@ Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narr
 
 Each initiative below is tracked as its own named, numbered prompt sequence — not a continuation of the 15-phase roadmap in § 2, which is closed. Full build narrative for every shipped prompt lives in `docs/ADDENDA_LOG.md`; this list is just current status.
 
-- **Task/Calendar (4 prompts planned).** ⬜ In progress. Prompt 1 (`tasks` table: schema, RLS mirroring `leads`' no-role-enforcement shape, indexes) — ✅ shipped 2026-07-28. Prompt 2 (`TasksSection` in the Profile Sheet: add/list/toggle-complete, Open/Completed filter) — ✅ shipped 2026-07-28. Prompts 3–4 (calendar view) — not started. Full history: `docs/ADDENDA_LOG.md` § Task/Calendar addendum — Prompts 1 & 2.
+- **Task/Calendar (4 prompts planned).** ⬜ In progress. Prompt 1 (`tasks` table: schema, RLS mirroring `leads`' no-role-enforcement shape, indexes) — ✅ shipped 2026-07-28. Prompt 2 (`TasksSection` in the Profile Sheet: add/list/toggle-complete, Open/Completed filter) — ✅ shipped 2026-07-28. Prompt 3 (`TasksDueQueue` — org-wide open-task list on Today's Agenda, `?leadId=` deep-linked, with a live-proven `leads!inner` archived-lead filter) — ✅ shipped 2026-07-28. Prompt 4 (archive-side auto-close of an archived lead's open tasks) — not started; note the Prompt 3 query is already correct without it by design, so Prompt 4 is data hygiene, not a fix for a live leak. Full history: `docs/ADDENDA_LOG.md` § Task/Calendar addendum — Prompts 1 & 2, § Prompt 3.
 
 ---
 
