@@ -8,6 +8,7 @@ import type { Lead } from "@/lib/leads/queries";
 import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
 import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
 import { NoteCaptureForm } from "@/components/leads/profile/NoteCaptureForm";
+import { TasksSection } from "@/components/leads/profile/TasksSection";
 
 export function ProfileSheet({
   lead,
@@ -86,6 +87,7 @@ export function ProfileSheet({
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
               <ExecutiveBrief brief={lead.ai_brief} />
+              <TasksSection leadId={lead.id} />
               <ActivityTimeline
                 leadId={lead.id}
                 refreshKey={refreshKey}
