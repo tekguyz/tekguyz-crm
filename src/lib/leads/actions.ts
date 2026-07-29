@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
+import { closeTasksForArchivedLead } from "@/lib/tasks/actions";
 
 export type LeadFormState = { error?: string } | null;
 
@@ -128,9 +129,30 @@ export async function updateLead(
   return null;
 }
 
+// Archiving is this app's only "delete", so it also closes the lead's open
+// tasks — nothing should linger in the org-wide Tasks Due list pointing at an
+// archived lead. One direction only: tasks closed this way stay closed if the
+// lead is later unarchived (explicit v1 non-goal).
+//
+// `.select().single()` chained per the standard adopted after the
+// rotateWebhookSecret silent-no-op fix — the previous bare `.update().eq()`
+// discarded its result, so an RLS-denied archive reported success. It also
+// yields the organization_id the SYSTEM_ALERT needs, as unarchiveLead does.
 export async function archiveLead(leadId: string): Promise<void> {
   const supabase = await createClient();
-  await supabase.from("leads").update({ archived: true }).eq("id", leadId);
+
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .update({ archived: true })
+    .eq("id", leadId)
+    .select("organization_id")
+    .single();
+
+  if (error) throw error;
+
+  // Never throws by construction — cleanup must not roll back the archive.
+  await closeTasksForArchivedLead(leadId, lead.organization_id);
+
   revalidatePath("/", "layout");
 }
 

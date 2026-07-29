@@ -89,6 +89,66 @@ export async function createTask(
   return null;
 }
 
+// Called server-side by archiveLead() when a lead is archived: closes that
+// lead's still-open tasks so none linger pointing at a dead lead, and logs a
+// single SYSTEM_ALERT summarizing the count.
+//
+// Extracted here rather than inlined into archiveLead because
+// lib/leads/actions.ts is at 197 lines against this project's 200-line cap.
+//
+// Deliberately NEVER throws and never rethrows. Archiving the lead is the
+// primary action; a task-cleanup failure must not block it or roll it back,
+// so every failure path logs and returns 0. Returns the number closed.
+export async function closeTasksForArchivedLead(
+  leadId: string,
+  orgId: string,
+): Promise<number> {
+  try {
+    const supabase = await createClient();
+
+    // `.select("id")` is both the hardening and the counter: a bulk UPDATE
+    // can't use .single(), but selecting the affected rows means an
+    // RLS-denied write comes back as zero rows instead of a silent
+    // error-free "success" — and zero rows then correctly writes no log.
+    const { data: closed, error } = await supabase
+      .from("tasks")
+      .update({ completed: true, completed_at: new Date().toISOString() })
+      .eq("lead_id", leadId)
+      .eq("completed", false)
+      .select("id");
+
+    if (error) {
+      console.error(`[closeTasksForArchivedLead] lead ${leadId}:`, error.message);
+      return 0;
+    }
+
+    const count = closed?.length ?? 0;
+
+    // No SYSTEM_ALERT when nothing was closed — a "0 open task(s) auto-closed"
+    // entry is noise in the timeline, not signal.
+    if (count === 0) return 0;
+
+    const { error: logError } = await supabase.from("activity_logs").insert({
+      lead_id: leadId,
+      organization_id: orgId,
+      log_type: "SYSTEM_ALERT",
+      content: `${count} open task(s) auto-closed — parent lead archived.`,
+    });
+
+    if (logError) {
+      console.error(`[closeTasksForArchivedLead] log for ${leadId}:`, logError.message);
+    }
+
+    return count;
+  } catch (err) {
+    console.error(
+      `[closeTasksForArchivedLead] unexpected failure for lead ${leadId}:`,
+      err instanceof Error ? err.message : err,
+    );
+    return 0;
+  }
+}
+
 export async function toggleTaskComplete(taskId: string, completed: boolean): Promise<void> {
   const supabase = await createClient();
 
