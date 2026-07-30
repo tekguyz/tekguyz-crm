@@ -5,9 +5,14 @@ import { inputClass, labelClass } from "@/components/leads/edit-modal/field-styl
 // <form action={serverAction}> reads these straight off FormData, so no state
 // lives here and nothing needs bridging up to the shell.
 //
-// Note: `website` is deliberately absent. updateLead() writes it from FormData,
-// but this modal has never rendered an input for it — carried over as-is rather
-// than "fixed" here, since this split is a pure structural extraction.
+// `website`, `lead_source`, and `service_category` are rendered here for a
+// correctness reason, not a cosmetic one: updateLead() writes all three
+// unconditionally (`formData.get(x) || null`). With no input present,
+// formData.get() returned null and every save silently NULLed all three —
+// destroying real webhook/CSV-captured attribution data. Same latent bug the
+// 2026-07-27 Lead Field Completion pass fixed for physical_address and the
+// social columns; these three were missed in that sweep. Any column
+// updateLead writes must have an input here, or it gets wiped on save.
 export function IdentityFields({ lead }: { lead: Lead }) {
   return (
     <>
@@ -38,6 +43,28 @@ export function IdentityFields({ lead }: { lead: Lead }) {
         <div>
           <label className={labelClass}>Company</label>
           <input name="company" defaultValue={lead.company ?? ""} className={inputClass} />
+        </div>
+      </div>
+      <div>
+        <label className={labelClass}>Website</label>
+        <input name="website" defaultValue={lead.website ?? ""} className={inputClass} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Lead source</label>
+          <input
+            name="lead_source"
+            defaultValue={lead.lead_source ?? ""}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Service category</label>
+          <input
+            name="service_category"
+            defaultValue={lead.service_category ?? ""}
+            className={inputClass}
+          />
         </div>
       </div>
     </>

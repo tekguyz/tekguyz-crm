@@ -53,6 +53,18 @@ export function CreateLeadModal() {
           />
           <input name="phone" placeholder="Phone" className={inputClass} />
           <input name="company" placeholder="Company" className={inputClass} />
+          {/* createLead() has always read these three off FormData, but no
+              input ever existed, so they could never be set at creation — the
+              insert-side counterpart of the save-side bug that was NULLing
+              them in EditLeadModal. Added here so both modals cover every
+              column their Server Action actually writes. */}
+          <input name="website" placeholder="Website" className={inputClass} />
+          <input name="lead_source" placeholder="Lead source" className={inputClass} />
+          <input
+            name="service_category"
+            placeholder="Service category"
+            className={inputClass}
+          />
           <input
             name="estimated_revenue"
             type="number"
