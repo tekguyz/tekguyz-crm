@@ -108,15 +108,8 @@ Each initiative below is tracked as its own named, numbered prompt sequence — 
 Build one phase at a time. After each phase, STOP — run the dev server, apply that phase's migration to the real Supabase project, and manually verify it works before starting the next phase. Never generate more than one phase ahead of what's been verified.
 
 ## Form/Action Field Parity (permanent rule)
-**Every column a Server Action writes from `formData.get("x")` must have a rendered `<input name="x">` in the form that posts to it.** `formData.get()` returns `null` for an absent field, and this codebase's actions all use the `formData.get("x") || null` idiom, so a written-but-unrendered column is silently NULLed on *every single save* — no error, no warning, invisible until someone notices the data is gone. This is not hypothetical: it has now happened three times to five columns (`physical_address` and the three social columns, fixed 2026-07-27; `website`/`lead_source`/`service_category`, fixed 2026-07-30 after destroying real seeded data and coming one click from destroying a live customer's webhook-captured attribution).
-
-The mechanical check, to run whenever a form or its action changes — both directions must come back empty:
-```bash
-# columns the action writes but the form never renders
-comm -13 <(cat <form files> | grep -oE 'name="[a-z_]+"' | sed 's/name="//;s/"//' | sort -u) \
-         <(sed -n '<action line range>p' <action file> | grep -oE 'formData\.get\("[a-z_]+"\)' | sed 's/formData.get("//;s/")//' | sort -u)
-```
-Applies to `createLead`/`CreateLeadModal` and `updateLead`/`EditLeadModal` today. Splitting a form across sibling components (see the 2026-07-28 `EditLeadModal` split) makes this *easier* to get wrong, since no single file shows the full field set any more — diff against the concatenation of the shell plus every sibling, never one file.
+**Every column a Server Action writes from `formData.get("x")` must have a rendered `<input name="x">` in the form posting to it.** An absent field yields `null`, so a written-but-unrendered column is silently NULLed on every save — no error, invisible until the data is gone. Hit five `leads` columns across two incidents (2026-07-27, 2026-07-30). Defaults are worse than `|| null`, not better: `?? "UTC"` / `?? "NEW"` silently *reset* a column and pass validation, since the default is itself valid.
+Whenever a form or its action changes, diff the form's `name=` set against the action's `formData.get()` set (both directions empty). For a form split across siblings, diff the shell **plus every sibling** — no single file shows the field set. Full audit + exact commands: `docs/ADDENDA_LOG.md` § Server Action field-parity audit.
 
 ## Session & Verification Discipline
 - **Never assume a prior instruction landed without checking actual code/file state.** A past conversation, a memory, or a claim in chat is not evidence that code exists — read the file. If asked to confirm behavior, show the real current code/output, not a recollection of intent.

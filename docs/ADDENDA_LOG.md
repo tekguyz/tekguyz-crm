@@ -387,6 +387,36 @@ Closes the last Known Gap from the Task/Calendar work: `EditLeadModal.tsx` was 3
 
 ---
 
+## Server Action field-parity audit — full sweep (2026-07-30)
+Follow-up to the same-day NULL-on-save fix: swept **every** Server Action in the codebase for that bug class, not just the three flagged. **Result: clean — `leads` was the only affected area, no new instances found.** No code changes. Recorded because a negative result bounds the bug's blast radius, and re-deriving it later would cost the same work.
+
+Enumerated all 10 `"use server"` files and every `formData.get()` call, then diffed each action's read-set against its form's rendered `name=` set:
+
+| Action | Form | Fields read | Result |
+|---|---|---|---|
+| `updateOrgSettings` | `OrgDetailsPanel` | name, timezone, currency_format | ✅ |
+| `updateDisplayName` | `AccountPanel` (form 1) | display_name | ✅ |
+| `updateNotificationPreferences` | `AccountPanel` (form 2) | notify_new_lead, notify_weekly_report | ✅ |
+| `saveOrganizationCredentials` | `ApiKeysPanel` | api_key_gemini, api_key_anthropic | ✅ |
+| `createInvite` | `InviteMemberForm` | email, role | ✅ |
+| `createTask` | `TasksSection` | title, due_at | ✅ |
+| `signIn` / `signUp` | login / signup pages | email, password, next | ✅ |
+| `requestPasswordReset` / `resetPassword` | forgot- / reset-password pages | email; password, confirmPassword | ✅ |
+| `createOrganization` | onboarding page | name | ✅ |
+
+The reusable check (both directions must come back empty):
+```bash
+comm -13 <(cat <form files> | grep -oE 'name="[a-zA-Z_]+"' | sed 's/name="//;s/"//' | sort -u) \
+         <(grep -oE 'formData\.get\("[a-zA-Z_]+"\)' <action file> | sed 's/formData.get("//;s/")//' | sort -u)
+```
+
+- **Why `leads` was uniquely vulnerable, and the actual predictor of risk.** Every clean action writes 1–3 columns mapping exactly onto a small form's visible fields; drift is nearly impossible at that size. `updateLead` writes **17** columns in one `.update()` object against the app's largest form — and since the 2026-07-28 split, across six files, so no single file shows the field set. Risk scales with (columns written × form size × files spanned), not with how recently the code was touched. `AccountPanel`'s two separate forms were checked for cross-wiring too (a field sitting in the wrong form passes a naive parity check); `display_name` and the two checkboxes are correctly in separate `<form>`s bound to their own actions.
+- **Refinement to the rule, found during the sweep and promoted to `CLAUDE.md`: non-null defaults are the more dangerous variant.** `updateOrgSettings` uses `?? "UTC"` / `?? "USD"` and `updateLead` uses `?? "NEW"` for status. Those are correct today because the inputs exist — but if one were ever removed, the column would silently *reset to a plausible value* rather than nulling, and the action's own validation would not catch it because the fallback is itself a valid option. That is strictly harder to notice than a NULL. Not a live bug anywhere; recorded so the next person reading `?? "UTC"` doesn't read it as inherently safer than `|| null`.
+- **Checkbox semantics confirmed correct, not a false positive.** `updateNotificationPreferences`' `formData.get(x) === "on"` looks like the same pattern but isn't: unchecked checkboxes are legitimately absent from FormData, so absent→false is the intended HTML behavior, already documented in that file. Flagging it would have been noise.
+- **No `docs/SCHEMA_REFERENCE.md` change was warranted** — this audit touched no table, column, policy, RPC, or index. Noted explicitly so a later session doesn't assume the schema doc was skipped by oversight.
+
+---
+
 ## Known Gaps — Full Historical Record
 
 The text below is the complete, unedited Known Gaps section exactly as it stood in `CLAUDE.md` immediately before the 2026-07-26 restructure that compressed it to one-line dispositions. Kept here verbatim so no historical detail was lost in that rewrite. For the current, up-to-date disposition of each gap, see `CLAUDE.md`'s own Known Gaps section — treat this block as frozen history, not a living document.
