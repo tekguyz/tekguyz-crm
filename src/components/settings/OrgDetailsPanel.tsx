@@ -8,6 +8,7 @@ import {
   type OrgSettingsFormState,
 } from "@/lib/organizations/actions";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
 import {
   AlertDialog,
@@ -141,7 +142,13 @@ export function OrgDetailsPanel({
 
       {canEdit && currentWebhookUrl && (
         <div className="mt-4 border-t border-hairline pt-4">
-          <label className="mb-1 block text-xs text-ink-muted">Webhook URL</label>
+          <label className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
+            Webhook URL
+            <HelpTooltip
+              topicId="webhook-setup"
+              blurb="POST inbound leads here from Zapier or a form provider. The secret is part of the URL, so treat the whole thing as a credential."
+            />
+          </label>
           <p className="mb-2 text-xs text-ink-muted">
             Send inbound leads here (e.g. from Zapier) as a POST request — this URL is
             tenant-scoped and authenticates the request on its own. Only owners and admins can

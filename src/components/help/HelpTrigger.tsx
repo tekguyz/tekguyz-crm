@@ -1,29 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { HelpCircle } from "lucide-react";
-import { HelpDrawer } from "@/components/help/HelpDrawer";
+import { useHelp } from "@/components/help/HelpContext";
 
-// Owns open/closed state locally for now. If a second entry point ever needs
-// to open the drawer (a keyboard shortcut, a deep link), lift this state to a
-// shared provider rather than duplicating it here.
+// Just an opener now — the drawer itself is mounted once in AppShell and
+// driven by HelpContext, so this no longer owns any open/closed state and
+// deliberately renders no <HelpDrawer> of its own.
 export function HelpTrigger() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { openHelp } = useHelp();
 
   return (
-    <HelpDrawer
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      trigger={
-        <button
-          type="button"
-          title="Help"
-          className="flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
-        >
-          <HelpCircle className="size-4" />
-          <span className="sr-only">Help</span>
-        </button>
-      }
-    />
+    <button
+      type="button"
+      title="Help"
+      onClick={() => openHelp()}
+      className="flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
+    >
+      <HelpCircle className="size-4" />
+      <span className="sr-only">Help</span>
+    </button>
   );
 }

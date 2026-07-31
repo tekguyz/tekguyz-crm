@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { HelpTooltip } from "@/components/help/HelpTooltip";
 
 const initialState: CredentialsFormState = null;
 
@@ -63,7 +64,13 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
 
   return (
     <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
-      <h2 className="mb-1 text-base font-semibold">API Keys</h2>
+      <h2 className="mb-1 flex items-center gap-1.5 text-base font-semibold">
+        API Keys
+        <HelpTooltip
+          topicId="api-keys"
+          blurb="Bring your own Gemini or Anthropic key. Keys are stored server-side, never shown back to you, and can be removed with Clear."
+        />
+      </h2>
       <p className="mb-4 text-xs text-ink-muted">
         Bring your own Gemini and Anthropic keys for AI features. Leaving a field blank keeps
         the existing key unchanged.

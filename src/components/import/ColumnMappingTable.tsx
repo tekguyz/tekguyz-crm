@@ -1,5 +1,6 @@
 "use client";
 
+import { HelpTooltip } from "@/components/help/HelpTooltip";
 import {
   MAPPABLE_FIELDS,
   type ColumnMapping,
@@ -45,7 +46,13 @@ export function ColumnMappingTable({
 
   return (
     <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
-      <h2 className="mb-1 text-base font-semibold">Match your columns</h2>
+      <h2 className="mb-1 flex items-center gap-1.5 text-base font-semibold">
+        Match your columns
+        <HelpTooltip
+          topicId="csv-import"
+          blurb="Columns are auto-matched when the header is unambiguous. Change any row's dropdown to fix a mapping, or set it to Ignore to skip that column."
+        />
+      </h2>
       <p className="mb-4 text-xs text-ink-muted">
         {file.rows.length.toLocaleString()} rows from {file.fileName}. Anything you leave as
         &ldquo;Ignore&rdquo; won&rsquo;t be imported.
