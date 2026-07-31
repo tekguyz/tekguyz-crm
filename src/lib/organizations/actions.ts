@@ -33,13 +33,30 @@ export async function updateOrgSettings(
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 
+  // .select("id").single() is load-bearing for the same reason it is in
+  // rotateWebhookSecret below: the organizations UPDATE policy is OWNER/ADMIN
+  // only, and a role-denied RLS UPDATE matches zero rows with error === null
+  // rather than raising — so a bare .update().eq() reports success on a save
+  // that never happened. .single() turns that into a real PGRST116 error.
+  // Unlike rotateWebhookSecret this has no app-level role pre-check, so this
+  // is the only thing standing between a MEMBER and a false "Saved."
   const { error } = await supabase
     .from("organizations")
     .update({ name, timezone, currency_format: currencyFormat })
-    .eq("id", orgId);
+    .eq("id", orgId)
+    .select("id")
+    .single();
 
   if (error) {
-    return { error: error.message };
+    // Only PGRST116 means "matched zero rows"; a genuine database error still
+    // surfaces its own message rather than being mislabelled a permission
+    // problem.
+    return {
+      error:
+        error.code === "PGRST116"
+          ? "Couldn't save those settings — only owners and admins can update the organization."
+          : error.message,
+    };
   }
 
   revalidatePath("/", "layout");

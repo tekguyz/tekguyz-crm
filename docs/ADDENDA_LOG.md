@@ -450,6 +450,23 @@ Closes the Help System initiative. Lifts Prompt 1's local drawer state into a Co
 
 ---
 
+## updateOrgSettings silent-RLS-no-op fix (2026-07-30)
+
+Closes the Known Gap flagged 2026-07-27: `updateOrgSettings` in `src/lib/organizations/actions.ts` ran `.update({ name, timezone, currency_format }).eq("id", orgId)` with no `.select()` chained, so an RLS-denied UPDATE matched zero rows, returned `error: null`, and the action reported success on a save that never happened.
+
+- **Mirrored `rotateWebhookSecret`'s existing fix in the same file** — `.select("id").single()` chained onto the update, turning "zero rows matched" into a real `PGRST116` error. Its load-bearing comment was mirrored too, with the one difference that matters called out: `rotateWebhookSecret` has an app-level OWNER/ADMIN pre-check *and* the `.single()` guard, while `updateOrgSettings` has no role pre-check at all, so `.single()` is the only thing standing between a MEMBER and a false "Saved."
+- **One deliberate deviation from a literal copy: the error branch distinguishes `PGRST116` from every other error.** `rotateWebhookSecret` collapses all errors into one message because it has no other expected failure. `updateOrgSettings` previously returned the raw `error.message`, which is genuinely useful for a real database error (a constraint violation, a connection failure) — collapsing everything into "only owners and admins can update" would have *mislabelled* those as permission problems, introducing a new small correctness bug while fixing another. So: `error.code === "PGRST116"` → the permission-shaped message; anything else → `error.message`, exactly as before.
+- **The UI's `canEdit` gate is not a substitute and was confirmed not to be one.** `settings/page.tsx` passes `canEdit={canManageOrg}`, so a MEMBER never sees the form — but a Server Action is directly invocable regardless of what the UI renders, which is precisely why the server-side guard matters.
+- **Live-verified in both directions with a disposable script** (`scripts/tmp-verify-org-settings.ts`, created and deleted within the session, confirmed gone via `git status`), replicating the action's exact Supabase call against real session-bound clients — public-schema writes went through the app's own keys per Prompt 11's pattern, never Supabase MCP, which was used only for SELECT verification.
+  - **OWNER, fixed shape:** `error: null`, returned `data: { id: … }`, and the row genuinely changed (`TEKGUYZ Demo` → `TEKGUYZ Demo VERIFY-OWNER`, confirmed by read-back).
+  - **MEMBER, OLD shape — the bug reproduced live, not assumed:** a throwaway MEMBER attached to TEKGUYZ Demo ran the pre-fix `.update().eq()` and got **`error: null`** while the row was **unchanged**. That is the exact false success this gap described; it was confirmed real before being fixed, rather than taken on faith from the code shape.
+  - **MEMBER, fixed shape:** `PGRST116 — "Cannot coerce the result to a single JSON object"`, row unchanged.
+- **Then verified through the real Server Action, not just the replicated query**, since the new `error.code` branch only exists in the action itself: saved a changed org name through the real `/settings` form as the demo OWNER — no error banner, and SQL confirmed the row changed — then restored the original name through the same form. Zero console errors.
+- **Fixtures fully cleaned:** throwaway MEMBER user and membership deleted, org restored, verified by SQL (`leftover_users: 0`, demo org back to 3 members, both `TEKGUYZ` and `TEKGUYZ Demo` back to `UTC`/`USD` with original names). The real `TEKGUYZ` org was never touched at any point.
+- **First item to exercise the new relocate-on-close rule** added to `CLAUDE.md`'s Session & Verification Discipline earlier the same session: its one-liner moved straight into § Known Gaps — Resolved Items Archive rather than being left inline as a ✅.
+
+---
+
 ## Known Gaps — Full Historical Record
 
 The text below is the complete, unedited Known Gaps section exactly as it stood in `CLAUDE.md` immediately before the 2026-07-26 restructure that compressed it to one-line dispositions. Kept here verbatim so no historical detail was lost in that rewrite. For the current, up-to-date disposition of each gap, see `CLAUDE.md`'s own Known Gaps section — treat this block as frozen history, not a living document.
@@ -499,3 +516,4 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **`src/components/leads/EditLeadModal.tsx` was 310 lines, over the 200-line cap.** ✅ Fixed 2026-07-28 — split by concern into five siblings under `src/components/leads/edit-modal/`, shell down to 86 lines. Full history: `docs/ADDENDA_LOG.md` § EditLeadModal split addendum.
 - **`updateLead` silently NULLed `website`/`lead_source`/`service_category` on every save.** ✅ Fixed 2026-07-30 — inputs added to `IdentityFields.tsx` and `CreateLeadModal`; now covered by `CLAUDE.md`'s Form/Action Field Parity rule. Full history: `docs/ADDENDA_LOG.md` § Silent NULL-on-save data-loss bug.
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
+- **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
