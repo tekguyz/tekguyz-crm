@@ -504,6 +504,29 @@ It scores exactly three inputs — `client_name`, `email`, and `message` — as 
 
 ---
 
+## Webhook secret exposure audit (2026-08-11)
+
+Full sweep of every place `organizations.webhook_secret` exists in plaintext, prompted by the owner pasting a live endpoint into a chat and rotating it.
+
+**Where it appears, and whether each is acceptable.**
+1. **The URL path itself — the one that matters.** The secret *is* the path segment (`/api/v1/triage/<secret>`), so it is written verbatim into every access log that records a request line. Confirmed live: the local dev server printed `POST /api/v1/triage/<secret> 200` during this session's testing, and Vercel logs the same shape in production. It also lands in the website's own env (`CRM_TRIAGE_ENDPOINT`), any integration's stored config, and any proxy/CDN log in between. Nothing in this repo logs it — this is the framework's ordinary request logging, which is exactly the point: **you cannot opt a URL out of being logged.**
+2. **`organizations.webhook_secret`, a plain `uuid` column**, unique + indexed. Readable by anything with service-role or direct DB access. Noted as an internal inconsistency: this app encrypts BYO provider keys in Supabase Vault (Prompt 13a) but leaves the webhook secret in cleartext beside them.
+3. **The RSC payload for `/settings`** — `settings/page.tsx` builds `webhookUrl` and passes it to the `OrgDetailsPanel` client component, so it ships to the browser. **Correctly gated**: fetched only when `canManageOrg`, and `get_org_webhook_secret` re-checks OWNER/ADMIN server-side, so a MEMBER never receives it. Equivalent in exposure to rendering it on screen, which is intended.
+4. **On screen in the CRM**, as a `<code>` block with a copy button — intended; the owner has noted a show/hide toggle as a later nicety.
+5. **Not in the repo.** Verified by scanning all tracked files for UUID-shaped strings: zero hits outside migrations, org ids, and Resend message ids. `.env` is gitignored (confirmed via `git check-ignore`).
+
+**Why it is plaintext.** The design (Prompt 11) makes the secret the tenant resolver: a bare form poster with no ability to set headers can still reach the right tenant. That buys real integration simplicity, and it is why the value must stay reversible — hashing it would break both tenant lookup by secret and the ability to redisplay the URL in Settings.
+
+**Best principle, stated plainly.** A secret in a URL is a bearer credential in the one place designed to be recorded. The industry answer, in ascending order of strength:
+1. **Move it to a header** (`Authorization: Bearer …` / `X-Webhook-Secret`). Headers are not written to access logs by default. Cheapest real improvement.
+2. **Stop transmitting the secret at all — HMAC-sign the payload.** The sender computes `HMAC-SHA256(body, secret)` and sends it as `X-Signature`; the receiver recomputes and compares in constant time. The secret never crosses the wire, so no log can leak it. This is what Stripe, GitHub and Shopify do, and it authenticates the *body*, not just the caller, which the current scheme does not.
+3. **Store a hash, not the value** — only possible once (2) removes the need to look the secret up by value or redisplay it. Then a database leak yields nothing usable.
+4. Keep rotation (already built, live-verified 2026-07-27) as the break-glass.
+
+**Not changed in this pass, deliberately.** Any of the above is a breaking change for the live tekguyz.com form and every configured integration, and the owner explicitly fenced the triage route out of the current work. Recorded as an open Known Gap instead. Interim mitigations that cost nothing: treat the endpoint as a password (never paste it into chats, tickets or screenshots), and rotate after any suspected exposure.
+
+---
+
 ## Known Gaps — Full Historical Record
 
 The text below is the complete, unedited Known Gaps section exactly as it stood in `CLAUDE.md` immediately before the 2026-07-26 restructure that compressed it to one-line dispositions. Kept here verbatim so no historical detail was lost in that rewrite. For the current, up-to-date disposition of each gap, see `CLAUDE.md`'s own Known Gaps section — treat this block as frozen history, not a living document.
