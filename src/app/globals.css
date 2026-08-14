@@ -2,8 +2,8 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --color-canvas-soft: var(--canvas-soft);
   --color-canvas-pure: var(--canvas-pure);
@@ -11,6 +11,9 @@
   --color-ink-muted: var(--ink-muted);
   --color-hairline: var(--hairline);
   --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-cold: var(--cold);
 
   --color-pill-purple-bg: var(--pill-purple-bg);
@@ -26,87 +29,156 @@
   --color-pill-sky-bg: var(--pill-sky-bg);
   --color-pill-sky-fg: var(--pill-sky-fg);
 
-  /* Shapes > Border Radius Scale (DESIGN.md) — overrides Tailwind's stock
-     scale, which used different px values under these same names. */
-  --radius-xs: 4px;
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Border radius (DESIGN.md v2). Overrides Tailwind's stock scale under the
+     same utility names — rounded-md here is 6px. Never reason from Tailwind
+     radius defaults in this codebase. */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
 
-  /* Elevation & Depth (DESIGN.md). Level 2's stops beyond the one DESIGN.md
-     documents (the final "0 23px 52px / .05" stop) are our own interpolation
-     — DESIGN.md doesn't give the other 4. Values differ between themes (see
-     :root/.dark below) — black-on-near-black is far weaker than black-on-
-     white at the same alpha, so dark mode uses higher alphas to register at
-     all. */
+  /* Type scale (DESIGN.md v2). These are ADDITIONAL names, not overrides —
+     Tailwind's own text-xs / text-sm / text-base keep their stock meanings.
+     Size, line-height, weight and tracking are all baked in, so one utility
+     class is complete and the roles cannot drift apart at call sites. */
+  --text-display: 22px;
+  --text-display--line-height: 1.2;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.015em;
+
+  --text-h1: 18px;
+  --text-h1--line-height: 1.3;
+  --text-h1--font-weight: 650;
+  --text-h1--letter-spacing: -0.01em;
+
+  --text-h2: 15px;
+  --text-h2--line-height: 1.35;
+  --text-h2--font-weight: 600;
+  --text-h2--letter-spacing: -0.01em;
+
+  --text-title: 14px;
+  --text-title--line-height: 1.4;
+  --text-title--font-weight: 600;
+
+  --text-body-md: 13px;
+  --text-body-md--line-height: 1.5;
+  --text-body-md--font-weight: 400;
+
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 1.5;
+  --text-body-sm--font-weight: 400;
+
+  --text-label: 11px;
+  --text-label--line-height: 1.4;
+  --text-label--font-weight: 550;
+  --text-label--letter-spacing: 0.02em;
+
+  --text-caption: 11px;
+  --text-caption--line-height: 1.45;
+  --text-caption--font-weight: 400;
+
+  /* Elevation (DESIGN.md v2). Level 0 is the absence of a shadow and is the
+     default for buttons, cards, inputs and table rows — it has no token.
+     Level 1 is dropdowns and popovers only. Level 2 is modals and the command
+     palette only. Dark mode runs ~3x the light alpha at each stop, because
+     black-on-near-black is far weaker than black-on-white at equal alpha.
+     Keep that ratio if these are ever retuned. */
   --shadow-elevation-1: var(--elevation-1);
   --shadow-elevation-2: var(--elevation-2);
 }
 
 @layer base {
-  :root {
-    --canvas-soft: oklch(0.97 0.005 60);
+  /* Hue 260 (cool neutral) throughout, replacing v1's warm 60 / 240 mix.
+     `.light` exists as an explicit class, not just as :root, so a subtree can
+     be forced to light — the kitchen-sink page renders both themes side by
+     side on one screen and needs that. */
+  :root,
+  .light {
+    --canvas-soft: oklch(0.98 0.002 260);
     --canvas-pure: oklch(1 0 0);
-    --ink-main: oklch(0.12 0.008 60);
-    --ink-muted: oklch(0.5 0.006 60);
-    --hairline: oklch(0.92 0.004 60);
-    --accent: oklch(0.42 0.28 264);
-    --cold: oklch(0.7 0.005 60);
+    --ink-main: oklch(0.15 0.004 260);
+    --ink-muted: oklch(0.52 0.006 260);
+    --hairline: oklch(0.9 0.003 260);
 
-    --pill-purple-bg: oklch(0.94 0.04 300);
-    --pill-purple-fg: oklch(0.45 0.18 300);
-    --pill-pink-bg: oklch(0.94 0.045 350);
-    --pill-pink-fg: oklch(0.5 0.19 350);
-    --pill-orange-bg: oklch(0.94 0.05 55);
-    --pill-orange-fg: oklch(0.48 0.17 45);
-    --pill-teal-bg: oklch(0.94 0.04 195);
-    --pill-teal-fg: oklch(0.45 0.1 195);
-    --pill-green-bg: oklch(0.94 0.05 145);
-    --pill-green-fg: oklch(0.45 0.14 145);
-    --pill-sky-bg: oklch(0.94 0.03 235);
-    --pill-sky-fg: oklch(0.48 0.12 235);
+    /* PLACEHOLDER — NOT SAMPLED. DESIGN.md v2 ships this value so components
+       have something to render against; no Twenty CRM reference screenshot was
+       ever provided, so it has never been visually confirmed. Do not describe
+       this as final. Replace it only by sampling a real reference. */
+    --accent: oklch(0.48 0.16 260);
+    --accent-fg: oklch(0.99 0 0);
 
-    --elevation-1: 0 0.175px 1.041px rgba(0, 0, 0, 0.01),
-      0 0.8px 2.925px rgba(0, 0, 0, 0.02), 0 2.025px 7.847px rgba(0, 0, 0, 0.027),
-      0 4px 18px rgba(0, 0, 0, 0.04);
-    --elevation-2: 0 0.3px 1.8px rgba(0, 0, 0, 0.015),
-      0 1.4px 5px rgba(0, 0, 0, 0.025), 0 3.5px 13px rgba(0, 0, 0, 0.033),
-      0 8px 26px rgba(0, 0, 0, 0.042), 0 23px 52px rgba(0, 0, 0, 0.05);
+    /* --danger / --danger-fg and --accent-fg are additions beyond DESIGN.md v2,
+       approved 2026-08-14. v2 defines no destructive colour, but this app
+       archives, deletes and revokes, and the pill palette may never be used for
+       a button. The -fg pairs exist because one accent value cannot be both a
+       background and readable text across two themes. */
+    --danger: oklch(0.52 0.19 25);
+    --danger-fg: oklch(0.99 0 0);
+
+    --cold: oklch(0.68 0.004 260);
+
+    /* Decorative pills: same six hues as v1, chroma x0.78 (a ~22% cut).
+       Lightness is untouched in every pair, so existing fg/bg contrast is
+       preserved and only saturation drops. DESIGN.md v2 specifies the cut for
+       light mode only; the same ratio is applied to dark below so the two
+       themes read as one palette. */
+    --pill-purple-bg: oklch(0.94 0.031 300);
+    --pill-purple-fg: oklch(0.45 0.14 300);
+    --pill-pink-bg: oklch(0.94 0.035 350);
+    --pill-pink-fg: oklch(0.5 0.148 350);
+    --pill-orange-bg: oklch(0.94 0.039 55);
+    --pill-orange-fg: oklch(0.48 0.133 45);
+    --pill-teal-bg: oklch(0.94 0.031 195);
+    --pill-teal-fg: oklch(0.45 0.078 195);
+    --pill-green-bg: oklch(0.94 0.039 145);
+    --pill-green-fg: oklch(0.45 0.109 145);
+    --pill-sky-bg: oklch(0.94 0.023 235);
+    --pill-sky-fg: oklch(0.48 0.094 235);
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
+    --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06),
+      0 20px 44px rgba(0, 0, 0, 0.06);
   }
 
   .dark {
-    --canvas-soft: oklch(0.15 0.005 240);
-    --canvas-pure: oklch(0.19 0.005 240);
-    --ink-main: oklch(0.98 0 0);
-    --ink-muted: oklch(0.65 0.01 240);
-    /* Brightened from 0.24 — against canvas-pure (0.19) that was only a
-       5-point lightness gap vs light mode's 8-point gap (hairline .92 on
-       canvas-pure 1.0), so borders (especially nested ones, e.g. inputs on
-       cards) were reading as nearly invisible. */
-    --hairline: oklch(0.3 0.006 240);
-    --accent: oklch(0.55 0.24 264);
-    --cold: oklch(0.45 0.005 240);
+    --canvas-soft: oklch(0.14 0.004 260);
+    --canvas-pure: oklch(0.18 0.004 260);
+    --ink-main: oklch(0.97 0 0);
+    --ink-muted: oklch(0.66 0.008 260);
+    /* 10-point lightness gap over canvas-pure (0.28 vs 0.18), matching light
+       mode's 10-point gap (0.90 vs 1.00). v1 needed a one-off brightening fix
+       here because its two themes had different gaps; v2's published numbers
+       already have parity, so keep them in step if either is retuned. */
+    --hairline: oklch(0.28 0.005 260);
 
-    --pill-purple-bg: oklch(0.3 0.08 300);
-    --pill-purple-fg: oklch(0.86 0.06 300);
-    --pill-pink-bg: oklch(0.3 0.09 350);
-    --pill-pink-fg: oklch(0.87 0.07 350);
-    --pill-orange-bg: oklch(0.3 0.09 55);
-    --pill-orange-fg: oklch(0.85 0.07 55);
-    --pill-teal-bg: oklch(0.3 0.06 195);
-    --pill-teal-fg: oklch(0.85 0.05 195);
-    --pill-green-bg: oklch(0.3 0.08 145);
-    --pill-green-fg: oklch(0.85 0.06 145);
-    --pill-sky-bg: oklch(0.3 0.05 235);
-    --pill-sky-fg: oklch(0.85 0.05 235);
+    /* PLACEHOLDER — NOT SAMPLED. See the light-mode note above. */
+    --accent: oklch(0.62 0.15 260);
+    /* Dark accent is light (L 0.62), so its foreground flips to near-black.
+       Near-white on it would fail contrast. */
+    --accent-fg: oklch(0.16 0.004 260);
 
-    --elevation-1: 0 0.175px 1.041px rgba(0, 0, 0, 0.06),
-      0 0.8px 2.925px rgba(0, 0, 0, 0.1), 0 2.025px 7.847px rgba(0, 0, 0, 0.13),
-      0 4px 18px rgba(0, 0, 0, 0.18);
-    --elevation-2: 0 0.3px 1.8px rgba(0, 0, 0, 0.08),
-      0 1.4px 5px rgba(0, 0, 0, 0.12), 0 3.5px 13px rgba(0, 0, 0, 0.16),
-      0 8px 26px rgba(0, 0, 0, 0.2), 0 23px 52px rgba(0, 0, 0, 0.24);
+    --danger: oklch(0.65 0.18 25);
+    --danger-fg: oklch(0.16 0.004 25);
+
+    --cold: oklch(0.42 0.006 260);
+
+    --pill-purple-bg: oklch(0.3 0.062 300);
+    --pill-purple-fg: oklch(0.86 0.047 300);
+    --pill-pink-bg: oklch(0.3 0.07 350);
+    --pill-pink-fg: oklch(0.87 0.055 350);
+    --pill-orange-bg: oklch(0.3 0.07 55);
+    --pill-orange-fg: oklch(0.85 0.055 55);
+    --pill-teal-bg: oklch(0.3 0.047 195);
+    --pill-teal-fg: oklch(0.85 0.039 195);
+    --pill-green-bg: oklch(0.3 0.062 145);
+    --pill-green-fg: oklch(0.85 0.047 145);
+    --pill-sky-bg: oklch(0.3 0.039 235);
+    --pill-sky-fg: oklch(0.85 0.039 235);
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.18);
+    --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2),
+      0 20px 44px rgba(0, 0, 0, 0.22);
   }
 
   body {
@@ -121,17 +193,41 @@
   h5,
   h6 {
     font-weight: 700;
-    letter-spacing: -0.04em;
+    /* v2 tracking. v1 used -0.04em, which read as marketing display type; this
+       should read as dense utility. A text-* role utility still overrides both
+       properties, because utilities sit in a later cascade layer. */
+    letter-spacing: -0.015em;
   }
 
-  /* DESIGN.md's text-input spec: "Focus adds the soft Level-1 shadow."
-     Accent is also documented as the focus-signal color. Previously every
-     input used outline-none with no replacement — zero visible focus state. */
-  input:not([type="checkbox"], [type="radio"]):focus,
-  select:focus,
-  textarea:focus {
+  /* Accessibility floor: every interactive element gets a visible focus ring.
+     Keyboard only — :focus-visible, so a mouse click does not paint a ring. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Fields get a ring drawn on the border instead of an offset outline, so the
+     focus signal reads as part of the field. This is a 1px ring, NOT an
+     elevation shadow — v2 fields are Level 0 and stay flat when focused.
+     The :not() must remain a SINGLE :not() with a comma-separated list.
+     Chaining :not(a):not(b) silently fails to compile under this project's
+     Lightning CSS / Turbopack pipeline — no error, just no focus styling. */
+  input:not([type="checkbox"], [type="radio"]):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
     outline: none;
     border-color: var(--accent);
-    box-shadow: var(--shadow-elevation-1);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
