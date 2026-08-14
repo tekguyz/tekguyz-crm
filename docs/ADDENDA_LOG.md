@@ -527,6 +527,54 @@ Full sweep of every place `organizations.webhook_secret` exists in plaintext, pr
 
 ---
 
+## Archived: 15-Phase Technical Roadmap (initial build, closed)
+
+Relocated from CLAUDE.md § 2 on 2026-08-14. Every entry was already a pointer
+into this file; keeping it in the instructions file cost 31 lines a session for
+zero operational value. Nothing changed but its address.
+
+## 2. 15-PHASE TECHNICAL ROADMAP (Initial Build — Complete)
+
+This roadmap covered the initial build only, Prompts 1–15 (Phases 1–5 below); it closed out with Prompt 15b (see `docs/ADDENDA_LOG.md`). All work since has been post-launch feature work, tracked as its own named initiative per feature rather than as a continuation of this numbered list — see § 3 below. Do not add new prompts to this list; a new feature gets its own initiative section instead.
+
+Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narrative for every prompt with a "— shipped, see docs/ADDENDA_LOG.md" tag below lives in that file; prompts tagged "no written addendum" shipped before this project's addenda-writing discipline started (Prompt 11 onward) and have no dedicated narrative on file, only what's inferable from later addenda that reference them.
+
+**Phase 1: SaaS Omni-Shell Navigation Layout & Database Security**
+- Prompt 1: Initialize the complete multi-tenant platform App Shell layout tracking a fixed vertical left navigation sidebar, a dedicated sidebar footer Quick-Action button container, and a top horizontal utility header bar using pure Tailwind v4 OKLCH theme tokens. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 2: Execute the full multi-tenant Postgres database schema migration script, including membership-based tenant resolution, vaulted service-role-only credentials, per-tenant webhook secrets, revenue/outcome tracking, and RLS policies with paired WITH CHECK clauses. — shipped; full schema in `docs/SCHEMA_REFERENCE.md`.
+
+**Phase 2: Action Dashboard & Responsive Pipeline Workspace**
+- Prompt 3: Implement the complete "Today's Agenda" core focal sub-view layout components, splitting data sections into an SLA Critical queue, a high-value priority track, and a starred account bookmark workspace. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 4: Construct the desktop multi-column Kanban board and its drag/reorder state controller, using responsive Tailwind layout tokens. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 5: Construct the mobile-first prioritized Focus List, sharing its data adapter with the Kanban board from Prompt 4. — shipped (pre-addenda-discipline; no written addendum).
+- Prompt 6: Create the document-style "All Contacts" directory card grid layout, mapping every address, phone, and email variable to immediate interactive communication link shortcuts (tel:, sms:, mailto:, Google Maps URL deep links). — shipped (pre-addenda-discipline; no written addendum).
+
+**Phase 3: Decoupled Sheets, Search Palettes & Onboarding Wizards**
+- Prompt 7: Build out the interactive motion/react customer slide-over profile sheet, decoupling layout states into a separate layout shell component, a markdown executive brief module, and an activity log history stream. — shipped; the `activity_logs` migration addendum is in `docs/SCHEMA_REFERENCE.md`, no separate build narrative on file.
+- Prompt 8: Implement the global keyboard-intercepted CMD+K Command Bar overlay portal, establishing rapid fuzzy search capabilities across tenant contact rows to trigger profile sheets. — shipped (pre-addenda-discipline; no written addendum); see Known Gaps for its performance-at-scale note.
+- Prompt 9: Build the CSV Import/Export Migration Wizard's upload and column-mapping UI using PapaParse. — shipped 2026-07-25 (import only; export deliberately excluded, own follow-up), see `docs/ADDENDA_LOG.md` § Prompt 9 addendum.
+- Prompt 10: Build the CSV wizard's Zod validation layer and optimized database batch-insert Server Action. — shipped 2026-07-26, see `docs/ADDENDA_LOG.md` § Prompt 10 addendum.
+
+**Phase 4: Inbound Verification Webhooks & Multi-LLM Actions**
+- Prompt 11: Construct the hardened, secret-gated `/api/v1/triage/[webhook_secret]` POST ingestion route, configuring rate limiting, a strict Zod schema check, and tenant resolution via the per-organization webhook secret. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 11 addendum.
+- Prompt 12: Layer in the automated `gemini-3.5-flash` AI Spam Shield text verification pass and dispatch deep-linked Resend notification emails on verified inbound leads. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 12 addendum.
+- Prompt 13: Create the multi-tenant BYO API Key configuration form interface (writing to the vaulted `organization_credentials` table via Server Action) alongside the combined note-capture component with browser audio recording mechanics and optimistic "Transcribing…" UI, verifying credential presence before invoking `gemini-3.1-flash-lite` voice transcriptions. — shipped, superseded in part by 13a, see `docs/ADDENDA_LOG.md` § Prompt 13 addendum.
+- Prompt 13a: Replace `organization_credentials`'s plaintext columns with real Supabase Vault encryption, superseding Prompt 13's plain-`TEXT` implementation before any real secret was ever written to it. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 13a addendum.
+
+**Phase 5: Analytical Operations & Production Hardening**
+- Prompt 14: Engineer an asynchronous serverless cron route utilizing `gemini-3.1-pro` to sweep active lead logs, aggregate projected-vs-realized monthly revenue metrics (using the outcome/actual_revenue fields), and compile a weekly markdown executive diagnostic report delivered via Resend. — shipped (actual model id is `gemini-3.1-pro-preview`, not the roadmap's string — see the addendum), see `docs/ADDENDA_LOG.md` § Prompt 14 addendum.
+- Prompt 15: Perform a complete app-wide optimization pass to deploy global React error boundary components, mount skeleton loading fallbacks, and verify environment variable states for live production delivery on Vercel. — shipped across two addenda, see `docs/ADDENDA_LOG.md` § Prompt 15a and § Prompt 15b addenda.
+
+---
+
+## CLAUDE.md compression history
+
+**Compression history:** 41,369 → 32,786 bytes on 2026-07-30 (narrative re-accumulated *inside* existing bullets was stripped back to rule-or-status plus one pointer), then → 30,416 on 2026-08-11 (resolved Known Gaps relocated to the `ADDENDA_LOG.md` archive; Section 1's duplicated design-token values dropped in favour of `globals.css`). Nothing was ever deleted outright — it moved. **Keep it this way, and note that byte size, not line count, is the health metric here** — both times the file grew, line count barely moved because the bloat was inside existing bullets. A `✅` Known Gaps item does not live here at all, an open one is 1–2 sentences, a completed § 3 initiative is 2–3 sentences, a discipline bullet is the rule itself. The story belongs in the addendum.
+
+2026-08-14: § 2 roadmap and Known Gaps relocated out; file-size cap softened to a smell; "log it when unsure" reversed. 133 → ~60 lines.
+
+---
+
 ## Known Gaps — Full Historical Record
 
 The text below is the complete, unedited Known Gaps section exactly as it stood in `CLAUDE.md` immediately before the 2026-07-26 restructure that compressed it to one-line dispositions. Kept here verbatim so no historical detail was lost in that rewrite. For the current, up-to-date disposition of each gap, see `CLAUDE.md`'s own Known Gaps section — treat this block as frozen history, not a living document.

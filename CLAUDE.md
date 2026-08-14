@@ -2,21 +2,27 @@
 
 ## Reference Index
 
-This file was restructured on 2026-07-26 — it had grown to 741 lines / ~150KB, past the point where reading it in full every session (this file's own standing discipline) was practical. Nothing was deleted; the bulk of it moved to two companion docs:
-
-- **`docs/SCHEMA_REFERENCE.md`** — the full live database schema: every table's DDL, every RLS policy (with its paired `WITH CHECK`), every `SECURITY DEFINER` RPC, every index, plus the reconciled migration notes and the Prompt 7 `activity_logs` addendum. Open this before any migration, RLS policy, or RPC work — it's the ground truth for what the database actually looks like.
-- **`docs/ADDENDA_LOG.md`** — the full build history: every dated addendum from Prompt 11 through the CSV Import Wizard (Prompts 9–10), verbatim, plus the complete pre-2026-07-26 text of the Known Gaps section. Open this before touching credentials/vault/webhook code specifically, when asked to explain why a past decision was made, or when the one-line disposition in this file's own Known Gaps section below isn't enough detail.
-
-**Compression history:** 41,369 → 32,786 bytes on 2026-07-30 (narrative re-accumulated *inside* existing bullets was stripped back to rule-or-status plus one pointer), then → 30,416 on 2026-08-11 (resolved Known Gaps relocated to the `ADDENDA_LOG.md` archive; Section 1's duplicated design-token values dropped in favour of `globals.css`). Nothing was ever deleted outright — it moved. **Keep it this way, and note that byte size, not line count, is the health metric here** — both times the file grew, line count barely moved because the bloat was inside existing bullets. A `✅` Known Gaps item does not live here at all, an open one is 1–2 sentences, a completed § 3 initiative is 2–3 sentences, a discipline bullet is the rule itself. The story belongs in the addendum.
-
-What stays in *this* file: Section 1 (design system + operational rules + the multi-tenant security model, which is permanent law), the closed 15-phase roadmap, the post-launch feature-work status list (§ 3), the two standing-discipline sections, and Known Gaps — kept as short, current dispositions with a pointer to the full story in `ADDENDA_LOG.md`. New addenda go to `docs/ADDENDA_LOG.md` by default now, not here — this file only gets edited when something becomes a permanent rule/pattern, a post-launch initiative's status changes, or a Known Gaps disposition changes.
+- **This file:** permanent rules only — the design system, operational rules, the multi-tenant security model, post-launch initiative status, and the standing disciplines. Edit it only when a permanent rule or pattern changes.
+- **`docs/SCHEMA_REFERENCE.md`:** the live database schema — every table, RLS policy with its paired `WITH CHECK`, `SECURITY DEFINER` RPC, and index. Read before any migration, RLS, or RPC work.
+- **`docs/ADDENDA_LOG.md`:** dated build history and the full story behind past decisions. New addenda go here, not in this file.
+- **`docs/KNOWN_GAPS.md`:** deliberately deferred work.
 
 ---
 
 ## 1. CORE MECHANICS & ARCHITECTURE
 
-### File Bloat Prevention
-To keep components highly maintainable under LLM context windows, monolithic files are prohibited. Features like the customer profile view are split cleanly at the same directory level into a layout shell file, a brief component, an immutable timeline viewer, and an isolated note-capture form module. **Per-file cap: 200 lines** (raised from 150 on 2026-07-28) — split a file into a sibling at the same directory level rather than inlining further once it would cross that line.
+### File Size
+Split files by responsibility, not by line count. A file should do one thing;
+when it starts doing two, split it into a sibling at the same directory level
+(the customer profile view is the reference shape: layout shell, brief,
+timeline, note-capture, each its own module).
+
+**Around 200 lines is a smell worth a second look, not a wall.** Never split a
+cohesive unit purely to get under a number — that is how this project produced
+its worst bug class. A form split across siblings hides its own field set, so no
+single file shows it, and five `leads` columns were silently NULLed across two
+incidents as a direct result (see Form/Action Field Parity below). A 240-line
+file with one clear job beats two 120-line files that must be read together.
 
 ### UI/UX Design System (Notion High-Voltage)
 The interface mimics a document-driven desk in bright daylight: minimalist and structurally restrained. Surfaces are defined strictly by a 1px hairline border and layered near-transparent shadows — no heavy drop shadows. The "Going Cold" SLA rule: when a lead's `next_action_at` is overdue, its card border becomes a gray dashed line and its status badge desaturates to grayscale.
@@ -49,37 +55,12 @@ Following a Principal Architect audit of the original schema, five structural ga
 
 ---
 
-## 2. 15-PHASE TECHNICAL ROADMAP (Initial Build — Complete)
+## 2. Build History
 
-This roadmap covered the initial build only, Prompts 1–15 (Phases 1–5 below); it closed out with Prompt 15b (see `docs/ADDENDA_LOG.md`). All work since has been post-launch feature work, tracked as its own named initiative per feature rather than as a continuation of this numbered list — see § 3 below. Do not add new prompts to this list; a new feature gets its own initiative section instead.
-
-Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narrative for every prompt with a "— shipped, see docs/ADDENDA_LOG.md" tag below lives in that file; prompts tagged "no written addendum" shipped before this project's addenda-writing discipline started (Prompt 11 onward) and have no dedicated narrative on file, only what's inferable from later addenda that reference them.
-
-**Phase 1: SaaS Omni-Shell Navigation Layout & Database Security**
-- Prompt 1: Initialize the complete multi-tenant platform App Shell layout tracking a fixed vertical left navigation sidebar, a dedicated sidebar footer Quick-Action button container, and a top horizontal utility header bar using pure Tailwind v4 OKLCH theme tokens. — shipped (pre-addenda-discipline; no written addendum).
-- Prompt 2: Execute the full multi-tenant Postgres database schema migration script, including membership-based tenant resolution, vaulted service-role-only credentials, per-tenant webhook secrets, revenue/outcome tracking, and RLS policies with paired WITH CHECK clauses. — shipped; full schema in `docs/SCHEMA_REFERENCE.md`.
-
-**Phase 2: Action Dashboard & Responsive Pipeline Workspace**
-- Prompt 3: Implement the complete "Today's Agenda" core focal sub-view layout components, splitting data sections into an SLA Critical queue, a high-value priority track, and a starred account bookmark workspace. — shipped (pre-addenda-discipline; no written addendum).
-- Prompt 4: Construct the desktop multi-column Kanban board and its drag/reorder state controller, using responsive Tailwind layout tokens. — shipped (pre-addenda-discipline; no written addendum).
-- Prompt 5: Construct the mobile-first prioritized Focus List, sharing its data adapter with the Kanban board from Prompt 4. — shipped (pre-addenda-discipline; no written addendum).
-- Prompt 6: Create the document-style "All Contacts" directory card grid layout, mapping every address, phone, and email variable to immediate interactive communication link shortcuts (tel:, sms:, mailto:, Google Maps URL deep links). — shipped (pre-addenda-discipline; no written addendum).
-
-**Phase 3: Decoupled Sheets, Search Palettes & Onboarding Wizards**
-- Prompt 7: Build out the interactive motion/react customer slide-over profile sheet, decoupling layout states into a separate layout shell component, a markdown executive brief module, and an activity log history stream. — shipped; the `activity_logs` migration addendum is in `docs/SCHEMA_REFERENCE.md`, no separate build narrative on file.
-- Prompt 8: Implement the global keyboard-intercepted CMD+K Command Bar overlay portal, establishing rapid fuzzy search capabilities across tenant contact rows to trigger profile sheets. — shipped (pre-addenda-discipline; no written addendum); see Known Gaps for its performance-at-scale note.
-- Prompt 9: Build the CSV Import/Export Migration Wizard's upload and column-mapping UI using PapaParse. — shipped 2026-07-25 (import only; export deliberately excluded, own follow-up), see `docs/ADDENDA_LOG.md` § Prompt 9 addendum.
-- Prompt 10: Build the CSV wizard's Zod validation layer and optimized database batch-insert Server Action. — shipped 2026-07-26, see `docs/ADDENDA_LOG.md` § Prompt 10 addendum.
-
-**Phase 4: Inbound Verification Webhooks & Multi-LLM Actions**
-- Prompt 11: Construct the hardened, secret-gated `/api/v1/triage/[webhook_secret]` POST ingestion route, configuring rate limiting, a strict Zod schema check, and tenant resolution via the per-organization webhook secret. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 11 addendum.
-- Prompt 12: Layer in the automated `gemini-3.5-flash` AI Spam Shield text verification pass and dispatch deep-linked Resend notification emails on verified inbound leads. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 12 addendum.
-- Prompt 13: Create the multi-tenant BYO API Key configuration form interface (writing to the vaulted `organization_credentials` table via Server Action) alongside the combined note-capture component with browser audio recording mechanics and optimistic "Transcribing…" UI, verifying credential presence before invoking `gemini-3.1-flash-lite` voice transcriptions. — shipped, superseded in part by 13a, see `docs/ADDENDA_LOG.md` § Prompt 13 addendum.
-- Prompt 13a: Replace `organization_credentials`'s plaintext columns with real Supabase Vault encryption, superseding Prompt 13's plain-`TEXT` implementation before any real secret was ever written to it. — shipped, see `docs/ADDENDA_LOG.md` § Prompt 13a addendum.
-
-**Phase 5: Analytical Operations & Production Hardening**
-- Prompt 14: Engineer an asynchronous serverless cron route utilizing `gemini-3.1-pro` to sweep active lead logs, aggregate projected-vs-realized monthly revenue metrics (using the outcome/actual_revenue fields), and compile a weekly markdown executive diagnostic report delivered via Resend. — shipped (actual model id is `gemini-3.1-pro-preview`, not the roadmap's string — see the addendum), see `docs/ADDENDA_LOG.md` § Prompt 14 addendum.
-- Prompt 15: Perform a complete app-wide optimization pass to deploy global React error boundary components, mount skeleton loading fallbacks, and verify environment variable states for live production delivery on Vercel. — shipped across two addenda, see `docs/ADDENDA_LOG.md` § Prompt 15a and § Prompt 15b addenda.
+The initial build was a closed 15-phase roadmap (Prompts 1–15), complete. Full
+list and per-prompt narrative: `docs/ADDENDA_LOG.md` § Archived: 15-Phase
+Technical Roadmap. Do not add new prompts to it — a new feature gets its own
+initiative in § 3.
 
 ---
 
@@ -93,7 +74,10 @@ Each initiative below is tracked as its own named, numbered prompt sequence — 
 ---
 
 ## Build discipline
-Build one phase at a time. After each phase, STOP — run the dev server, apply that phase's migration to the real Supabase project, and manually verify it works before starting the next phase. Never generate more than one phase ahead of what's been verified.
+Finish and verify one unit before starting the next. Never generate ahead of
+what has been verified. "Verified" means the thing was actually run — dev server,
+test, or browser — not that it compiled. If a unit includes a migration, apply it
+to the real Supabase project and confirm it before continuing.
 
 ## Form/Action Field Parity (permanent rule)
 **Every column a Server Action writes from `formData.get("x")` must have a rendered `<input name="x">` in the form posting to it.** An absent field yields `null`, so a written-but-unrendered column is silently NULLed on every save — no error, invisible until the data is gone. Hit five `leads` columns across two incidents (2026-07-27, 2026-07-30). Defaults are worse than `|| null`, not better: `?? "UTC"` / `?? "NEW"` silently *reset* a column and pass validation, since the default is itself valid.
@@ -104,29 +88,13 @@ Whenever a form or its action changes, diff the form's `name=` set against the a
 - **Maintain the Known Gaps section for anything intentionally deferred.** If a limitation, missing enforcement, or scoped-out edge case is accepted on purpose (not just forgotten), it gets a bullet there so it doesn't silently get assumed complete in a later session.
 - **When a Known Gaps item flips from ⬜ to ✅, relocate its one-liner out of this file into `docs/ADDENDA_LOG.md` § "Known Gaps — Resolved Items Archive" in that same session** — don't leave a resolved item inline "to clean up later." Deferred cleanup is exactly what let this section regrow to the point of needing two separate compression passes; make relocation part of closing the gap, not a follow-up task.
 - **Build the current unit in isolation unless the roadmap already documents a shared requirement.** Build shared infrastructure ahead of time only when this file's own roadmap text explicitly calls for the sharing (e.g. Prompt 5's data adapter, shared with Prompt 4's Kanban); anticipating an unstated future consumer is scope creep.
-- **`preview_click` can silently no-op on state-changing buttons while still reporting success.** Cross-check any such result against the network/DOM before trusting it; `button.click()` via `preview_eval` is the reliable fallback.
+- **A scripted click on a state-changing button can report success while doing nothing.** Cross-check any such result against the network tab or the DOM before trusting it. The current Browser pane tools are `computer` (real pointer and keyboard), `read_page`, `read_network_requests`, and `javascript_tool`; a direct `button.click()` via `javascript_tool` is the reliable fallback when a synthetic click no-ops.
 - **If `document.visibilityState` reads `"hidden"`, the whole app can fail to respond to any click, not just the component under test.** Before debugging new code, test an already-shipped control the same way — if it also fails, this is environmental, so fall back to scripted verification instead of fighting the browser tool. Full symptoms: `docs/ADDENDA_LOG.md` § Silent NULL-on-save data-loss bug.
 - **A controlled Radix overlay whose trigger lives outside its `Root` does not return focus to that trigger on close.** When the trigger can't live inside the `Root` (e.g. one overlay in `AppShell` opened from several places), capture `document.activeElement` at open time and restore it in `onCloseAutoFocus` via `preventDefault()` + `.focus()`, guarded by `isConnected`. Test focus return with the trigger **genuinely focused first** — a programmatic `.click()` never focuses — and assert on `document.activeElement` directly. Full history: `docs/ADDENDA_LOG.md` § Help Drawer addendum — Prompt 1, § Prompt 2.
 - **A dispatched synthetic `mouseover`/`mouseenter` does not fire React's `onMouseEnter`.** Test hover-driven UI with a real pointer (`computer{action:"hover"}`) or through its click path. Related: the Browser pane's screenshot-to-viewport coordinate scale drifts as the pane resizes, so derive it fresh from a known element's `getBoundingClientRect()` each time.
-- **Update CLAUDE.md proactively, without being asked,** whenever a durable architectural decision, newly-discovered constraint, scope decision, or permanent verification habit is established. When unsure whether something is durable enough, log it — a stale entry is easier to prune than a decision that only existed in a cleared chat. **New dated addenda go to `docs/ADDENDA_LOG.md`, not this file**; edit this one only for a permanent rule/pattern change or a Known Gaps disposition update.
+- **Update CLAUDE.md proactively, without being asked,** whenever a durable architectural decision, newly-discovered constraint, scope decision, or permanent verification habit is established. When unsure whether something is durable enough, leave it out — this file has needed two emergency compressions, and "log it when unsure" is what filled it. If it turns out to matter, it will come up again and can be logged then. **New dated addenda go to `docs/ADDENDA_LOG.md`, not this file**; edit this one only for a permanent rule/pattern change or a Known Gaps disposition update.
 - **Supabase MCP tool-access rule:** read-only MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT only) may be used freely for self-verification. Anything that writes schema (`apply_migration`, any DDL) must never be called directly — write the migration SQL file and hand it to the human. The one standing exception is the `vault` schema, which has no client-facing surface at all (see `docs/ADDENDA_LOG.md` § Prompt 13a addendum); it does **not** extend to any `public`-schema table, which must go through the app's own service-role key per Prompt 11's pattern. **This has been broken once already** (§ Lead Field Completion addendum, 2026-07-27) — before reaching for `execute_sql` to write or restore any `public`-schema row, stop and use a disposable script instead.
 
-## Known Gaps (open only — resolved items archived in docs/ADDENDA_LOG.md)
-Each bullet below is a current, one-line disposition for something still open (⬜) or partially open. **Fully resolved (✅) items are not kept here** — the moment a gap closes completely, its one-liner relocates to `docs/ADDENDA_LOG.md` § "Known Gaps — Resolved Items Archive" in the same session (see Session & Verification Discipline below), so this section doesn't silently regrow with old, done work. A couple of bullets below still show a ✅ alongside a ⬜: that's a partially-resolved gap where real open scope remains — the ✅ portion is context for why the ⬜ portion is scoped the way it is, not something forgotten. Full discovery narrative, live-verification detail, and historical context for every item — including the complete pre-2026-07-26 text of this section — lives in `docs/ADDENDA_LOG.md` under "Known Gaps — Full Historical Record" and in the addendum each pointer names. Treat an item here with no date as stale and re-triage it.
-
-- **CSV Import/Export Wizard (Prompts 9–10).** ✅ Import: fully built and live-verified (2026-07-26). ⬜ Export: deliberately deferred as its own follow-up — shares no machinery with import. Full history: `docs/ADDENDA_LOG.md` § Prompt 9 addendum, § Prompt 10 addendum, § Production Gaps Sweep addendum.
-- **Signup-confirmation path, post `/auth/confirm` PKCE fix.** ⬜ Consciously deferred — the fix should carry over by construction, but is not live-email-verified due to Supabase's auth rate limit. Full history: `docs/ADDENDA_LOG.md` § Signup-confirmation live-email re-check attempt.
-- **No account-level (user-scoped) settings surface exists.** ✅ Mostly fixed 2026-07-27 — `AccountPanel` on `/settings` covers password change, display name, and notification preferences. ⬜ Still open by deliberate scope: email change, account deletion (needs its own decision about an OWNER's leads first), and an org switcher (no persisted "active org" concept exists yet). Full history: `docs/ADDENDA_LOG.md` § Account Panel: Password, Display Name, Notification Preferences addendum.
-- **Team management is view-only beyond invites.** ⬜ Flagged, not fixed (2026-07-25) — no role change or member removal. Becomes urgent at the first real MEMBER invite, same trigger as the `leads` role-enforcement gap below. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
-- **3 of 5 `organization_credentials` vault columns have no UI.** ⬜ Partly stale as of 2026-08-11: OpenAI and Twilio genuinely have no caller, but **Resend now has two** (`notify-new-lead.ts`, `send-weekly-report.ts`) — they resolve it via the `PLATFORM_RESEND_API_KEY` env fallback, so per-org BYO Resend is the only piece actually missing. Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
-- **The webhook secret is a bearer credential carried in the URL path, so it lands in request logs.** ⬜ Reported not fixed (2026-08-11) — it is unavoidably logged by Vercel/Next on every ingest (`POST /api/v1/triage/<secret>`), and stored as a plain `uuid` column rather than in Vault like `organization_credentials`. Rotation is the current mitigation and works. Moving it to a header, or better to an HMAC payload signature, is the real fix but is a breaking change for every live integration. Full analysis: `docs/ADDENDA_LOG.md` § Webhook secret exposure audit.
-- **`leads` has no `message` column — the visitor's own words are not first-class data.** ⬜ Reported not fixed (2026-08-11) — the enquiry text survives only inside `activity_logs.content` as raw webhook JSON, so it is unsearchable and invisible in the UI, yet it is the main thing the spam shield scores. Needs a migration plus read/display plumbing; revisit when lead detail matters more than lead routing.
-- **Webhook ingestion upserts by email, overwriting the earlier enquiry.** ⬜ Reported not fixed (2026-08-11) — a returning address overwrites `client_name`/`company`/`service_category` and reactivates an archived row to NEW. Demonstrated live on `510c28db`. Deliberate for the Resurrection Engine, almost certainly not for the overwrite; needs a decision (append a new lead vs. keep first-write-wins) before it is changed.
-- **AI Spam Shield over-triggers on the tekguyz.com form's own placeholder copy.** ⬜ Reported not fixed (2026-08-11) — deliberately out of scope of the routing fix, since tuning a classifier is its own change with its own verification. The blast radius is now capped (flagged leads stay visible and still notify), so this is a precision problem, not a data-loss one.
-- **10 pre-existing shield-archived leads are still hidden.** ⬜ Backfill scoped but deliberately not run (2026-08-11) — the fix is forward-only. Exact scope and the one-statement backfill are in `docs/ADDENDA_LOG.md` § Spam Shield routing fix; it is the owner's call, not a silent cleanup.
-- **`lead_source`/`service_category` are free text with no managed vocabulary.** ⬜ Deferred as P3 (2026-07-30) — a select/typeahead would help analytics grouping, but needs its own decision about the option list and migrating existing free-text values. Revisit when analytics grouping actually matters.
-- **`leads` CRUD has zero role enforcement** — any MEMBER has full CRUD parity with OWNER/ADMIN. ⬜ **Trigger has now fired (re-triaged 2026-08-11) — no longer theoretical.** The 2026-07-22 deferral rested on "zero MEMBER-role users exist"; there are now 2 real MEMBERs, both in `TEKGUYZ Demo` (the real `TEKGUYZ` org still has only its OWNER). Exposure is demo data only, so it is not urgent, but the original justification no longer holds — decide before a MEMBER is added to the real org. Same trigger as the Team-management gap above. Full history: `docs/ADDENDA_LOG.md` § Known Gaps — Full Historical Record.
-- **Command palette (Prompt 8) has no pagination or debounce.** ⬜ Consciously deferred; scale note refreshed 2026-08-11 — 14 leads in the real org, 20 in demo, so still trivially fast (the old "0-lead" justification was stale). Revisit around low hundreds of contacts. Full history: `docs/ADDENDA_LOG.md` § Known Gaps — Full Historical Record.
-- **Mobile AppShell/Sidebar has no responsive collapse.** ⬜ Deferred (2026-07-25) — likely folded into the upcoming Claude Design pass rather than patched standalone; timing still an open decision, not ignored. Full history: `docs/ADDENDA_LOG.md` § Known Gaps — Full Historical Record.
-- **`get_advisors` (security + performance) findings.** ⬜ Triaged 2026-07-22 — mostly by-design or non-issues at current scale (unindexed FKs, `auth_rls_initplan` warnings, unused indexes, RLS-enabled-no-policy on service-role-only tables). Revisit the performance items if row counts reach the thousands. Full history: `docs/ADDENDA_LOG.md` § Known Gaps — Full Historical Record, § Prompt 15b addendum.
-- **Manual, human-only checklist:** enable Leaked Password Protection (Authentication → Policies/Providers) once this project is off Supabase's free tier — confirmed off as of 2026-07-24, correctly not actionable today. The only item in this file that needs a human dashboard action, not a code fix.
+## Known Gaps
+Deliberately deferred work lives in `docs/KNOWN_GAPS.md`, including the rules
+for maintaining it. Read it before assuming any limitation is already handled.
