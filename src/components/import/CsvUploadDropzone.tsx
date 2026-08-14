@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Papa from "papaparse";
-import { UploadCloud } from "lucide-react";
+import { IconCloudUpload } from "@tabler/icons-react";
 import {
   MAX_IMPORT_ROWS,
   type ParsedCsvFile,
@@ -77,7 +77,7 @@ export function CsvUploadDropzone({ onParsed }: { onParsed: (file: ParsedCsvFile
           dragging ? "border-accent bg-canvas-soft" : "border-hairline"
         }`}
       >
-        <UploadCloud className="mx-auto mb-3 size-8 text-ink-muted" />
+        <IconCloudUpload className="mx-auto mb-3 size-8 text-ink-muted" />
         <p className="mb-1 text-sm font-medium">
           {parsing ? "Reading your file…" : "Drop a CSV file here"}
         </p>

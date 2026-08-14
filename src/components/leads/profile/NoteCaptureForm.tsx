@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { Mic, Square } from "lucide-react";
+import { IconMicrophone, IconSquare } from "@tabler/icons-react";
 import { addManualNote, addAudioTranscript } from "@/lib/activity/actions";
 import { useAudioRecorder } from "@/lib/hooks/use-audio-recorder";
 
@@ -103,7 +103,7 @@ export function NoteCaptureForm({
               : "bg-canvas-pure text-ink-muted hover:bg-canvas-soft hover:text-ink-main"
           }`}
         >
-          {recorderStatus === "recording" ? <Square className="size-4" /> : <Mic className="size-4" />}
+          {recorderStatus === "recording" ? <IconSquare className="size-4" /> : <IconMicrophone className="size-4" />}
         </button>
       </div>
 

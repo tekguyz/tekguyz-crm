@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { IconHelpCircle } from "@tabler/icons-react";
 import { useHelp } from "@/components/help/HelpContext";
 
 // Just an opener now — the drawer itself is mounted once in AppShell and
@@ -16,7 +16,7 @@ export function HelpTrigger() {
       onClick={() => openHelp()}
       className="flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
     >
-      <HelpCircle className="size-4" />
+      <IconHelpCircle className="size-4" />
       <span className="sr-only">Help</span>
     </button>
   );

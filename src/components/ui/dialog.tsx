@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -72,7 +72,7 @@ function DialogContent({
             data-slot="dialog-close"
             className="absolute top-4 right-4 flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
           >
-            <X className="size-4" />
+            <IconX className="size-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { Modal } from "@/components/ui/Modal";
 import { createLead, type LeadFormState } from "@/lib/leads/actions";
 
@@ -32,7 +32,7 @@ export function CreateLeadModal() {
         onClick={() => setOpen(true)}
         className="flex w-full items-center justify-center gap-2 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
       >
-        <Plus className="size-4" />
+        <IconPlus className="size-4" />
         New Lead
       </button>
 

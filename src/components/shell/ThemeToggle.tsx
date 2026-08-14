@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { IconSun, IconMoon, IconDeviceDesktop } from "@tabler/icons-react";
 
 // Three-state cycle (System → Light → Dark), not a two-state light/dark
 // switch. The root ThemeProvider is configured with defaultTheme="system"
@@ -13,7 +13,7 @@ import { Sun, Moon, Monitor } from "lucide-react";
 const ORDER = ["system", "light", "dark"] as const;
 type ThemeChoice = (typeof ORDER)[number];
 
-const ICONS = { system: Monitor, light: Sun, dark: Moon };
+const ICONS = { system: IconDeviceDesktop, light: IconSun, dark: IconMoon };
 const LABELS = { system: "System", light: "Light", dark: "Dark" };
 
 const BUTTON_CLASS =

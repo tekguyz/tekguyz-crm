@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import type { Lead } from "@/lib/leads/queries";
 import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
 import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
@@ -81,7 +81,7 @@ export function ProfileSheet({
                 aria-label="Close"
                 className="rounded-md p-1 text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
               >
-                <X className="size-4" />
+                <IconX className="size-4" />
               </button>
             </div>
 

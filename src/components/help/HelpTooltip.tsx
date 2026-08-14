@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { IconHelpCircle } from "@tabler/icons-react";
 import { useHelp } from "@/components/help/HelpContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -24,7 +24,7 @@ export function HelpTooltip({ topicId, blurb }: { topicId: string; blurb: string
           onFocus={() => setOpen(true)}
           className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:text-ink-main"
         >
-          <HelpCircle className="size-4" />
+          <IconHelpCircle className="size-4" />
         </button>
       </PopoverTrigger>
       <PopoverContent

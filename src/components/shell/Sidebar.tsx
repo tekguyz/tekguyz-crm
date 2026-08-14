@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, KanbanSquare, Users, Upload, Settings } from "lucide-react";
+import { IconLayoutGrid, IconLayoutKanban, IconUsers, IconUpload, IconSettings } from "@tabler/icons-react";
 import { SidebarQuickAction } from "@/components/shell/SidebarQuickAction";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Today", icon: LayoutGrid },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/import", label: "Import", icon: Upload },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Today", icon: IconLayoutGrid },
+  { href: "/pipeline", label: "Pipeline", icon: IconLayoutKanban },
+  { href: "/contacts", label: "Contacts", icon: IconUsers },
+  { href: "/import", label: "Import", icon: IconUpload },
+  { href: "/settings", label: "Settings", icon: IconSettings },
 ];
 
 export function Sidebar() {

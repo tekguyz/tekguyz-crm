@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, LogOut } from "lucide-react";
+import { IconSearch, IconLogout } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth/actions";
 import { CommandBar } from "@/components/command/CommandBar";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -36,7 +36,7 @@ export function Header({
         onClick={() => setCommandOpen(true)}
         className="flex items-center gap-2 rounded-md border border-hairline px-3.5 py-1 text-sm text-ink-muted shadow-elevation-1 transition-colors hover:bg-canvas-soft hover:text-ink-main"
       >
-        <Search className="size-4" />
+        <IconSearch className="size-4" />
         Search
         <kbd className="ml-4 rounded border border-hairline px-1.5 py-0.5 text-xs text-ink-muted">
           ⌘K
@@ -61,7 +61,7 @@ export function Header({
             title="Sign out"
             className="flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
           >
-            <LogOut className="size-4" />
+            <IconLogout className="size-4" />
           </button>
         </form>
       </div>

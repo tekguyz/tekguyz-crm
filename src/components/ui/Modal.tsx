@@ -2,7 +2,7 @@
 
 import { createContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 
 // Exposes this Modal's own <dialog> DOM node so nested Radix-portal-based
 // components (e.g. AlertDialog) can portal into it instead of document.body.
@@ -60,7 +60,7 @@ export function Modal({
           aria-label="Close"
           className="rounded-md p-1 text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
         >
-          <X className="size-4" />
+          <IconX className="size-4" />
         </button>
       </div>
       <ModalPortalContext.Provider value={portalTarget}>{children}</ModalPortalContext.Provider>

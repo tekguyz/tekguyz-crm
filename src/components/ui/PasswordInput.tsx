@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
 
 export function PasswordInput({
   name,
@@ -33,7 +33,7 @@ export function PasswordInput({
         aria-label={visible ? "Hide password" : "Show password"}
         className="absolute top-1/2 right-2 -translate-y-1/2 text-ink-muted transition-colors hover:text-ink-main"
       >
-        {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        {visible ? <IconEyeOff className="size-4" /> : <IconEye className="size-4" />}
       </button>
     </div>
   );

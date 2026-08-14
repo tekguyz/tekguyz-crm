@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, MessageSquare, Mail, MapPin } from "lucide-react";
+import { IconPhone, IconMessage, IconMail, IconMapPin } from "@tabler/icons-react";
 import type { ContactLead } from "@/lib/leads/queries";
 import { EditLeadModal } from "@/components/leads/EditLeadModal";
 
@@ -33,17 +33,17 @@ export function ContactCard({ lead }: { lead: ContactLead }) {
           {lead.phone && (
             <>
               <a href={`tel:${lead.phone}`} className={actionLinkClass}>
-                <Phone className="size-3.5" />
+                <IconPhone className="size-3.5" />
                 Call
               </a>
               <a href={`sms:${lead.phone}`} className={actionLinkClass}>
-                <MessageSquare className="size-3.5" />
+                <IconMessage className="size-3.5" />
                 Text
               </a>
             </>
           )}
           <a href={`mailto:${lead.email}`} className={actionLinkClass}>
-            <Mail className="size-3.5" />
+            <IconMail className="size-3.5" />
             Email
           </a>
           {lead.physical_address && (
@@ -53,7 +53,7 @@ export function ContactCard({ lead }: { lead: ContactLead }) {
               rel="noopener noreferrer"
               className={actionLinkClass}
             >
-              <MapPin className="size-3.5" />
+              <IconMapPin className="size-3.5" />
               Map
             </a>
           )}

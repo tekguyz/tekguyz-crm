@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import Fuse from "fuse.js";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 import { fetchSearchableContacts } from "@/lib/leads/actions";
 import type { ContactLead } from "@/lib/leads/queries";
 import { CommandResultItem } from "@/components/command/CommandResultItem";
@@ -107,7 +107,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
               className="fixed top-24 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-canvas-pure shadow-elevation-2"
             >
               <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
-                <Search className="size-4 shrink-0 text-ink-muted" />
+                <IconSearch className="size-4 shrink-0 text-ink-muted" />
                 <input
                   autoFocus
                   value={query}

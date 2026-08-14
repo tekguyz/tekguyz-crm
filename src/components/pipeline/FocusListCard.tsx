@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
+import { IconStar } from "@tabler/icons-react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { PIPELINE_STATUSES, PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipeline";
@@ -46,7 +46,7 @@ export function FocusListCard({
             )}
           </div>
           {lead.is_starred && (
-            <Star
+            <IconStar
               className={`size-4 shrink-0 ${
                 overdue ? "fill-ink-muted text-ink-muted" : "fill-pill-orange-fg text-pill-orange-fg"
               }`}

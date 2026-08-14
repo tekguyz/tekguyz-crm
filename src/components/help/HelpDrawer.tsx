@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Fuse from "fuse.js";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 import { HELP_TOPICS, type HelpTopic } from "@/lib/help/content";
 import { useHelp } from "@/components/help/HelpContext";
 import {
@@ -78,7 +78,7 @@ export function HelpDrawer() {
             Quick answers for the parts of the app that need one.
           </DialogDescription>
           <div className="mt-3 flex items-center gap-2 rounded-xs border border-hairline bg-canvas-pure p-1.5">
-            <Search className="size-4 shrink-0 text-ink-muted" />
+            <IconSearch className="size-4 shrink-0 text-ink-muted" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
