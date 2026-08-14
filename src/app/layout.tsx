@@ -19,9 +19,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The font variable must live on <html>, not <body>. Tailwind's preflight
+  // applies font-family: var(--font-sans) at the html level, and --font-sans
+  // resolves to var(--font-inter) — so declaring --font-inter on <body> puts it
+  // out of reach and the whole app silently falls back to the system stack,
+  // with no error anywhere.
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
           <Toaster />
