@@ -60,7 +60,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-hairline bg-canvas-pure p-6 text-ink-main shadow-elevation-2 duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-hairline bg-canvas-pure p-4 text-ink-main shadow-elevation-2 duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}
@@ -96,7 +96,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("text-base font-semibold", className)}
+      className={cn("text-h2", className)}
       {...props}
     />
   );
@@ -109,7 +109,7 @@ function AlertDialogDescription({
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-sm text-ink-muted", className)}
+      className={cn("text-body-md text-ink-muted", className)}
       {...props}
     />
   );
@@ -122,8 +122,17 @@ function AlertDialogAction({
   return (
     <AlertDialogPrimitive.Action
       data-slot="alert-dialog-action"
+      // Mirrors Button's `primary` variant: Level 0, hairline-or-transparent
+      // border, no shadow. v1 gave this a Level-1 shadow that grew to Level 2
+      // on hover; under v2 elevation is reserved for popovers and modals, and a
+      // button inside a modal is not itself elevated. Radix needs its own props
+      // forwarded onto the element, so this restates Button's classes rather
+      // than composing it.
+      //
+      // text-accent-fg, not text-canvas-pure: --accent flips lightness between
+      // themes, which is the whole reason the -fg pair exists.
       className={cn(
-        "inline-flex items-center justify-center rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60",
+        "text-body-md inline-flex h-8 items-center justify-center rounded-md border border-transparent bg-accent px-3 font-medium text-accent-fg transition-colors hover:opacity-90 disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -138,8 +147,9 @@ function AlertDialogCancel({
   return (
     <AlertDialogPrimitive.Cancel
       data-slot="alert-dialog-cancel"
+      // Mirrors Button's `secondary` variant — see AlertDialogAction above.
       className={cn(
-        "inline-flex items-center justify-center rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft",
+        "text-body-md inline-flex h-8 items-center justify-center rounded-md border border-hairline bg-canvas-pure px-3 font-medium text-ink-main transition-colors hover:bg-canvas-soft",
         className,
       )}
       {...props}
