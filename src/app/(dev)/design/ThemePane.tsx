@@ -1,3 +1,4 @@
+import { ButtonsSection } from "./sections/ButtonsSection";
 import { TokensSection } from "./sections/TokensSection";
 
 // Forces an explicit theme on its subtree rather than inheriting the ambient
@@ -19,6 +20,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
         <h2 className="text-h1 mb-4 text-ink-main capitalize">{theme}</h2>
         <div className="flex flex-col gap-6">
           <TokensSection />
+          <ButtonsSection />
         </div>
       </div>
     </section>
