@@ -16,6 +16,10 @@ CLAUDE.md compression passes.
 - A ✅ shown beside a ⬜ means partially resolved with real open scope — the ✅
   half is context for why the ⬜ half is scoped as it is.
 - An item with no date is stale. Re-triage it before relying on it.
+- Full discovery narrative and historical context for every item — including the
+  complete pre-2026-07-26 text of this register — lives in
+  `docs/ADDENDA_LOG.md` § "Known Gaps — Full Historical Record", plus whichever
+  addendum each individual bullet names.
 
 ## Open items
 

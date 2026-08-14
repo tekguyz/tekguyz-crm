@@ -533,7 +533,7 @@ Relocated from CLAUDE.md § 2 on 2026-08-14. Every entry was already a pointer
 into this file; keeping it in the instructions file cost 31 lines a session for
 zero operational value. Nothing changed but its address.
 
-## 2. 15-PHASE TECHNICAL ROADMAP (Initial Build — Complete)
+### 2. 15-PHASE TECHNICAL ROADMAP (Initial Build — Complete)
 
 This roadmap covered the initial build only, Prompts 1–15 (Phases 1–5 below); it closed out with Prompt 15b (see `docs/ADDENDA_LOG.md`). All work since has been post-launch feature work, tracked as its own named initiative per feature rather than as a continuation of this numbered list — see § 3 below. Do not add new prompts to this list; a new feature gets its own initiative section instead.
 
@@ -571,7 +571,13 @@ Full DB schema for Prompt 2 lives in `docs/SCHEMA_REFERENCE.md`. Full build narr
 
 **Compression history:** 41,369 → 32,786 bytes on 2026-07-30 (narrative re-accumulated *inside* existing bullets was stripped back to rule-or-status plus one pointer), then → 30,416 on 2026-08-11 (resolved Known Gaps relocated to the `ADDENDA_LOG.md` archive; Section 1's duplicated design-token values dropped in favour of `globals.css`). Nothing was ever deleted outright — it moved. **Keep it this way, and note that byte size, not line count, is the health metric here** — both times the file grew, line count barely moved because the bloat was inside existing bullets. A `✅` Known Gaps item does not live here at all, an open one is 1–2 sentences, a completed § 3 initiative is 2–3 sentences, a discipline bullet is the rule itself. The story belongs in the addendum.
 
-2026-08-14: § 2 roadmap and Known Gaps relocated out; file-size cap softened to a smell; "log it when unsure" reversed. 133 → ~60 lines.
+2026-08-14: § 2 roadmap and Known Gaps relocated out; file-size cap softened to a smell; "log it when unsure" reversed. 133 → 100 lines. (The plan predicted ~60; its arithmetic ignored that the replacement text for File Size and Build discipline is longer than what it replaced. Nothing was cut to chase the number.)
+
+Two paragraphs from the pre-2026-08-14 Reference Index are preserved here rather than lost, since the replacement index re-expresses their substance more briefly:
+
+> This file was restructured on 2026-07-26 — it had grown to 741 lines / ~150KB, past the point where reading it in full every session (this file's own standing discipline) was practical. Nothing was deleted; the bulk of it moved to two companion docs.
+
+> What stays in *this* file: Section 1 (design system + operational rules + the multi-tenant security model, which is permanent law), the closed 15-phase roadmap, the post-launch feature-work status list (§ 3), the two standing-discipline sections, and Known Gaps — kept as short, current dispositions with a pointer to the full story in `ADDENDA_LOG.md`. New addenda go to `docs/ADDENDA_LOG.md` by default now, not here — this file only gets edited when something becomes a permanent rule/pattern, a post-launch initiative's status changes, or a Known Gaps disposition changes.
 
 ---
 
