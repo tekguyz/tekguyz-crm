@@ -1,7 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme {
+/* `inline` is load-bearing, not cosmetic. A plain `@theme` emits each token as
+   a real custom property on :root — `--color-canvas-soft: var(--canvas-soft)`.
+   Custom-property substitution happens on the element that declares it, so that
+   indirection resolves against :root's `--canvas-soft` and only the already
+   resolved colour inherits downward. A nested `.light` / `.dark` wrapper can
+   then redeclare `--canvas-soft` all it likes and no utility will notice: both
+   theme panes on /design rendered identically dark. `@theme inline` instead
+   inlines the reference into the utility itself
+   (`.bg-canvas-soft { background-color: var(--canvas-soft) }`), so the lookup
+   happens on the element being painted and a scoped wrapper re-themes its own
+   subtree. Required for any nested theme scope; harmless for the html-level
+   theme next-themes drives. */
+@theme inline {
   --font-sans: var(--font-inter);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
