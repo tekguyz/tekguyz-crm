@@ -527,6 +527,65 @@ Full sweep of every place `organizations.webhook_secret` exists in plaintext, pr
 
 ---
 
+## Design System v2 "Structural Neutral" — foundation layer (2026-08-14)
+
+Twelve tasks (0–12), one commit each, on `main`. Spec: `docs/superpowers/specs/2026-08-14-design-system-v2-foundation-design.md`. Plan: `docs/superpowers/plans/2026-08-14-design-system-v2-foundation.md`. This is the **foundation layer only** — tokens, primitives, and a reference surface. Rolling the primitives out across the app's actual views is a separate, still-outstanding prompt.
+
+**The pivot.** Notion High-Voltage is gone in full. v1 was a document-driven desk in bright daylight — warm hue, soft shadows, generous radii, marketing-display tracking. v2 is a dense utility instrument: structure comes from hairline borders and spacing, not shadow; colour is signal, not decoration.
+
+- **Hue.** v1's warm `60` / `240` mix → a single cool neutral `260` across every neutral and the accent. This is the single biggest lever in the whole re-skin; nothing else changes the read as much.
+- **Elevation flattened.** Level 0 (hairline, zero shadow) is now the default for buttons, cards, inputs and table rows — v1 gave buttons and default cards a Level-1 shadow and that is deliberately gone. Level 1 is popovers/dropdowns only; Level 2 is modals and the command palette only. The ~3x dark-mode alpha ratio carried over from v1 and still holds.
+- **Radius tightened.** 3/4/6/8/10px under the `rounded-xs|sm|md|lg|xl` names, which override Tailwind's stock scale. Reasoning from Tailwind radius defaults in this codebase is always wrong.
+- **Type scale.** Eight named roles (`text-display`/`h1`/`h2`/`title`/`body-md`/`body-sm`/`label`/`caption`) baking size, line-height, weight and tracking into one utility, so a role cannot drift apart at call sites. These are **additional** names — `text-xs`/`sm`/`base` keep their stock Tailwind meanings. Heading tracking went `-0.04em` → `-0.015em`.
+- **Pills desaturated** by chroma × 0.78 (~22%) with lightness untouched, so fg/bg contrast is preserved and only saturation drops. DESIGN.md v2 specified the cut for light mode only; the same ratio was applied to dark so the two themes read as one palette, and that decision is now recorded in `docs/DESIGN.md`.
+
+**`--accent` is an UNSAMPLED PLACEHOLDER.** Light `oklch(0.48 0.16 260)`, dark `oklch(0.62 0.15 260)`. DESIGN.md v2 was written from Twenty CRM as a visual reference, but **no reference screenshot was ever attached to this work**, so the accent has never been sampled from or compared against anything. It ships because components need something to render against. It carries an inline PLACEHOLDER comment in `globals.css`, a note on the `/design` page itself, and an open entry in `docs/KNOWN_GAPS.md`. Do not describe it as final, sampled, or verified. Everything downstream reads the token, so replacing it is a one-line change.
+
+**Three tokens are additions beyond DESIGN.md v2**, approved 2026-08-14 and now recorded in DESIGN.md itself:
+
+- `--danger` / `--danger-fg` — v2 defines no destructive colour, but this app archives, deletes, revokes and rotates. The decorative pill palette may never be used for a button, so reuse was not an option; inventing a destructive tone was the only path that did not break a standing rule.
+- `--accent-fg` — a contrast requirement, not a style choice. Dark `--accent` is *light* (L 0.62), so near-white text on it fails contrast. One accent value cannot be both a background and readable text across two themes, so the foreground flips by theme. The same applies to `--danger-fg`. Never hardcode white on the accent.
+
+**Fonts.** Geist → Inter via `next/font`. Geist Mono was dropped rather than re-pointed: `font-mono` had zero consumers anywhere in `src/`, so it was a font download for nothing; `--font-mono` now resolves to a system stack so a future code block still renders.
+
+**The Inter bug — one commit's worth of nothing.** The swap was declared correct and was not: `next/font` put `--font-inter` on `<body>`, but Tailwind's preflight applies `font-family: var(--font-sans)` at the **`<html>`** level, and `--font-sans` resolves to `var(--font-inter)`. Declared on `<body>`, the variable is out of reach of the rule that consumes it, so the entire app silently rendered in the system fallback stack — no error, no warning, and a build that passes. Fixed by moving the variable to `<html>` (commit `1e234d1`), with the reasoning left as a comment in `layout.tsx`. Promoted to a permanent rule in CLAUDE.md § UI/UX.
+
+**Icon sweep.** `lucide-react` fully removed, `@tabler/icons-react` in, across 19 files — import lines and identifiers only, no className/prop/layout/logic edits. `tsc --noEmit` was the completeness check: any icon left un-renamed becomes an undefined identifier and fails the typecheck, so the sweep could not be partially done and still compile.
+
+**Primitives built (8), all in `src/components/ui/`:** `Button` (4 variants × 2 sizes + loading), `Input`, `Textarea`, `Select` (one shared label/hint/error/aria contract across all three), `Card` (owns the Going Cold dashed border), `Badge` (owns the Going Cold desaturated tone), `NavItem`, and a bare `Table` shell. **Refactored onto v2 tokens:** `PasswordInput` and `CopyButton` (both now compose the new primitives rather than restyling their own markup), `Skeleton`, `Modal`, `dialog`, `alert-dialog`, `popover`. `sonner.tsx` was on the plan's restyle list but needed **no** change — it maps sonner's own CSS variables onto `--canvas-pure` / `--ink-main` / `--hairline` by raw token name, and all three survived the v2 swap. Left untouched deliberately rather than edited to look busy.
+
+Two things had no clean primitive equivalent and were handled explicitly rather than forced: no `Dialog` wrapper was built (`Modal` was restyled in place — a wrapper would have been a second overlay recipe competing with the three Radix ones already standardised), and the `Table` shell ships deliberately bare — no sorting, selection, or virtualisation, because DESIGN.md v2 puts Table View out of scope and it currently has no consumer at all.
+
+**`/design`** — a dev-only kitchen-sink route outside the `(app)` group, so it inherits no AppShell chrome. It renders every primitive in every state twice on one page, once under an explicit `.light` scope and once under `.dark`, so both themes are verifiable without toggling. It calls `notFound()` when `NODE_ENV === "production"`.
+
+**Vitest + React Testing Library** adopted (dev-only): 49 tests across 8 suites, `globals: false` so every test file imports its own `describe`/`it`/`expect`. Scope limit is deliberate and should not be assumed wider: the tests cover the 8 new primitives and nothing else. Everything predating them is still untested.
+
+**CLAUDE.md** was restructured first (Task 0) because its file-size rule governed what the rest of the work was allowed to do. Seven audited items: the closed 15-phase roadmap and the Known Gaps register both relocated out (§ Archived: 15-Phase Technical Roadmap above, and `docs/KNOWN_GAPS.md`); the hard 200-line cap softened to "a smell, not a wall"; "log it when unsure" reversed to "leave it out"; dead browser tool names replaced; build discipline and the Reference Index rewritten. **133 → 100 lines, not the ~60 the plan predicted** — the plan's arithmetic ignored that its own replacement text for File Size and Build discipline is longer than what it replaced. Nothing was cut to chase the number. See § CLAUDE.md compression history above.
+
+### Three lessons worth more than the code they came from
+
+1. **`@theme` vs `@theme inline` in Tailwind v4.** A plain `@theme` emits `--color-x: var(--x)` as a real custom property on `:root`. Custom-property substitution happens on the element that *declares* it, so that indirection resolves against `:root`'s value and only the already-resolved colour inherits downward — a nested `.light`/`.dark` wrapper can redeclare `--x` all it likes and no utility will notice. Symptom: both `/design` theme panes rendered identically dark. `@theme inline` instead inlines the reference into the utility itself, so the lookup happens on the element being painted and a scoped wrapper re-themes its own subtree. `globals.css` uses `inline` for this reason; do not revert it.
+
+2. **tailwind-merge must be told about custom `text-*` roles.** The v2 type roles are unknown to tailwind-merge's stock config, which files any `text-<unknown>` under text-COLOUR — so it treats a role and a colour as the same conflict group and drops whichever came first. `cn("text-accent-fg", "text-body-md")` silently returns just `text-body-md`, and every primary button loses its foreground colour with no error anywhere. `src/lib/utils/cn.ts` now registers all eight roles as a `font-size` group via `extendTailwindMerge`, restoring two independent groups. Any new `text-*` role must be added there.
+
+3. **React 19 + a non-compositing browser pane = zero-sized geometry, and assertions that pass vacuously.** React 19 gates its suspense reveal on `requestAnimationFrame`, which never fires when the pane does not composite (`document.visibilityState === "hidden"`, no hydration — the environmental failure already documented under § Silent NULL-on-save data-loss bug). Content stays parked in `<div hidden id="S:0">` holders, and every `getBoundingClientRect()` returns 0x0. A padding or size check then "passes" while measuring nothing at all. Remove the `hidden` attribute on those holders before measuring, or the numbers are meaningless. Computed colour/style reads are reliable without the unhide, which is why the colour/radius/elevation/type verification in this build is trustworthy and the by-eye verification is not.
+
+### Verification, and one corrected gate
+
+`npm run lint`, `npx tsc --noEmit`, `npm test` (49/49 across 8 suites) and `npm run build` all clean; `grep -rn "lucide-react" src/ package.json` returns nothing.
+
+**The plan's `/design` build gate was wrong and is corrected here.** It expected `/design` to be *absent* from the build's route list. It is not, and cannot be: any `page` file produces a route entry in the App Router. `/design` appears as `○ (Static)`, 27.4 kB / 169 kB First Load JS — the route's client bundle is still measured and reported even though the page never renders, so route-list size proves nothing either. The `notFound()` call runs at prerender time, so the route builds as a static 404 — the actual desired outcome, just not the one the plan described. **The correct gate is to assert on the prerendered output, not the route list:** `.next/server/app/design.html` must contain "This page could not be found" and must **not** contain "Structural Neutral". Use that check in future.
+
+The plan's `git diff --stat main` scope gate also does not work — all of this work is *on* `main`. `git diff --stat afe9c73~1` (the commit before the spec landed) gives the initiative's real scope instead.
+
+**Not verified by eye.** Every visual check in this build was a scripted computed-style read, because the Browser pane never composited in this environment. Re-confirmed at the end of Task 12 rather than assumed from earlier tasks: on `/design`, `document.visibilityState === "hidden"`, `document.hasFocus() === false`, two `<div hidden>` suspense holders present, and both theme panes measuring `0x0` until those holders are unhidden — after which they measure `677x3136` each.
+
+What that scripted pass **does** prove, and these are trustworthy: the two panes compute genuinely different backgrounds from the same utility class (light `lab(97.67 …)` vs dark `lab(2.47 …)`), which is the `@theme inline` fix working; `rounded-md` computes to 6px and `rounded-xs` to 3px; the `sm` Button is 28px tall at 12px type; the Input is `4px 8px` padding, matching DESIGN.md's spec exactly; and `<html>` computes `font-family: Inter, "Inter Fallback"`, confirming the font actually landed.
+
+What it **cannot** prove: `:focus-visible` never matches because the pane itself is unfocused, so no focus ring can be observed painting — only that the CSS rule compiled. And the Button spinner's `animation-name` is correctly `spin`, but `animation-duration` computes to `1e-05s` because this harness reports `prefers-reduced-motion: reduce`, so it is frozen here by design and its motion is unobservable. Recorded as an open item in `docs/KNOWN_GAPS.md` rather than quietly assumed.
+
+---
+
 ## Archived: 15-Phase Technical Roadmap (initial build, closed)
 
 Relocated from CLAUDE.md § 2 on 2026-08-14. Every entry was already a pointer
