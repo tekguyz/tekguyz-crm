@@ -1,5 +1,6 @@
 import { ButtonsSection } from "./sections/ButtonsSection";
 import { FormsSection } from "./sections/FormsSection";
+import { NavSection } from "./sections/NavSection";
 import { SurfacesSection } from "./sections/SurfacesSection";
 import { TokensSection } from "./sections/TokensSection";
 
@@ -25,6 +26,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
           <ButtonsSection />
           <FormsSection />
           <SurfacesSection />
+          <NavSection />
         </div>
       </div>
     </section>
