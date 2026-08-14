@@ -1,5 +1,18 @@
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+
+// The option list is shared across the four Select states so only the prop
+// under test differs between them.
+function statusOptions() {
+  return (
+    <>
+      <option value="new">New</option>
+      <option value="contacted">Contacted</option>
+      <option value="won">Won</option>
+    </>
+  );
+}
 
 // Each field state gets its own instance rather than a loop over props, because
 // the point of this page is to look at every state at once — a loop would hide
@@ -47,6 +60,20 @@ export function FormsSection() {
           error="Keep it under 240 characters."
         />
         <Textarea label="Notes" rows={2} defaultValue="Locked" disabled />
+      </div>
+
+      <h3 className="text-h2">Select</h3>
+      <div className="flex flex-col gap-3">
+        <Select label="Status">{statusOptions()}</Select>
+        <Select label="Status" hint="Drives which pipeline column it sits in.">
+          {statusOptions()}
+        </Select>
+        <Select label="Status" error="Pick a status before saving.">
+          {statusOptions()}
+        </Select>
+        <Select label="Status" defaultValue="won" disabled>
+          {statusOptions()}
+        </Select>
       </div>
     </div>
   );
