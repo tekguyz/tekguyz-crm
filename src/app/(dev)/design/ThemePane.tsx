@@ -1,5 +1,6 @@
 import { ButtonsSection } from "./sections/ButtonsSection";
 import { FormsSection } from "./sections/FormsSection";
+import { SurfacesSection } from "./sections/SurfacesSection";
 import { TokensSection } from "./sections/TokensSection";
 
 // Forces an explicit theme on its subtree rather than inheriting the ambient
@@ -23,6 +24,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
           <TokensSection />
           <ButtonsSection />
           <FormsSection />
+          <SurfacesSection />
         </div>
       </div>
     </section>
