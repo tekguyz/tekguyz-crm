@@ -40,6 +40,11 @@ views is Prompt 2 and is explicitly out of scope here.
    at 13px. Geist Mono has no consumers.
 4. **The accent is the placeholder value, flagged as unconfirmed.** No value is
    invented or approximated.
+5. **A test runner is added** (Vitest + React Testing Library), scoped to the 8
+   new primitives. The brief's "zero new dependencies" fence was lifted for this
+   on 2026-08-14. See §5.5.
+6. **CLAUDE.md gets a seven-item structural cleanup** beyond the § UI/UX pointer
+   the brief asks for, approved after an audit on 2026-08-14. See §5.75.
 
 ---
 
@@ -101,8 +106,21 @@ Therefore this spec **adds** two tokens and records the addition in DESIGN.md:
 .dark  { --danger: oklch(0.65 0.18 25); }
 ```
 
-If you would rather `Button` ship without a `danger` variant in this prompt,
-say so at spec review and both the tokens and the variant come out.
+Approved at spec review 2026-08-14.
+
+**Foreground pairs — a second necessary addition.** A single `--accent` cannot
+serve as both a button background and readable text, because v2's dark accent
+(`L 0.62`) is light: near-white text on it fails contrast, while in light mode
+(`L 0.48`) near-white is required. The same applies to `--danger`. So each gets
+a paired foreground token that flips by theme:
+
+```
+:root { --accent-fg: oklch(0.99 0     0  ); --danger-fg: oklch(0.99 0     0 ); }
+.dark { --accent-fg: oklch(0.16 0.004 260); --danger-fg: oklch(0.16 0.004 25); }
+```
+
+This is a mechanical contrast requirement, not a style choice. Both pairs are
+recorded in `docs/DESIGN.md` as additions to v2 and called out in the report.
 
 ### 1.4 Decorative pill palette — desaturated
 
@@ -239,8 +257,9 @@ input padding `4px 8px` (was `6px`).
 
 ## 2. Icon library swap
 
-Add `@tabler/icons-react` (MIT). This is the **only** new dependency.
-Remove `lucide-react`.
+Add `@tabler/icons-react` (MIT). Remove `lucide-react`. This is the only new
+**runtime** dependency; the test runner in §5.5 adds devDependencies, which the
+brief's dependency fence was explicitly lifted to allow (approved 2026-08-14).
 
 Outline variants only. Stroke `1.75`–`2`; Tabler's default stroke is `2`, which
 is inside range, so the view sweep does not set it explicitly. Primitives set
@@ -345,7 +364,98 @@ Route: `src/app/(dev)/design/page.tsx`.
 
 ---
 
-## 5. Documentation
+## 5.5 Test runner
+
+The repo has no test runner today. One is added as part of this work (the
+brief's "zero new dependencies" fence was lifted for this purpose, approved
+2026-08-14).
+
+**Stack:** Vitest + React Testing Library.
+
+devDependencies added: `vitest`, `@vitejs/plugin-react`, `jsdom`,
+`@testing-library/react`, `@testing-library/jest-dom`,
+`@testing-library/user-event`.
+
+Config: `vitest.config.ts` (jsdom environment, `@` path alias mirroring
+`tsconfig.json`) and `src/test/setup.ts` (imports `@testing-library/jest-dom`).
+`package.json` gains `"test": "vitest run"` and `"test:watch": "vitest"`.
+
+**What is tested — the 8 new primitives only.** Each primitive's test asserts
+its behavioural and accessibility contract:
+
+- `Button` — variant and size class mapping; `disabled` sets the attribute;
+  `loading` sets `disabled` and `aria-busy` and renders the spinner.
+- `Input` / `Textarea` — `label` wires `htmlFor` to the input id; `error` sets
+  `aria-invalid` and links the message via `aria-describedby`; `hint` links
+  instead when there is no error; a caller-supplied `id` wins over the
+  generated one.
+- `Select` — same label and error wiring; the chevron is `aria-hidden` and does
+  not intercept pointer events.
+- `Card` — `cold` swaps the border to dashed `--cold` and sets `data-cold`.
+- `Badge` — every tone maps to its pill token pair; `dot` renders an
+  `aria-hidden` dot.
+- `NavItem` — `active` sets `aria-current="page"`; inactive does not.
+- Table shell — renders semantic `table`/`thead`/`tbody`/`tr`/`td`/`th`.
+
+**What is deliberately not tested:** token values and anything visual. A test
+asserting `bg-accent` appears in a class string proves nothing about whether the
+OKLCH value is right. Colour, contrast, and elevation are verified in the
+browser on the kitchen-sink page, and that verification is not optional.
+
+Existing untested components stay untested. No smoke tests are added for the
+refactored primitives — a render-without-crash assertion is maintenance cost
+without a real contract behind it.
+
+---
+
+## 5.75 CLAUDE.md cleanup
+
+Approved 2026-08-14 after an audit. Seven changes, all structural, nothing
+deleted — content moves to companion docs. Done as its own commit **before** the
+design work, because item 1 changes how the design work is allowed to split
+files.
+
+1. **200-line hard cap → soft signal.** The cap is stated as a prohibition
+   justified by "LLM context windows". It is also the direct cause of a
+   documented data-loss bug class: CLAUDE.md line 100 warns that a form split
+   across siblings hides its field set, so no single file shows it — and that
+   cost five silently-NULLed columns across two incidents. Rewritten to: split
+   by responsibility; ~200 lines is a smell worth looking at, not a wall; never
+   split a cohesive unit purely to get under a number.
+2. **"When unsure, log it" → "when unsure, leave it out."** Line 111's advice
+   contradicts lines 5–12, which record two emergency compressions after the
+   file reached 150KB. The file's own history disproves the rule.
+3. **Dead tool names.** Line 107 instructs the reader to use `preview_click`
+   and `preview_eval`. Neither exists. Rewritten against the current Browser
+   pane tools (`computer`, `javascript_tool`), keeping the underlying warning —
+   a state-changing click can report success while doing nothing.
+4. **§ 2, the closed 15-phase roadmap (31 lines)** moves verbatim to
+   `docs/ADDENDA_LOG.md`, replaced by a two-line pointer. Every entry already
+   said "shipped, see ADDENDA_LOG.md"; it is a table of contents for another
+   file.
+5. **Build discipline** rewritten. "Build one phase at a time… apply that
+   phase's migration" describes the closed roadmap; there are no more phases and
+   most work has no migration. Becomes: finish and verify one unit before
+   starting the next; never generate ahead of what has been verified.
+6. **Known Gaps (19 lines + a 6-sentence maintenance preamble)** moves to a new
+   `docs/KNOWN_GAPS.md`, replaced by one pointer line. It is a bug tracker
+   living in an instructions file, and it is the documented cause of both
+   compressions. The maintenance rules move with it.
+7. **Reference Index (8 lines)** trimmed to three: what lives here, what lives
+   in `SCHEMA_REFERENCE.md`, what lives in `ADDENDA_LOG.md`. The byte-count
+   compression changelog moves to `ADDENDA_LOG.md`.
+
+**Explicitly kept unchanged:** the multi-tenant security model, the Form/Action
+field-parity rule, the "a classifier routes a lead, it never hides one" rule,
+the Supabase write-tool restriction, and the three browser gotchas
+(`document.visibilityState`, Radix focus return, synthetic `mouseover`). Each is
+concrete, non-obvious, and paid for by a real incident.
+
+Expected result: 133 lines → roughly 60.
+
+---
+
+## 5.8 Documentation
 
 | File | Change |
 |---|---|
@@ -363,7 +473,11 @@ Route: `src/app/(dev)/design/page.tsx`.
 - Any file under `src/lib/actions/`, any migration file, any page under
   `src/app/(app)/`.
 - Table View, Saved Views, Group-by, Kanban density toggle, Team Role Management.
-- Any dependency other than `@tabler/icons-react`.
+- Any runtime dependency other than `@tabler/icons-react`. Test devDependencies
+  per §5.5 are in scope.
+- Tests for anything other than the 8 new primitives.
+- Any CLAUDE.md change beyond the seven audited items in §5.75 and the
+  § UI/UX Design System pointer.
 
 Note: existing views will **look** different immediately, because they consume
 the shared tokens. That is the intended effect of a token swap and is not a
@@ -375,6 +489,8 @@ scope breach — no view file is edited for styling.
 
 1. `npm run build` — clean.
 2. `npm run lint` — clean.
+2a. `npm test` — all primitive tests pass.
+2b. `npx tsc --noEmit` — clean.
 3. `grep -r "lucide-react" src` returns nothing; `lucide-react` is absent from
    `package.json`.
 4. Browser pass on `/design` in light and dark: every primitive, every state,
@@ -389,4 +505,6 @@ scope breach — no view file is edited for styling.
 The closing report states: what shipped; **the exact accent value and that it is
 an unsampled placeholder, not a sampled value**; the full list of primitives
 built and refactored; every component with no clean primitive equivalent and how
-it was handled (Dialog wrapper, TableRow, `--danger`); and anything skipped.
+it was handled (Dialog wrapper, TableRow, `--danger`, the `-fg` pairs); the test
+runner added and what it does and does not cover; the CLAUDE.md cleanup result;
+and anything skipped.
