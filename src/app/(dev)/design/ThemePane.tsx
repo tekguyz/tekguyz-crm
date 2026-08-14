@@ -1,4 +1,5 @@
 import { ButtonsSection } from "./sections/ButtonsSection";
+import { FormsSection } from "./sections/FormsSection";
 import { TokensSection } from "./sections/TokensSection";
 
 // Forces an explicit theme on its subtree rather than inheriting the ambient
@@ -21,6 +22,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
         <div className="flex flex-col gap-6">
           <TokensSection />
           <ButtonsSection />
+          <FormsSection />
         </div>
       </div>
     </section>
