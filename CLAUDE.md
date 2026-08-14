@@ -7,6 +7,8 @@
 - **`docs/ADDENDA_LOG.md`:** dated build history and the full story behind past decisions. New addenda go here, not in this file.
 - **`docs/KNOWN_GAPS.md`:** deliberately deferred work.
 
+**There is deliberately no `STATUS.md`.** Status is split by responsibility across the four files above — current initiative status in § 3 here, dated narrative in `ADDENDA_LOG.md`, open work in `KNOWN_GAPS.md`. Consolidating them into one status file is what produced this file's two emergency compressions; do not create one. The `.claude/skills/handoff` skill synthesises a handoff for the user's separate Claude.ai planning Project by auditing all four, and is the supported way to answer "where are we".
+
 ---
 
 ## 1. CORE MECHANICS & ARCHITECTURE
