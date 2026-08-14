@@ -690,3 +690,49 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **`updateLead` silently NULLed `website`/`lead_source`/`service_category` on every save.** ✅ Fixed 2026-07-30 — inputs added to `IdentityFields.tsx` and `CreateLeadModal`; now covered by `CLAUDE.md`'s Form/Action Field Parity rule. Full history: `docs/ADDENDA_LOG.md` § Silent NULL-on-save data-loss bug.
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
 - **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
+
+## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
+
+The foundation-layer addendum above recorded that nothing had been verified by
+eye, because the Browser pane reported `document.visibilityState === "hidden"`
+and never composited. **That was environmental, not permanent.** With the pane
+actually open, `visibilityState` reads `visible`, the page hydrates, real
+`getBoundingClientRect()` values are non-zero, and screenshots work. The earlier
+conclusion was correct for its conditions and wrong as a standing claim — worth
+remembering before treating any "the tool can't do X" finding as durable.
+
+What the by-eye pass confirmed on `/design`, in both panes: both themes force
+correctly against the ambient theme; all four Button variants across four states
+render flat, with `box-shadow: none` in every one; the `--accent-fg` /
+`--danger-fg` flip works, measured at 6.54:1 and 5.93:1 in light and 5.26:1 and
+5.50:1 in dark, all passing WCAG AA for normal text; the keyboard focus ring
+paints on `:focus-visible`; Input's error border and message render in
+`--danger`; the Going Cold dashed border shows on both Card and table row; the
+Modal opens at Level 2 and closes via its X and via backdrop click; and the
+Popover opens at a visibly lighter Level 1.
+
+Two corrections to earlier claims. The native `<dialog>` does **not** escape its
+pane's theme — `showModal()` promotes it to the top layer, which changes only
+where it paints, not where it sits in the DOM, so it still inherits its pane's
+custom properties. Only the Radix Popover portals to `document.body` and
+therefore renders in the ambient theme. Both were confirmed visually.
+
+**Real fix: `CopyButton` swallowed clipboard failures.** It awaited
+`navigator.clipboard.writeText(text)` before `setCopied(true)`, with no
+`try`/`catch` — so any rejection skipped the state flip entirely and the button
+simply sat there looking broken, with nothing logged. Confirmed live that
+`writeText` rejects with `NotAllowedError` even on a secure, focused origin
+where the Permissions API reports `clipboard-write` as `granted` (it also needs
+transient user activation). Now wrapped, with a sonner error toast on failure.
+This predates the v2 work — the refactor carried it forward rather than
+introducing it.
+
+**Found, not fixed:** the `input:focus-visible { border-color: var(--accent) }`
+declaration in `globals.css` is dead. It sits in `@layer base`, while
+`Input`/`Textarea`/`Select` each carry a `border-hairline` utility, and Tailwind
+utilities are in a later cascade layer. The paired 1px accent `box-shadow` ring
+still paints, so focus stays clearly visible and the accessibility floor holds.
+Logged in `docs/KNOWN_GAPS.md` rather than patched, since it is cosmetic.
+
+Also confirmed via the Vercel connector that production is READY on the current
+`main` — the foundation layer is deployed, not just committed.

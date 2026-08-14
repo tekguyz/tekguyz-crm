@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconCopy, IconCheck } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/Button";
 
@@ -22,9 +23,19 @@ export function CopyButton({ text }: { text: string }) {
       size="sm"
       className="shrink-0"
       onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        // writeText rejects on any non-secure origin, without transient user
+        // activation, and under some browser clipboard policies. Before this
+        // try/catch, that rejection skipped setCopied entirely, so the button
+        // just sat there looking broken with nothing logged anywhere. Confirmed
+        // live: it rejects with NotAllowedError even when the Permissions API
+        // reports clipboard-write as "granted".
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          toast.error("Couldn't copy — copy it manually instead.");
+        }
       }}
     >
       {copied ? (
