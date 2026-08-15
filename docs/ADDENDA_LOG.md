@@ -539,6 +539,8 @@ Twelve tasks (0–12), one commit each, on `main`. Spec: `docs/superpowers/specs
 - **Type scale.** Eight named roles (`text-display`/`h1`/`h2`/`title`/`body-md`/`body-sm`/`label`/`caption`) baking size, line-height, weight and tracking into one utility, so a role cannot drift apart at call sites. These are **additional** names — `text-xs`/`sm`/`base` keep their stock Tailwind meanings. Heading tracking went `-0.04em` → `-0.015em`.
 - **Pills desaturated** by chroma × 0.78 (~22%) with lightness untouched, so fg/bg contrast is preserved and only saturation drops. DESIGN.md v2 specified the cut for light mode only; the same ratio was applied to dark so the two themes read as one palette, and that decision is now recorded in `docs/DESIGN.md`.
 
+> **SUPERSEDED 2026-08-14 (later same day).** The paragraph below is the record of what was true when this addendum was written. `--accent` has since been sampled from the CRM's brand mark and is final — `oklch(0.53 0.181 263.2)` light / `oklch(0.70 0.155 263.2)` dark. See § Brand identity + `--accent` sampling. Do not act on the instruction in the next paragraph.
+
 **`--accent` is an UNSAMPLED PLACEHOLDER.** Light `oklch(0.48 0.16 260)`, dark `oklch(0.62 0.15 260)`. DESIGN.md v2 was written from Twenty CRM as a visual reference, but **no reference screenshot was ever attached to this work**, so the accent has never been sampled from or compared against anything. It ships because components need something to render against. It carries an inline PLACEHOLDER comment in `globals.css`, a note on the `/design` page itself, and an open entry in `docs/KNOWN_GAPS.md`. Do not describe it as final, sampled, or verified. Everything downstream reads the token, so replacing it is a one-line change.
 
 **Three tokens are additions beyond DESIGN.md v2**, approved 2026-08-14 and now recorded in DESIGN.md itself:
@@ -691,6 +693,9 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
 - **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
 - **`leads` CRUD has zero role enforcement — any MEMBER has full CRUD parity with OWNER/ADMIN.** ✅ Fixed 2026-08-14 — `archived`, `outcome`, `actual_revenue` and `closed_at` are now OWNER/ADMIN-only on UPDATE, enforced by a `BEFORE UPDATE` trigger, with a live three-role Vitest suite (`npm run test:rls`). Everything else on `leads` stays MEMBER-writable by design. Two narrower successors are open in `docs/KNOWN_GAPS.md` (the controls are still rendered to a MEMBER; there is still no `assigned_to`). Full history: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
+- **`--accent` has never been visually confirmed.** ✅ Closed 2026-08-14 — the gap asked for a real reference to sample; the CRM's new brand mark became it. Shipped `oklch(0.53 0.181 263.2)` light / `oklch(0.70 0.155 263.2)` dark, hue and chroma locked to the logo blue `#3B6FE0` with lightness lowered to clear AA for the inline-link role. Confirmed live in both `/design` panes: resolves to exactly `#3063D3` / `#6A9BFE`, all accent pairings ≥5.1:1. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
+- **Lockup SVGs were built with a stand-in font.** ✅ Closed 2026-08-14 — never shipped in that state. `build_brand.py` was re-run in-repo against real Inter from `@fontsource/inter` (name table confirmed `Inter` Bold / `Inter Medium`); the pipeline has no font-substitution fallback, it skips lockups outright when no font is supplied. All four lockups emitted with the wordmark outlined to two `<path>` elements and zero `<text>`. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
+- **The agency mark may still be referenced somewhere in `src/`.** ✅ Closed 2026-08-14 — audited; no component referenced a logo asset at all, so nothing needed repointing. The real exposure was three App Router file conventions serving the old mark — `src/app/favicon.ico`, `src/app/icon.png` and `src/app/apple-icon.png` — all three deleted. The bundle's brief named only `favicon.ico`; `icon.png` and `apple-icon.png` override `metadata.icons` the same silent way. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
 
 ## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
 
@@ -883,3 +888,189 @@ The two items the addendum above listed as owed are now done. Superseding the
   answer an anonymous, not-yet-signed-in invitee, and the unguessable invite
   token is itself the credential. Both are fine as they stand. Recorded here so
   the next session does not re-derive it.
+
+
+---
+
+## Brand identity + `--accent` sampling — 2026-08-14
+
+The CRM was shipping the TEKGUYZ agency mark that serves `tekguyz.com`. That
+mark represents the company; the CRM is a multi-tenant product other orgs log
+into. Replaced with a purpose-built identity, and the replacement turned out to
+be the thing that finally closed the `--accent` placeholder.
+
+### Where the mark came from
+Concept explored externally (Gemini image generation) across six directions,
+then **re-authored from scratch as vector geometry**. Nothing was traced or
+imported.
+
+**All six generated files were `JPEG / RGB` with no alpha channel.** The four
+that appeared transparent had the checkerboard rendered as literal pixels; the
+dark-mode lockup had a dark checkerboard baked in. They were mockups, not
+assets. Re-authoring was not polish — it was the only path to a usable file.
+Any future round of external image generation gets the same treatment: it is a
+concepting tool, never an asset source.
+
+### The pipeline
+`scripts/brand/build_brand.py` holds geometry, SVG emitters, the wordmark
+outliner and the Pillow rasteriser in one file. Every asset derives from it.
+The reason for one file rather than a folder is drift: the earlier draft had
+geometry in one module and the rasteriser in another, and the first proportion
+fix had to be applied twice.
+
+**Wordmark text is outlined, never live `<text>`.** The first draft emitted
+`<text font-family="Inter, system-ui, sans-serif">`. That renders correctly
+inside the app — Inter is loaded via `next/font` — and silently degrades to a
+system stack in an email signature, a deck, or on a client's machine, with no
+error. The outliner uses `fontTools` `SVGPathPen` against the real Inter TTF.
+
+### Three defects caught during the build, and their fixes
+
+**1. Proportions.** First render put `HEX_R` at 58 against a 344-wide funnel;
+the mark read as a tree, not a funnel. Hexes cut to 44, funnel widened to 384,
+rim dropped 16px.
+
+**2. The mark does not survive 16px.** Three nodes, a cased Y-junction and an
+arrowhead inside a funnel cannot resolve at favicon scale — proven, not
+assumed, by rendering the ladder at 48/32/16. Fix is a **reduced variant**
+(funnel + arrow only, 1.25× stroke) used at ≤32px, full mark at 48+. This is a
+responsive logo. Do not "fix" it by shrinking the full mark into the ICO.
+
+**3. The default mark is invisible on dark canvases.** Its structure is carried
+entirely by `#1A1A1A` outlines. Against `--canvas-soft` dark the outlines
+vanish and the mark collapses into disconnected blue and green shapes. Caught
+by rendering the proof sheet with a dark half. Fix is a second colour variant
+with ink at `#F5F5F5` — **not** a CSS filter, which would also flip the blue
+and teal.
+
+A fourth issue surfaced from the fix to #3: on dark, teal `#2FA679` against the
+near-white casing measures 2.81:1, under the 3:1 adjacency bar. Teal drops to
+`#16976B` (`oklch(0.60 0.124 163.3)`, hue and chroma locked) in the on-dark
+variant only. Logotypes are exempt from WCAG 1.4.11, so this was voluntary —
+but a mark whose outline dissolves is a bad mark regardless of the spec.
+
+Two further layout defects were caught by numeric verification of the lockups
+rather than by eye: the stacked variant had a 9px bottom margin (descender
+clipping risk), and both variants positioned text by **advance width**, which
+carries side bearings and a trailing tracking step, throwing optical centring
+off by several px at logo sizes. Both fixed by laying out against real ink
+bounds (`BoundsPen`). Verified margins are now exactly 64px on all four sides
+and icon/text optical centres agree to 0.0px.
+
+### `--accent` is sampled — the placeholder is closed
+
+The open gap said the accent must be sampled from a real reference before the
+design could be called done. The brand blue is that reference.
+
+`#3B6FE0` = `oklch(0.569 0.181 263.2)`. Hue **263**, already inside the
+hue-260 cool-neutral family DESIGN.md v2 specified. Brand and system agreed
+without either compromising — genuinely lucky, not engineered.
+
+**The raw brand blue is not the token.** At L 0.569 it measures 4.44:1 against
+the light canvas, failing WCAG AA for text, and `CLAUDE.md` assigns `--accent`
+to inline navigational links. One lightness step down with hue and chroma
+locked to the logo:
+
+- `--accent` light: `oklch(0.48 0.16 260)` → **`oklch(0.53 0.181 263.2)`** (`#3063D3`)
+- `--accent` dark: `oklch(0.62 0.15 260)` → **`oklch(0.70 0.155 263.2)`** (`#6A9BFE`)
+
+The dark change is not cosmetic either: the old dark placeholder measured
+4.23:1 against the dark canvas, also marginal.
+
+Full audit — 14 pairings tested, 0 failures:
+
+| Pairing | Ratio | Verdict |
+|---|---|---|
+| accent light, link text on canvas | 5.22:1 | AA |
+| accent light, link text on card | 5.45:1 | AA |
+| `--accent-fg` white on accent-light button | 5.45:1 | AA |
+| accent light focus ring on canvas | 5.22:1 | AA (3:1 UI) |
+| accent dark, link text on canvas | 5.99:1 | AA |
+| accent dark, link text on card | 5.49:1 | AA |
+| `--accent-fg` ink on accent-dark button | 6.54:1 | AA |
+| accent dark focus ring on canvas | 5.99:1 | AA (3:1 UI) |
+| logo ink vs light canvas | 16.67:1 | pass |
+| logo ink-on-dark vs dark canvas | 14.93:1 | pass |
+| logo teal vs ink casing | 5.68:1 | pass |
+| logo blue vs ink casing | 3.76:1 | pass |
+| wordmark subtitle, light | 5.07:1 | AA |
+| wordmark subtitle, dark | 5.83:1 | AA |
+
+Because everything downstream reads the token, this was a two-line change in
+`globals.css`.
+
+### Verification actually run
+- `build_brand.py` executed end-to-end, 20 assets emitted, exit 0.
+- Alpha channels asserted per file; `.ico` confirmed to carry 16/32/48 frames.
+- Lockup SVGs asserted to contain zero `<text>` elements.
+- Wordmark ink bounds computed via `BoundsPen` and asserted inside the viewBox;
+  margins and optical centring measured, not eyeballed.
+- Path `d` data validated against the legal SVG command set.
+- Contrast ratios computed from sRGB relative luminance per WCAG 2.x.
+
+### Not verified
+- **No SVG was composited by a browser rendering engine.** Rasters came from
+  Pillow; the SVGs were only validated structurally and numerically. A stroke
+  join or `stroke-linecap` difference between Pillow and a real renderer is
+  possible and would show up as a slightly different corner radius on the
+  funnel. Open one master SVG in a browser before committing.
+- **The shipped lockups were built with a stand-in font.** Inter was not
+  available in the generating environment, so the pipeline was exercised
+  against Liberation Sans to prove the code path. The lockups must be
+  regenerated in-repo against real Inter before use — see `docs/KNOWN_GAPS.md`.
+
+### In-repo apply pass — supersedes the two "Not verified" items above (2026-08-14, same day)
+
+The bundle was authored outside this repo and shipped with the two caveats
+above. Both were addressed on apply; the text above is left intact as the
+record of what arrived, and this is what changed.
+
+- **Lockups regenerated against real Inter.** `pip install pillow fonttools`,
+  `npm i @fontsource/inter`, then `build_brand.py` with
+  `--inter-bold inter-latin-700-normal.woff --inter-medium inter-latin-500-normal.woff`.
+  Exit 0. Font name tables read back as `Inter` / `Bold` and `Inter Medium` /
+  `Regular`, so no substitution happened. The pipeline has no silent fallback —
+  with no font supplied it prints `!! no font supplied — lockups skipped` and
+  emits nothing, which is the correct shape. Output: 10 SVGs (6 icons + 4
+  lockups), 11 PNGs, 1 multi-frame `.ico`. Every lockup carries two `<path>`
+  elements for the wordmark and zero `<text>`.
+
+- **SVG geometry confirmed against a real browser SVG engine.** The Browser
+  pane did not composite this session (`document.visibilityState` read
+  `hidden` throughout), so there is still no screenshot — but compositing is
+  not required to rasterise. All ten brand SVGs were loaded as `Image` objects
+  and drawn to a `<canvas>`, which routes through the browser's own SVG
+  renderer, then `icon.svg` was pixel-diffed against Pillow's `icon-512.png`.
+  Naively the two differ by 11.37%, but that is a framing artifact: the SVG
+  `viewBox` is cropped tight to the mark (`45 67 422 428`) while the PNG is
+  padded to a 512 square. Normalising both to their own ink bounding box
+  first: **3.23% of pixels differ at all, 0.34% differ grossly, aspect ratios
+  0.9838 vs 0.9883 (within 0.5%)**. That residue is stroke antialiasing on a
+  mark built almost entirely from 15–32px strokes. Pillow and the browser
+  agree on the geometry; the feared `stroke-linejoin` / `stroke-linecap` drift
+  is not present. What is still genuinely unverified is a human eye on the
+  mark against `docs/brand/PROOF-SHEET.png` — see `docs/KNOWN_GAPS.md`.
+
+- **`--accent` confirmed live rather than trusted from the table.** Read back
+  from both `/design` theme panes with `getComputedStyle`: light resolves to
+  `#3063D3`, dark to `#6A9BFE`, exactly the documented values, and the two
+  panes resolve *differently* — which re-proves that `@theme inline` still
+  lets a nested `.light`/`.dark` wrapper re-theme its own subtree. Contrast
+  measured from those resolved values: light 5.14:1 link-on-canvas, 5.45:1
+  on card, 5.32:1 `--accent-fg`-on-accent; dark all ≥6.9:1. Every pairing
+  clears AA. The light canvas figure came out 5.14 against the bundle table's
+  5.22 — a colour-space rounding difference, not a disagreement, and both
+  pass.
+
+- **`@fontsource/inter` was installed as a runtime dependency, not a
+  devDependency.** The bundle's README says `npm i -D`, which is right for the
+  build script but wrong for `opengraph-image.tsx` — that route does
+  `fs.readFileSync` against `node_modules/@fontsource/inter/...` at request
+  time, so a devDependency would build green and throw on the first OG request
+  in production. Same silent-failure class as the rest of this initiative.
+  Logged as an open gap; the durable fix is vendoring the two `.woff` files.
+
+- **OG tagline replaced.** The bundle's placeholder ("Sales pipeline, one org
+  at a time.") is now "Every lead, one pipeline." — chosen to restate the
+  mark's own idea, three sources converging into one. Still unapproved copy;
+  it stays an open gap until someone actually picks it.

@@ -12,9 +12,9 @@ not filled. This is a utility instrument, not a marketing surface — resist the
 "friendly SaaS" instinct toward soft shadows, big radii, and generous whitespace.
 
 ## Color Tokens (OKLCH)
-`--accent` is a **placeholder pending visual sampling** — see Prompt 1, step zero.
-Do not treat the value below as final; it exists so components have something to
-render against before the real value is sampled.
+`--accent` is **sampled and final** as of 2026-08-14 — derived from the brand
+mark's blue. See § `--accent` — SAMPLED AND CLOSED at the end of this file for
+the derivation and the contrast audit.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -23,7 +23,7 @@ render against before the real value is sampled.
 | `--ink-main` (primary text) | `oklch(0.15 0.004 260)` | `oklch(0.97 0.000 0)` | Body/headings |
 | `--ink-muted` (secondary text) | `oklch(0.52 0.006 260)` | `oklch(0.66 0.008 260)` | Metadata, timestamps, labels |
 | `--hairline` (1px borders) | `oklch(0.90 0.003 260)` | `oklch(0.28 0.005 260)` | Every structural border |
-| `--accent` — **PLACEHOLDER, sample from reference** | `oklch(0.48 0.16 260)` | `oklch(0.62 0.15 260)` | Primary CTAs, active nav, focus rings, links only — never decorative |
+| `--accent` — **sampled from the brand mark, final** | `oklch(0.53 0.181 263.2)` | `oklch(0.70 0.155 263.2)` | Primary CTAs, active nav, focus rings, links only — never decorative |
 | `--cold` (SLA breach tone) | `oklch(0.68 0.004 260)` | `oklch(0.42 0.006 260)` | Going Cold dashed border/badge — same behavior, recalibrated hue |
 
 Hue `260` (cool neutral) replaces the old `60` (warm) across the board — this is
@@ -44,7 +44,7 @@ desaturating only one of them would have split them.
 |---|---|---|---|
 | `--danger` | `oklch(0.52 0.19 25)` | `oklch(0.65 0.18 25)` | v2 defined no destructive colour, but the app archives, deletes and revokes. The pill palette may never be used for a button, so reuse was not an option. |
 | `--danger-fg` | `oklch(0.99 0 0)` | `oklch(0.16 0.004 25)` | Foreground pair — see below. |
-| `--accent-fg` | `oklch(0.99 0 0)` | `oklch(0.16 0.004 260)` | One accent value cannot be both a background and readable text across both themes: dark `--accent` is light (L 0.62), so near-white on it fails contrast. The foreground flips by theme. This is a contrast requirement, not a style choice. |
+| `--accent-fg` | `oklch(0.99 0 0)` | `oklch(0.16 0.004 260)` | One accent value cannot be both a background and readable text across both themes: dark `--accent` is light (L 0.70 as shipped), so near-white on it fails contrast. The foreground flips by theme. This is a contrast requirement, not a style choice. |
 
 ## Typography
 Font: **Inter** (if not already loaded, add via `next/font`). Tighter tracking
@@ -119,3 +119,110 @@ CSV Import Wizard, confirmation dialogs), Help drawer + inline tooltips.
 **Explicitly does not cover** (don't exist yet — built directly in this system
 when their time comes, not retrofitted later): Table View, Saved Views,
 Group-by, Kanban compact/dense toggle, Team Role Management UI.
+
+
+---
+
+## Brand Identity — "Converging Funnel" (2026-08-14)
+
+The CRM has its own mark, separate from the TEKGUYZ agency logo that serves
+`tekguyz.com`. The agency mark represents the company; the CRM is a
+multi-tenant product other organisations log into. Using one for the other was
+a placeholder, and it is now retired from this app.
+
+### The mark
+An inverted funnel with a filled reservoir, fed by three hexagonal nodes whose
+paths converge into a single downward arrow. Lead sources → qualification →
+one pipeline. Concept generated externally, re-authored as vector here.
+
+### Palette
+
+| Role | Light | Dark | Notes |
+|---|---|---|---|
+| Logo ink | `#1A1A1A` | `#F5F5F5` | Carries the mark's entire structure — see the two-variant rule |
+| Logo blue (reservoir) | `#3B6FE0` | `#3B6FE0` | `oklch(0.569 0.181 263.2)` |
+| Logo teal (nodes) | `#2FA679` | `#16976B` | Darkened on dark; against the near-white casing `#2FA679` measures only 2.81:1 |
+| Wordmark subtitle | `#6B6B72` | `#9A9AA2` | 5.07:1 / 5.83:1 |
+
+Logo colours are **not** UI tokens and are never consumed by a component. The
+mark is exempt from WCAG 1.4.11 as a logotype; the values above nonetheless
+clear 3:1 at every internal adjacency, because a mark whose outline dissolves
+is a bad mark regardless of what the spec requires.
+
+### Two hard rules
+
+**1. Two colour variants, chosen by theme — never a CSS filter.** The mark's
+structure is carried entirely by its ink outlines. On `--canvas-soft` dark
+(`oklch(0.14 0.004 260)`) the default `#1A1A1A` outlines vanish and the mark
+collapses into disconnected blue and green shapes. Dark surfaces must use
+`icon-on-dark.svg` / `lockup-*-dark.svg`. `filter: invert()` also flips the
+blue and teal and is never acceptable.
+
+**2. Reduced variant below 40px.** Three nodes, a cased Y-junction and an
+arrowhead inside a funnel cannot resolve at favicon scale. `icon-reduced.svg`
+(funnel + arrow, no nodes, 1.25× stroke) is the mark at ≤32px; the full mark
+is used at 48px and above. This is a responsive logo, not two logos.
+
+### Typography
+Wordmark is Inter — Bold 700 for `TEKGUYZ` at 0.025em tracking, Medium 500 for
+`CRM` at 0.16em. Same family as the app, so the mark and the UI read as one
+product.
+
+**All wordmark text is converted to SVG `<path>` outlines.** A logo carrying a
+live `<text font-family="Inter">` element renders correctly inside the app and
+silently falls back to a system stack everywhere else — email signatures,
+decks, a client's machine. `scripts/brand/build_brand.py` does the conversion
+from the real Inter TTF at build time.
+
+### Asset pipeline
+`scripts/brand/build_brand.py` is the single source of truth. Geometry, SVG
+emitters, the wordmark outliner and the rasteriser all live in that one file,
+so vector and raster cannot drift. No brand asset is ever hand-edited — fix
+the script and re-run:
+
+```
+pip install pillow fonttools
+npm i -D @fontsource/inter
+python3 scripts/brand/build_brand.py \
+  --inter-bold   node_modules/@fontsource/inter/files/inter-latin-700-normal.woff \
+  --inter-medium node_modules/@fontsource/inter/files/inter-latin-500-normal.woff \
+  --out public
+```
+
+---
+
+## `--accent` — SAMPLED AND CLOSED (2026-08-14)
+
+This is the derivation behind the Color Tokens table above, which was updated
+in the same pass.
+
+The mark's blue `#3B6FE0` is `oklch(0.569 0.181 263.2)`. Hue **263** already
+sits inside the hue-260 cool-neutral family v2 specified, so brand and system
+agree without either side compromising.
+
+The raw brand blue is **not** the token. At L 0.569 it measures 4.44:1 against
+the light canvas — a WCAG AA failure for text, and `CLAUDE.md` assigns
+`--accent` to inline navigational links. One lightness step down, hue and
+chroma locked to the logo:
+
+| Token | Light | Dark |
+|---|---|---|
+| `--accent` | `oklch(0.53 0.181 263.2)` → `#3063D3` | `oklch(0.70 0.155 263.2)` → `#6A9BFE` |
+
+Measured (see `docs/ADDENDA_LOG.md` for the full audit):
+
+| Pairing | Ratio | Verdict |
+|---|---|---|
+| accent light, link text on canvas | 5.22:1 | AA |
+| accent light, link text on card | 5.45:1 | AA |
+| `--accent-fg` white on accent-light button | 5.45:1 | AA |
+| accent dark, link text on canvas | 5.99:1 | AA |
+| accent dark, link text on card | 5.49:1 | AA |
+| `--accent-fg` ink on accent-dark button | 6.54:1 | AA |
+| focus ring, both themes | ≥5.22:1 | AA (3:1 UI) |
+
+The previous dark placeholder `oklch(0.62 0.15 260)` measured 4.23:1 against
+the dark canvas — marginal. The value above also fixes that.
+
+`#3B6FE0` remains the logo blue. The logo is not a UI control and is not held
+to text contrast.

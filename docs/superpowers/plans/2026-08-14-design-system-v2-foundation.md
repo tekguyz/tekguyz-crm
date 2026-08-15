@@ -1,5 +1,13 @@
 # Design System v2 "Structural Neutral" — Foundation Layer Implementation Plan
 
+> **Historical artifact — shipped 2026-08-14. One thing in it is now wrong.**
+> This plan repeatedly states that `--accent` is an unsampled placeholder and
+> must never be described as final. That was true when it was written and is
+> no longer. `--accent` was sampled from the CRM's brand mark later the same
+> day and is final: `oklch(0.53 0.181 263.2)` light / `oklch(0.70 0.155 263.2)`
+> dark. See `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling. Every
+> other instruction here still reflects what was built.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the Notion High-Voltage token system with DESIGN SYSTEM v2 ("Structural Neutral"), build a shared primitive component library, and prove both work on a dev-only kitchen-sink page in light and dark.

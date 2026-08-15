@@ -1,6 +1,13 @@
 # Design System v2 "Structural Neutral" — Foundation Layer (Prompt 1)
 
 Date: 2026-08-14
+
+> **Historical artifact — one value in it is now wrong.** This spec marks
+> `--accent` as an unsampled placeholder pending sampling from a Twenty CRM
+> reference. It was sampled from the CRM's own brand mark instead, later on
+> 2026-08-14, and is final: `oklch(0.53 0.181 263.2)` light /
+> `oklch(0.70 0.155 263.2)` dark. See `docs/ADDENDA_LOG.md` § Brand identity +
+> `--accent` sampling. Everything else here still stands.
 Status: awaiting approval
 
 ## Goal

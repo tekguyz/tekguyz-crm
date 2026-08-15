@@ -113,11 +113,13 @@
     --ink-muted: oklch(0.52 0.006 260);
     --hairline: oklch(0.9 0.003 260);
 
-    /* PLACEHOLDER — NOT SAMPLED. DESIGN.md v2 ships this value so components
-       have something to render against; no Twenty CRM reference screenshot was
-       ever provided, so it has never been visually confirmed. Do not describe
-       this as final. Replace it only by sampling a real reference. */
-    --accent: oklch(0.48 0.16 260);
+    /* SAMPLED AND FINAL (2026-08-14). Taken from the brand mark's blue
+       #3B6FE0 = oklch(0.569 0.181 263.2), lightness lowered one step with hue
+       and chroma locked. The raw brand value measures 4.44:1 on --canvas-soft
+       and fails AA as text; --accent carries the inline-link role, so it has
+       to clear 4.5:1. This is 5.22:1 on canvas, 5.45:1 white-on-it as a
+       button. Do not "correct" it back to #3B6FE0. */
+    --accent: oklch(0.53 0.181 263.2);
     --accent-fg: oklch(0.99 0 0);
 
     /* --danger / --danger-fg and --accent-fg are additions beyond DESIGN.md v2,
@@ -164,8 +166,11 @@
        already have parity, so keep them in step if either is retuned. */
     --hairline: oklch(0.28 0.005 260);
 
-    /* PLACEHOLDER — NOT SAMPLED. See the light-mode note above. */
-    --accent: oklch(0.62 0.15 260);
+    /* SAMPLED AND FINAL (2026-08-14). Same hue family as light, lightened for
+       the dark canvas. The previous placeholder (0.62 0.15 260) measured
+       4.23:1 against --canvas-soft dark — marginal. This is 5.99:1 on canvas,
+       6.54:1 ink-on-it as a button. */
+    --accent: oklch(0.70 0.155 263.2);
     /* Dark accent is light (L 0.62), so its foreground flips to near-black.
        Near-white on it would fail contrast. */
     --accent-fg: oklch(0.16 0.004 260);
