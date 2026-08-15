@@ -696,6 +696,7 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **`--accent` has never been visually confirmed.** ✅ Closed 2026-08-14 — the gap asked for a real reference to sample; the CRM's new brand mark became it. Shipped `oklch(0.53 0.181 263.2)` light / `oklch(0.70 0.155 263.2)` dark, hue and chroma locked to the logo blue `#3B6FE0` with lightness lowered to clear AA for the inline-link role. Confirmed live in both `/design` panes: resolves to exactly `#3063D3` / `#6A9BFE`, all accent pairings ≥5.1:1. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
 - **Lockup SVGs were built with a stand-in font.** ✅ Closed 2026-08-14 — never shipped in that state. `build_brand.py` was re-run in-repo against real Inter from `@fontsource/inter` (name table confirmed `Inter` Bold / `Inter Medium`); the pipeline has no font-substitution fallback, it skips lockups outright when no font is supplied. All four lockups emitted with the wordmark outlined to two `<path>` elements and zero `<text>`. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
 - **The agency mark may still be referenced somewhere in `src/`.** ✅ Closed 2026-08-14 — audited; no component referenced a logo asset at all, so nothing needed repointing. The real exposure was three App Router file conventions serving the old mark — `src/app/favicon.ico`, `src/app/icon.png` and `src/app/apple-icon.png` — all three deleted. The bundle's brief named only `favicon.ico`; `icon.png` and `apple-icon.png` override `metadata.icons` the same silent way. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
+- **OG card tagline is unreviewed copy.** ✅ Closed 2026-08-15 — "Every lead, one pipeline." approved by the owner. Now single-sourced in `src/lib/brand/copy.ts` alongside the product name and description, so the card, the manifest and the page metadata cannot drift apart. Full history: `docs/ADDENDA_LOG.md` § Brand application pass.
 
 ## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
 
@@ -1074,3 +1075,123 @@ record of what arrived, and this is what changed.
   at a time.") is now "Every lead, one pipeline." — chosen to restate the
   mark's own idea, three sources converging into one. Still unapproved copy;
   it stays an open gap until someone actually picks it.
+
+## Brand application pass — 2026-08-15
+
+The Brand Identity initiative produced the mark and its pipeline but stopped at
+metadata. This pass applied it. Two prompts, both shipped the same day.
+
+### The OG card had never rendered for anyone but a signed-in human
+
+Reported as a design complaint — "the image doesn't show in Vercel's Open Graph
+tab, and the text under the wordmark doesn't look good." The second half was
+real. The first half was not a rendering problem at all.
+
+`middleware.ts` matched `/opengraph-image` and `updateSession` redirected every
+cookie-less request to `/login`. The owner's browser carries a session cookie,
+so the URL worked when pasted into the address bar — which is exactly why it
+read as a design issue rather than a broken route. Slack, Facebook, iMessage
+and Vercel's own inspector carry no cookie and all received
+`307 → Redirecting...`. `curl` with no cookie reproduces it in one line, and
+that is now the standing check for anything served to a crawler.
+
+Fixed with an `isPublicMetadataRoute` allowlist covering `/opengraph-image`,
+`/twitter-image`, `/manifest.webmanifest`, `/robots.txt`, `/sitemap.xml`,
+`/icons/` and `/brand/`. None of it is tenant data — it is the same bytes for
+every visitor. Verified in production after deploy: `200 image/png`, no cookie.
+
+**This is a new instance of a familiar shape**: an auth gate that fails
+invisibly to the one person most likely to check it. Same family as the
+`src/app/favicon.ico` precedence bug and the Inter `<body>`/`<html>` bug — green
+build, no error, wrong output, and the person verifying is the least likely to
+see it.
+
+### Favicon: rounded blue plate
+
+The mark carries its structure in `#1A1A1A` ink, which is close enough to a
+dark Chrome tab that the icon dissolves on the single surface a favicon is most
+often viewed. Considered and rejected: a theme-aware SVG favicon, honoured only
+by Chrome and Firefox — Safari and the `.ico` fallback would still show the
+invisible variant, fixing the symptom on some browsers while hiding it on the
+rest.
+
+Added `radius_ratio` to `raster()`. The corner has to be baked into the pixels:
+iOS masks the touch icon and Android masks the maskable icon, but nothing ever
+masks a `favicon.ico`. Drawn on the supersampled canvas so the curve survives
+the LANCZOS downsample.
+
+Two choices were made by rendering rather than reasoning, and both went against
+the first guess:
+
+- **Filled, not outlined.** As an outline the rim, fill edge and arrow are three
+  thin white lines that merge into an unreadable blob by 16px. Filled, the mark
+  becomes a silhouette that survives the downsample and the arrow simply merges
+  into the mass it already sat inside.
+- **`PLATE_PAD = 0.08`.** Rendered 0.10 / 0.08 / 0.06 / 0.04 side by side at 16
+  and 32px. The reduced mark is wider than tall, so it fits to width and the rim
+  becomes the binding constraint: below ~0.06 it crosses the corner curve and
+  the plate stops reading as rounded.
+
+Everything except the five favicon files regenerated byte-identical, which is a
+useful incidental proof that the pipeline is deterministic.
+
+### The mark appeared nowhere in the running app
+
+Not under-used — absent. `Sidebar.tsx` and the shared `(auth)` layout both
+rendered the product name as plain text; a `grep` for logo usage matched only
+`IconLogout`.
+
+Added `src/components/brand/BrandMark.tsx`, which encodes both brand rules —
+the light/on-dark variant choice and the 32px full/reduced cutover — so a caller
+picks a height and gets the right asset. Placed in the Sidebar header at 22px
+(reduced) and above the auth card at 52px (full). One shared `(auth)` layout
+covers login, signup, forgot-password, reset-password and onboarding.
+
+**It themes through a `--brand-mark` CSS variable, not a `dark:` utility.** Two
+independent reasons, either sufficient: this codebase contains zero `dark:`
+variants and themes everything through tokens; and Tailwind v4 maps `dark:` to
+`prefers-color-scheme` rather than the `.dark` class unless a custom variant is
+declared, so a `dark:hidden` swap would have ignored the theme toggle entirely
+and broken the side-by-side panes on `/design`. Verified by screenshot in both
+themes — the correct colour variant loads in each.
+
+### Outward-facing copy consolidated
+
+`name`, `description` and `tagline` were duplicated across `layout.tsx`,
+`manifest.ts` and `opengraph-image.tsx`. Same drift shape as the Form/Action
+field-parity bug: three copies, no error when one falls behind, and the stale
+one is what a stranger sees. Now single-sourced in `src/lib/brand/copy.ts`.
+
+The description was rewritten from "Multi-tenant sales & operations CRM", which
+described the architecture rather than the job — "multi-tenant" is an
+implementation fact that tells a reader nothing.
+
+Added `alternates.canonical` (supplying the `og:url` Vercel flagged as missing)
+and `robots: { index: false, follow: false }`. This is a login-gated internal
+tool; every route redirects an anonymous visitor to `/login`, so there is
+nothing to index and an indexed login page is noise. **No `robots.txt` was
+added, deliberately** — a `Disallow` would stop crawlers fetching the page and
+therefore stop them reading the `noindex`, which is the classic
+conflicting-signal mistake. Link unfurls are unaffected either way: Slack and
+Facebook read OG tags directly and do not apply robots rules.
+
+Tagline "Every lead, one pipeline." was approved by the owner on 2026-08-15,
+closing that gap.
+
+### Test-data cleanup became a permanent rule
+
+Sixteen test leads had accumulated in the real TEKGUYZ org over three weeks
+against one genuine lead. The cause was not carelessness so much as a wrong
+mental model: archiving *felt* like cleanup. It is not — an archived row still
+counts, still appears in Contacts (which filters only on `archived`), and still
+lands in any query that forgets the flag.
+
+Now a permanent rule in `CLAUDE.md`. The app deliberately keeps no delete
+control — the Resurrection Engine depends on archive-not-delete, and that
+remains correct user-facing behaviour. Removal is a database-level operation,
+so the standing Supabase MCP rule applies unchanged: hand the human the exact
+`SELECT` then `DELETE`, or use a disposable service-role script; never
+`execute_sql` a write against a `public`-schema table. Executed by the owner on
+2026-08-15; verified afterwards at 1 lead in TEKGUYZ, the Demo org's 20
+untouched, zero orphaned tasks (`activity_logs` and `tasks` are
+`ON DELETE CASCADE` from `leads`).

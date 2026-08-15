@@ -8,9 +8,12 @@
 import { ImageResponse } from "next/og";
 import fs from "node:fs";
 import path from "node:path";
+import { BRAND } from "@/lib/brand/copy";
 
 export const runtime = "nodejs";
-export const alt = "TEKGUYZ CRM";
+// Read aloud by screen readers when the card is the only content of a shared
+// link, so it describes the card rather than just naming the product.
+export const alt = `${BRAND.name} — ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -66,7 +69,7 @@ export default async function Image() {
             marginTop: 44,
           }}
         >
-          TEKGUYZ CRM
+          {BRAND.name}
         </div>
         {/* Hairline, not extra whitespace — the design system builds structure
             from rules rather than gaps, and it separates the two type roles at
@@ -89,7 +92,7 @@ export default async function Image() {
             marginTop: 34,
           }}
         >
-          Every lead, one pipeline.
+          {BRAND.tagline}
         </div>
       </div>
     ),

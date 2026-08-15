@@ -1,11 +1,12 @@
 // src/app/manifest.ts
 import type { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand/copy";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TEKGUYZ CRM",
-    short_name: "TEKGUYZ",
-    description: "Multi-tenant sales & operations CRM",
+    name: BRAND.name,
+    short_name: BRAND.shortName,
+    description: BRAND.description,
     start_url: "/",
     display: "standalone",
     background_color: "#FAFAFA",
