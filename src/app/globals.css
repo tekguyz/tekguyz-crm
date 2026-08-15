@@ -153,6 +153,18 @@
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06),
       0 20px 44px rgba(0, 0, 0, 0.06);
+
+    /* The mark themes as a token like every other themed value, rather than
+       through a `dark:` utility. Two reasons: this codebase uses no `dark:`
+       variants at all, and Tailwind v4 maps `dark:` to prefers-color-scheme
+       rather than the `.dark` class — so a `dark:hidden` swap would ignore the
+       theme toggle and break the side-by-side panes on /design, which nest a
+       `.light` and a `.dark` wrapper on one screen. Resolving through a var
+       makes the mark follow whichever wrapper it is painted inside.
+       These are the -on-dark assets in .dark; never filter: invert(), which
+       would flip the blue and teal along with the ink. */
+    --brand-mark: url("/brand/icon.svg");
+    --brand-mark-reduced: url("/brand/icon-reduced.svg");
   }
 
   .dark {
@@ -196,6 +208,9 @@
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.18);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2),
       0 20px 44px rgba(0, 0, 0, 0.22);
+
+    --brand-mark: url("/brand/icon-on-dark.svg");
+    --brand-mark-reduced: url("/brand/icon-reduced-on-dark.svg");
   }
 
   body {

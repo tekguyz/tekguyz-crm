@@ -31,52 +31,65 @@ function loadInter(weight: "Bold" | "Medium") {
 export default async function Image() {
   return new ImageResponse(
     (
+      // One centred vertical stack. The previous layout put the icon and the
+      // text side by side and pinned the pair to the left edge, which left the
+      // tagline trailing off to the right of the mark instead of reading as
+      // part of the same unit. Link previews are cropped and scaled hard by
+      // every platform that renders them, so a centred block survives that
+      // better than an edge-anchored one.
       <div
         style={{
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "center",
-          padding: "0 96px",
           background: "#FAFAFA",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            width={168}
-            height={168}
-            alt=""
-            src={`data:image/svg+xml;base64,${ICON_SVG_B64}`}
-          />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                fontFamily: "Inter",
-                fontWeight: 700,
-                fontSize: 88,
-                letterSpacing: "-0.015em",
-                color: "#1A1A1A",
-                lineHeight: 1,
-              }}
-            >
-              TEKGUYZ CRM
-            </div>
-            <div
-              style={{
-                fontFamily: "Inter",
-                fontWeight: 500,
-                fontSize: 34,
-                letterSpacing: "0.01em",
-                color: "#6B6B72",
-                marginTop: 18,
-              }}
-            >
-              Every lead, one pipeline.
-            </div>
-          </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          width={264}
+          height={264}
+          alt=""
+          src={`data:image/svg+xml;base64,${ICON_SVG_B64}`}
+        />
+        <div
+          style={{
+            fontFamily: "Inter",
+            fontWeight: 700,
+            fontSize: 92,
+            letterSpacing: "-0.015em",
+            color: "#1A1A1A",
+            lineHeight: 1,
+            marginTop: 44,
+          }}
+        >
+          TEKGUYZ CRM
+        </div>
+        {/* Hairline, not extra whitespace — the design system builds structure
+            from rules rather than gaps, and it separates the two type roles at
+            the small sizes these cards are actually viewed at. */}
+        <div
+          style={{
+            width: 96,
+            height: 1,
+            background: "#D9D9DE",
+            marginTop: 34,
+          }}
+        />
+        <div
+          style={{
+            fontFamily: "Inter",
+            fontWeight: 500,
+            fontSize: 36,
+            letterSpacing: "0.01em",
+            color: "#6B6B72",
+            marginTop: 34,
+          }}
+        >
+          Every lead, one pipeline.
         </div>
       </div>
     ),

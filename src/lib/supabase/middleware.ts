@@ -44,7 +44,24 @@ export async function updateSession(request: NextRequest) {
   // redirect that page routes use.
   const isApiRoute = path.startsWith("/api/");
 
-  if (!user && !isAuthRoute && !isApiRoute) {
+  // Public metadata routes. These are fetched by link-preview crawlers and by
+  // the browser itself, neither of which carries a session cookie — so the
+  // auth redirect below turns every one of them into a 307 to /login and the
+  // asset silently never renders. It fails invisibly to a signed-in human,
+  // who has the cookie and sees the real thing, which is exactly how the OG
+  // card shipped broken: the URL worked in the owner's browser and returned
+  // "Redirecting..." to Slack, Vercel's OG inspector, and every other crawler.
+  // Nothing here is tenant data — it is the same bytes for every visitor.
+  const isPublicMetadataRoute =
+    path === "/opengraph-image" ||
+    path === "/twitter-image" ||
+    path === "/manifest.webmanifest" ||
+    path === "/robots.txt" ||
+    path === "/sitemap.xml" ||
+    path.startsWith("/icons/") ||
+    path.startsWith("/brand/");
+
+  if (!user && !isAuthRoute && !isApiRoute && !isPublicMetadataRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

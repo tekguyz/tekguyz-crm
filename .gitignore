@@ -4,3 +4,6 @@ node_modules/
 .next/
 .claude/settings.local.json
 tsconfig.tsbuildinfo
+# Python bytecode from scripts/brand
+__pycache__/
+*.pyc

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconLayoutGrid, IconLayoutKanban, IconUsers, IconUpload, IconSettings } from "@tabler/icons-react";
 import { SidebarQuickAction } from "@/components/shell/SidebarQuickAction";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 const NAV_ITEMS = [
   { href: "/", label: "Today", icon: IconLayoutGrid },
@@ -18,7 +19,8 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-hairline bg-canvas-pure">
-      <div className="flex h-14 items-center border-b border-hairline px-4">
+      <div className="flex h-14 items-center gap-2.5 border-b border-hairline px-4">
+        <BrandMark height={22} />
         <span className="text-sm font-semibold tracking-tight">TEKGUYZ CRM</span>
       </div>
 

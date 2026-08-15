@@ -101,6 +101,16 @@ REDUCED_SHAFT = [(256.0, 292.0), (256.0, 372.0)]
 REDUCED_HEAD = [(214.0, 366.0), (298.0, 366.0), (256.0, 430.0)]
 PAD = 8.0
 
+# Favicon plate. PLATE_PAD is deliberately tight — the mark should be as large
+# as the plate allows. The reduced mark is wider than it is tall, so it fits to
+# width and centres with vertical slack, which makes the rim the binding
+# constraint: below ~0.06 it starts crossing the corner curve and the plate
+# stops reading as rounded. 0.08 was picked by rendering 0.10/0.08/0.06/0.04
+# side by side at 16 and 32px. PLATE_RADIUS matches the iOS squircle
+# proportion closely enough to read as an app icon without being a superellipse.
+PLATE_PAD = 0.08
+PLATE_RADIUS = 0.22
+
 
 def bbox():
     xs, ys = [], []
@@ -323,10 +333,25 @@ def _rgba(h, a=255):
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)
 
 
-def raster(size, ink=INK, blue=BLUE, teal=TEAL, bg=None, pad_ratio=0.0, reduced=False):
+def raster(size, ink=INK, blue=BLUE, teal=TEAL, bg=None, pad_ratio=0.0,
+           reduced=False, radius_ratio=0.0):
+    """Rasterise the mark at `size`px.
+
+    `radius_ratio` rounds the `bg` plate, as a fraction of the edge. The corner
+    has to be baked into the pixels here: iOS masks the touch icon and Android
+    masks the maskable icon for you, but nothing ever masks a favicon.ico — a
+    square plate stays square in the tab strip. Drawn on the supersampled
+    canvas so the curve survives the LANCZOS downsample.
+    """
     from PIL import Image, ImageDraw
     S = size * SS
-    img = Image.new("RGBA", (S, S), _rgba(bg) if bg else (0, 0, 0, 0))
+    if bg and radius_ratio:
+        img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        ImageDraw.Draw(img).rounded_rectangle(
+            [0, 0, S - 1, S - 1], radius=S * radius_ratio, fill=_rgba(bg)
+        )
+    else:
+        img = Image.new("RGBA", (S, S), _rgba(bg) if bg else (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
     if reduced:
@@ -404,11 +429,23 @@ def build(out, bold_path, med_path):
     else:
         print("!! no font supplied — lockups skipped", file=sys.stderr)
 
-    raster(16, reduced=True).save(f"{ico_dir}/favicon-16x16.png")
-    raster(32, reduced=True).save(f"{ico_dir}/favicon-32x32.png")
-    raster(48).save(f"{ico_dir}/favicon-48x48.png")
-    raster(96).save(f"{ico_dir}/favicon-96x96.png")
-    raster(48, reduced=True).save(
+    # Favicons sit on a rounded blue plate with the mark knocked out in white.
+    # The bare mark carries its structure in #1A1A1A ink, which is very close
+    # to a dark Chrome tab — so the transparent variant dissolves on exactly
+    # the surface a favicon is most often seen. The plate is opaque, so it is
+    # the one variant that cannot be affected by the tab colour behind it.
+    # The funnel is filled white rather than left as an outline. Outlined, the
+    # rim, the fill edge and the arrow are three thin white lines that merge
+    # into an unreadable blob by 16px — checked by rendering both side by side.
+    # Filled, the mark becomes a silhouette that survives the downsample, and
+    # the arrow simply merges into the mass it was already sitting inside.
+    plate = dict(ink="#FFFFFF", blue="#FFFFFF", teal=None, bg=BLUE,
+                 pad_ratio=PLATE_PAD, radius_ratio=PLATE_RADIUS)
+    raster(16, reduced=True, **plate).save(f"{ico_dir}/favicon-16x16.png")
+    raster(32, reduced=True, **plate).save(f"{ico_dir}/favicon-32x32.png")
+    raster(48, reduced=True, **plate).save(f"{ico_dir}/favicon-48x48.png")
+    raster(96, reduced=True, **plate).save(f"{ico_dir}/favicon-96x96.png")
+    raster(96, reduced=True, **plate).save(
         os.path.join(out, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48)]
     )
     raster(180, bg="#FFFFFF", pad_ratio=0.13).save(f"{ico_dir}/apple-touch-icon-180.png")
