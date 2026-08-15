@@ -79,7 +79,7 @@ export default async function Image() {
             width: 96,
             height: 1,
             background: "#D9D9DE",
-            marginTop: 34,
+            marginTop: 20,
           }}
         />
         <div
@@ -89,7 +89,7 @@ export default async function Image() {
             fontSize: 36,
             letterSpacing: "0.01em",
             color: "#6B6B72",
-            marginTop: 34,
+            marginTop: 20,
           }}
         >
           {BRAND.tagline}

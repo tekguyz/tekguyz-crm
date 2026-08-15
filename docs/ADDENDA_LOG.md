@@ -1217,3 +1217,38 @@ so they are written down instead of carried in someone's head.
 
 The brand proof-sheet gap closed the same day on the owner's sign-off; its
 one-liner is in the Resolved Items Archive above.
+
+## Metadata & doc cleanup pass — 2026-08-15
+
+Four small independent fixes closing out the brand application QA pass. No
+design-token, schema or component change.
+
+**1. `theme_color` unified on `#3063D3`.** The gap logged above was decided the
+other way round from the guess recorded in it: the *brand* value wins, not the
+canvas value. `src/app/manifest.ts` already carried `#3063D3` and was left
+untouched; `layout.tsx`'s `viewport.themeColor` media-query pair (`#FAFAFA`
+light / `#1A1A1D` dark) was replaced with a single flat `"#3063D3"`. Verified
+against a running instance: the rendered tag is
+`<meta name="theme-color" content="#3063D3"/>` with **no `media` attribute**, so
+one value serves both OS colour preferences and there is no second tag to drift.
+A single value is the point — do not reintroduce a light/dark split here, or the
+manifest (which can only hold one `theme_color`) disagrees again.
+
+**2. OG card spacing.** `src/app/opengraph-image.tsx` stacked icon → wordmark
+(`marginTop: 44`) → hairline (`34`) → tagline (`34`), so the wordmark-to-tagline
+distance was **69px against a 44px icon gap**. The tagline read as a detached
+second element rather than a subordinate line of the same unit. Both `34`s
+dropped to `20`, giving **41px** — now tighter than the icon gap, so the type
+block groups. Route re-fetched with no cookie: `200 image/png`, both renders
+1200x630. The Inter-from-`node_modules` font load was deliberately left alone;
+it is its own tracked gap and has nothing to do with spacing.
+
+**3–4. `docs/KNOWN_GAPS.md` hygiene.** The `theme_color` bullet was deleted
+(implemented, not merely decided). The "Manual, human-only checklist: enable
+Leaked Password Protection" bullet was deleted — the owner has decided it will
+never be actioned, so it is not deferred work. The dated audit mentions of
+Leaked Password Protection elsewhere in this log are history and were left in
+place. In the "v2 primitives are now verified by eye" bullet, Escape-to-close
+came off the "Still unverified" list (a human supplied the real keypress; the
+earlier failure was the CDP synthetic-key limitation it was suspected to be) and
+the remaining two items were renumbered.

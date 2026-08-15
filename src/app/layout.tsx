@@ -58,13 +58,12 @@ export const metadata: Metadata = {
   },
 };
 
-// Theme colour flips with the app's two themes — a single value leaves one
-// theme's browser chrome mismatched against the canvas.
+// One flat brand value, deliberately not a light/dark pair. The manifest can
+// only carry a single theme_color, so a media-query split here means an
+// installed PWA and the browser chrome answer the same question two different
+// ways. Keep this identical to `theme_color` in src/app/manifest.ts.
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAFAFA" },
-    { media: "(prefers-color-scheme: dark)", color: "#1A1A1D" },
-  ],
+  themeColor: "#3063D3",
 };
 
 export default function RootLayout({
