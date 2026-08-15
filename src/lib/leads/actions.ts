@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
+import { isLeadRoleDenied, LEAD_ROLE_DENIED_MESSAGE } from "@/lib/leads/role-errors";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
 // split out on 2026-07-28 to bring this file back under the 200-line cap.
@@ -126,8 +127,12 @@ export async function updateLead(
     })
     .eq("id", leadId);
 
+  // A MEMBER hitting the role trigger gets the plain-language reason, not the
+  // raw Postgres string. This form always re-sends outcome/actual_revenue/
+  // closed_at, so a MEMBER only lands here when one of them actually changed —
+  // the trigger's IS DISTINCT FROM guard lets an unchanged re-send through.
   if (error) {
-    return { error: error.message };
+    return { error: isLeadRoleDenied(error) ? LEAD_ROLE_DENIED_MESSAGE : error.message };
   }
 
   revalidatePath("/", "layout");

@@ -690,6 +690,7 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **`updateLead` silently NULLed `website`/`lead_source`/`service_category` on every save.** ✅ Fixed 2026-07-30 — inputs added to `IdentityFields.tsx` and `CreateLeadModal`; now covered by `CLAUDE.md`'s Form/Action Field Parity rule. Full history: `docs/ADDENDA_LOG.md` § Silent NULL-on-save data-loss bug.
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
 - **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
+- **`leads` CRUD has zero role enforcement — any MEMBER has full CRUD parity with OWNER/ADMIN.** ✅ Fixed 2026-08-14 — `archived`, `outcome`, `actual_revenue` and `closed_at` are now OWNER/ADMIN-only on UPDATE, enforced by a `BEFORE UPDATE` trigger, with a live three-role Vitest suite (`npm run test:rls`). Everything else on `leads` stays MEMBER-writable by design. Two narrower successors are open in `docs/KNOWN_GAPS.md` (the controls are still rendered to a MEMBER; there is still no `assigned_to`). Full history: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
 
 ## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
 
@@ -736,3 +737,149 @@ Logged in `docs/KNOWN_GAPS.md` rather than patched, since it is cosmetic.
 
 Also confirmed via the Vercel connector that production is READY on the current
 `main` — the foundation layer is deployed, not just committed.
+
+---
+
+## Leads MEMBER-role enforcement addendum (2026-08-14)
+
+Closes the longest-standing security gap in the schema: `leads` had zero role
+enforcement, so any MEMBER could archive a lead or write the close
+outcome/revenue that becomes reported revenue. New:
+`supabase/migrations/20260814120000_leads_member_role_enforcement.sql`,
+`src/lib/leads/role-errors.ts`,
+`src/lib/leads/leads-role-enforcement.rls.test.ts`, `vitest.rls.config.mts`.
+Edited: `src/lib/leads/actions.ts`, `src/lib/leads/archive-actions.ts`,
+`src/components/leads/edit-modal/ArchiveControls.tsx`, `vitest.config.mts`,
+`package.json`. **The migration is written but NOT applied** — handed to the
+human per the standing DDL rule.
+
+- **Scope, in one line: `archived`, `outcome`, `actual_revenue` and `closed_at`
+  are OWNER/ADMIN-only on UPDATE.** MEMBER keeps unrestricted INSERT (all
+  columns, including those four), full tenant-wide SELECT, and full UPDATE of
+  every other column. The SELECT and INSERT policies were not touched.
+- **A trigger, not a policy, and that is not a workaround.** RLS `WITH CHECK`
+  evaluates the resulting row, never a column-level diff, so a policy could only
+  express "reject every MEMBER update to any already-closed lead" — a different
+  and wrong rule. A `BEFORE UPDATE` trigger comparing `OLD` vs `NEW` is the
+  idiomatic fit and reuses the shape `public.sync_modified_timestamp()` already
+  set. The tenant boundary is unchanged and still lives in the paired
+  `USING`/`WITH CHECK` on "Members write tenant leads".
+- **`IS DISTINCT FROM` on all four columns is load-bearing, not defensive
+  style.** `updateLead()` re-sends `outcome`/`actual_revenue`/`closed_at` on
+  every single save. Without the unchanged-values fast path, a MEMBER could not
+  edit a phone number on an already-closed lead — the enforcement would have
+  broken ordinary work on day one. There is a dedicated test for exactly this.
+- **`auth.uid() IS NULL` is an explicit exemption for service-role.** The
+  webhook Resurrection Engine flips `archived` back to false through
+  `createWebhookServiceClient()`, and the seed/reset scripts write fixtures the
+  same way. A `BEFORE UPDATE` trigger fires for every role including
+  `service_role`, so without this the trigger would have broken lead
+  re-ingestion. Worth remembering generally: RLS bypass is not trigger bypass.
+- **Checked against `OLD.organization_id`, not `NEW`.** The org that currently
+  owns the row is the one whose reported revenue is at stake. Identical in
+  practice (no app path writes `organization_id`), but `OLD` is the stricter
+  reading if a row were ever moved between two orgs the caller belongs to.
+- **`SECURITY INVOKER`, not `DEFINER`.** `authenticated` already holds SELECT on
+  `organization_members`, whose read policy resolves through the existing
+  `SECURITY DEFINER` helper `private.current_org_ids()`, so no elevation is
+  needed to read one's own role. `search_path` pinned to `''` per
+  `20260721130000_pin_function_search_path.sql`. Fail-closed: only an explicit
+  OWNER/ADMIN membership row permits the write.
+- **Raised with SQLSTATE 42501 and a `LEAD_ROLE_DENIED:` sentinel.** 42501 is
+  what PostgREST maps to HTTP 403 — but a plain RLS denial uses the same code,
+  so matching on the code alone would relabel an ordinary cross-tenant denial as
+  a role problem. `src/lib/leads/role-errors.ts` matches the sentinel in the
+  message and is the single place both action files translate it.
+- **Raising, rather than returning NULL from the trigger, is the whole point.**
+  A `BEFORE` trigger returning NULL silently drops the row's update and reports
+  success — the same "data doesn't match what the user saw" failure mode as the
+  silent-NULL-on-save bug. Raising aborts the statement, so a mixed
+  restricted + unrestricted UPDATE writes nothing at all. Tested directly.
+- **`archiveLead`/`unarchiveLead` now RETURN the denial instead of throwing it,
+  and that is a deliberate correctness fix, not a style change.** Next.js
+  redacts Server Action error messages in a production build, so a thrown
+  `Error("only an owner can…")` would have reached the browser as a generic
+  digest and the specific reason would have been lost. Every *other* failure
+  still throws, so the existing catch/retry path in `ArchiveControls` is intact.
+  Both handlers were extended to show the returned message verbatim — one small
+  step past the prompt's stated file list, taken because an action returning a
+  user-facing message that the UI overwrites with generic copy would not have
+  satisfied the requirement.
+- **Tests are a live three-role suite against the real project, kept out of
+  `npm test`.** `src/lib/leads/leads-role-enforcement.rls.test.ts` is the
+  committed, re-runnable form of the disposable service-role script pattern used
+  for every prior adversarial check here: three throwaway users, their own org
+  via the real `create_organization_with_owner` RPC, session-bound anon clients,
+  full teardown. 15 tests. It needs network, credentials and ~10s and it creates
+  real auth users, so `vitest.config.mts` excludes `src/**/*.rls.test.ts` and it
+  runs via `npm run test:rls` against `vitest.rls.config.mts` (node env,
+  `loadEnv(..., "")` to pull the service key into `process.env` — Vitest does not
+  read `.env` on its own and Node's `--env-file` cannot be threaded through the
+  vitest binary cross-platform).
+- **Pre-migration baseline captured deliberately, and it is the proof the gap
+  was real.** Run against the live database before the migration was applied:
+  **6 failed | 9 passed**. The six failures are exactly the six MEMBER "cannot"
+  cases (archive, unarchive, outcome, actual_revenue, closed_at, mixed write) —
+  i.e. a MEMBER today successfully archives leads and falsifies close data. The
+  nine passes are the three MEMBER-allowed cases and all six OWNER/ADMIN cases,
+  which confirms the harness itself works and that nothing legitimate regresses.
+  **The post-migration run — all 15 green — is still pending the human applying
+  the migration.**
+- **Fixture teardown verified by SQL after the run, not assumed:** 0 orgs
+  matching `RLS Role Enforcement Test%`, 0 `rls-role-test-%` auth users, and the
+  two real orgs untouched at TEKGUYZ 17 leads / TEKGUYZ Demo 20.
+- **Pre-migration reconciliation found no drift.** Live `pg_policies`,
+  `pg_trigger`, `information_schema` grants and column types for `leads` all
+  match `docs/SCHEMA_REFERENCE.md` and the migration files exactly. One already
+  known and already documented difference: the schema doc's original DDL for
+  `private.current_org_ids()` / `public.sync_modified_timestamp()` predates
+  `SET search_path TO ''`, flagged in the Task/Calendar Prompt 1 addendum.
+  Separately noted, not drift: `docs/KNOWN_GAPS.md` says the real `TEKGUYZ` org
+  has 0–14 leads depending on which line you read; it now has 17, so the "demo
+  data only" framing of the old deferral has quietly expired.
+- **`get_advisors` (security + performance) has NOT been run for this change** —
+  it can only report on applied DDL, and the migration is not applied. It is
+  owed immediately after the human applies it.
+- **Deliberately out of scope, so it is not assumed done:** no `assigned_to` /
+  per-row lead ownership (no schema for it exists; logged in
+  `docs/KNOWN_GAPS.md`), no role gating in the UI (the archive and outcome
+  controls still render for a MEMBER; also logged), no change to `tasks`,
+  `organizations` or `organization_invites` RLS, and no DELETE policy.
+
+### Post-apply verification (2026-08-14, same day)
+
+The two items the addendum above listed as owed are now done. Superseding the
+"NOT applied" language throughout that section:
+
+- **Applied by the human, re-verified live rather than assumed.** `pg_trigger` /
+  `pg_proc` confirm `trigger_enforce_lead_role_restrictions` is present and
+  enabled on `public.leads`, its function is `SECURITY INVOKER`
+  (`prosecdef = false`) with `search_path` pinned to `''`. `anon` and
+  `authenticated` both resolve `has_function_privilege(..., 'EXECUTE') = false`
+  on it; only `service_role` can, and a `returns trigger` function is not
+  callable through PostgREST regardless.
+- **`npm run test:rls`: 15 passed, 0 failed.** Against the pre-migration
+  baseline of 6 failed / 9 passed, the six MEMBER cases (archive, unarchive,
+  outcome, actual_revenue, closed_at, mixed write) flipped from silently
+  succeeding to correctly rejected, and the nine that were already passing still
+  pass — so OWNER/ADMIN close/archive and ordinary MEMBER editing did not
+  regress.
+- **`get_advisors` security + performance: no new finding attributable to this
+  change.** Both SECURITY DEFINER lints (0028 anon-executable, 0029
+  authenticated-executable) list eight pre-existing functions and do **not**
+  list `enforce_lead_role_restrictions` — the direct payoff of choosing
+  `SECURITY INVOKER`. No new `auth_rls_initplan` warning either, since the
+  enforcement is a trigger rather than a policy, and the function already wraps
+  its one auth call as `(select auth.uid())`.
+- **The eight SECURITY DEFINER warnings were triaged, not waved past.** All
+  eight are intentional RPC endpoints; 0028/0029 are newer lint rules surfacing
+  long-standing design, not a new exposure. `get_org_webhook_secret`,
+  `vault_set_org_credential` and `vault_clear_org_credential` already re-check
+  the caller's own OWNER/ADMIN role internally (documented in `CLAUDE.md` § 1).
+  The two whose internal checks were **not** previously documented were read
+  directly this session: `get_organization_members` gates on
+  `p_org_id in (select private.current_org_ids())`, so it is correctly
+  caller-scoped; `get_invite_preview` has no caller check by design — it must
+  answer an anonymous, not-yet-signed-in invitee, and the unguessable invite
+  token is itself the credential. Both are fine as they stand. Recorded here so
+  the next session does not re-derive it.

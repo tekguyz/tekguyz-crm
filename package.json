@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "vitest run --config vitest.rls.config.mts",
     "seed:demo": "tsx --env-file=.env scripts/seed/create-demo-org.ts",
     "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts"
   },

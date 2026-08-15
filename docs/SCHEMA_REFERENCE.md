@@ -460,4 +460,58 @@ GRANT SELECT, INSERT, UPDATE ON public.tasks TO authenticated;
 
 Reuses `private.current_org_ids()` and `public.sync_modified_timestamp()` as-is — no new helper function. Full build narrative (step-zero verification, the adversarial cross-tenant RLS test, the Tasks Due agenda query's defense-in-depth `leads!inner` filter, and the archive-side auto-close in Prompt 4) lives in `docs/ADDENDA_LOG.md` under the three "Task/Calendar addendum" sections.
 
+**Leads MEMBER-role enforcement addendum (2026-08-14, `supabase/migrations/20260814120000_leads_member_role_enforcement.sql`, applied by the human per the standing DDL rule and re-verified live the same day via `pg_trigger`/`pg_proc` — trigger present and enabled, function `SECURITY INVOKER` with `search_path` pinned):** a `BEFORE UPDATE` trigger on `public.leads` restricting four columns — `archived`, `outcome`, `actual_revenue`, `closed_at` — to OWNER/ADMIN. The three `leads` policies above are **unchanged**: SELECT and INSERT stay fully open to any tenant member, and the tenant boundary is still the paired `USING`/`WITH CHECK` on "Members write tenant leads". A policy cannot express this rule — `WITH CHECK` evaluates the resulting row, not a column-level diff — so the column-level role gate is a trigger layered on top, following `public.sync_modified_timestamp()`'s precedent. Pre-migration reconciliation on 2026-08-14 confirmed the live `leads` policies, trigger, grants and column types match this file exactly, with no drift.
+
+```sql
+CREATE OR REPLACE FUNCTION public.enforce_lead_role_restrictions()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY INVOKER            -- authenticated already reads organization_members
+SET search_path = ''
+AS $$
+DECLARE
+    v_uid uuid := (SELECT auth.uid());
+BEGIN
+    -- Unchanged values pass. Load-bearing: updateLead() re-sends all three
+    -- close columns on every save, so without this a MEMBER could not edit
+    -- any field on an already-closed lead.
+    IF new.archived       IS NOT DISTINCT FROM old.archived
+   AND new.outcome        IS NOT DISTINCT FROM old.outcome
+   AND new.actual_revenue IS NOT DISTINCT FROM old.actual_revenue
+   AND new.closed_at      IS NOT DISTINCT FROM old.closed_at THEN
+        RETURN new;
+    END IF;
+
+    -- Service-role / SQL editor: no end-user identity. Exempt on purpose —
+    -- the webhook Resurrection Engine writes `archived` this way. RLS bypass
+    -- is NOT trigger bypass, so this exemption has to be explicit.
+    IF v_uid IS NULL THEN
+        RETURN new;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.organization_members m
+        WHERE m.organization_id = old.organization_id
+          AND m.user_id = v_uid
+          AND m.role IN ('OWNER', 'ADMIN')
+    ) THEN
+        RETURN new;
+    END IF;
+
+    -- 42501 = PostgREST HTTP 403. The sentinel prefix is what
+    -- src/lib/leads/role-errors.ts matches on; a bare 42501 is ambiguous
+    -- because a plain RLS denial uses the same SQLSTATE.
+    RAISE EXCEPTION 'LEAD_ROLE_DENIED: only an owner or admin can archive a lead or change its close outcome, revenue, or close date.'
+        USING ERRCODE = '42501';
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trigger_enforce_lead_role_restrictions
+    BEFORE UPDATE ON public.leads
+    FOR EACH ROW
+    EXECUTE FUNCTION public.enforce_lead_role_restrictions();
+```
+
+Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enforcement.rls.test.ts`, run with `npm run test:rls` (deliberately excluded from `npm test` — it creates and tears down real auth users). Full narrative: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
+
 **Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` was added to this file, in scope for the work that just shipped; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.

@@ -38,7 +38,15 @@ export function ArchiveControls({ lead }: { lead: Lead }) {
     e.preventDefault();
     setArchiving(true);
     try {
-      await archiveLead(lead.id);
+      // A returned {error} is the one expected, explainable failure — a MEMBER
+      // blocked by trigger_enforce_lead_role_restrictions. Its message is
+      // written for the user, so it is shown verbatim; the dialog stays open,
+      // same as the catch path, but retrying will not help so no retry copy.
+      const denied = await archiveLead(lead.id);
+      if (denied) {
+        toast.error(denied.error);
+        return;
+      }
       toast.success(`${lead.client_name} archived.`);
       setArchiveDialogOpen(false);
     } catch (err) {
@@ -58,7 +66,12 @@ export function ArchiveControls({ lead }: { lead: Lead }) {
   async function handleUnarchive() {
     setUnarchiving(true);
     try {
-      await unarchiveLead(lead.id);
+      // Same two-channel split as handleArchiveConfirm above.
+      const denied = await unarchiveLead(lead.id);
+      if (denied) {
+        toast.error(denied.error);
+        return;
+      }
       toast.success(`${lead.client_name} restored from archive.`);
     } catch (err) {
       // Same gap as the archive path above — unarchiveLead has always thrown
