@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth/actions";
 import { CommandBar } from "@/components/command/CommandBar";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { Button } from "@/components/ui/Button";
 
 export function Header({
   orgName,
@@ -31,24 +32,23 @@ export function Header({
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-hairline bg-canvas-pure px-4">
-      <button
-        type="button"
-        onClick={() => setCommandOpen(true)}
-        className="flex items-center gap-2 rounded-md border border-hairline px-3.5 py-1 text-sm text-ink-muted shadow-elevation-1 transition-colors hover:bg-canvas-soft hover:text-ink-main"
-      >
-        <IconSearch className="size-4" />
+      {/* Level 0: the v1 search affordance carried a shadow-elevation-1, which
+          v2 reserves for popovers. Button's secondary variant is the same
+          hairline surface without it. */}
+      <Button type="button" variant="secondary" onClick={() => setCommandOpen(true)}>
+        <IconSearch className="size-5" stroke={1.75} />
         Search
-        <kbd className="ml-4 rounded border border-hairline px-1.5 py-0.5 text-xs text-ink-muted">
+        <kbd className="text-label ml-4 rounded-sm border border-hairline px-1.5 py-0.5 text-ink-muted">
           ⌘K
         </kbd>
-      </button>
+      </Button>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-ink-muted" title={userEmail}>
+        <span className="text-body-md text-ink-muted" title={userEmail}>
           {orgName}
         </span>
         <div
-          className="flex size-8 items-center justify-center rounded-full border border-hairline bg-canvas-soft text-xs font-medium uppercase"
+          className="text-label flex size-8 items-center justify-center rounded-full border border-hairline bg-canvas-soft uppercase"
           title={displayName || userEmail}
         >
           {(displayName || userEmail).slice(0, 1) || "?"}
@@ -56,13 +56,12 @@ export function Header({
         <HelpTrigger />
         <ThemeToggle />
         <form action={signOut}>
-          <button
-            type="submit"
-            title="Sign out"
-            className="flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
-          >
-            <IconLogout className="size-4" />
-          </button>
+          {/* w-8 px-0 squares off Button's md size for an icon-only control;
+              the size tokens themselves are untouched. */}
+          <Button type="submit" variant="secondary" title="Sign out" className="w-8 px-0">
+            <IconLogout className="size-5" stroke={1.75} />
+            <span className="sr-only">Sign out</span>
+          </Button>
         </form>
       </div>
 

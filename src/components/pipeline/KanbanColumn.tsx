@@ -44,13 +44,13 @@ export function KanbanColumn({
       }`}
     >
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold">{PIPELINE_STATUS_LABELS[status]}</h2>
-        <span className="text-xs text-ink-muted">{leads.length}</span>
+        <h2 className="text-title">{PIPELINE_STATUS_LABELS[status]}</h2>
+        <span className="text-body-sm text-ink-muted">{leads.length}</span>
       </div>
 
       <div className="flex flex-1 flex-col gap-2">
         {leads.length === 0 ? (
-          <p className="rounded-md border border-dashed border-hairline p-3 text-center text-xs text-ink-muted">
+          <p className="text-body-sm rounded-md border border-dashed border-hairline p-3 text-center text-ink-muted">
             No leads
           </p>
         ) : (

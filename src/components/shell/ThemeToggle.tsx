@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { IconSun, IconMoon, IconDeviceDesktop } from "@tabler/icons-react";
+import { Button } from "@/components/ui/Button";
 
 // Three-state cycle (System → Light → Dark), not a two-state light/dark
 // switch. The root ThemeProvider is configured with defaultTheme="system"
@@ -16,8 +17,9 @@ type ThemeChoice = (typeof ORDER)[number];
 const ICONS = { system: IconDeviceDesktop, light: IconSun, dark: IconMoon };
 const LABELS = { system: "System", light: "Light", dark: "Dark" };
 
-const BUTTON_CLASS =
-  "flex size-8 items-center justify-center rounded-md border border-hairline text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main";
+// Squares off Button's md size for an icon-only control. The design tokens
+// themselves are untouched — this is layout, not a new variant.
+const ICON_BUTTON_CLASS = "w-8 px-0";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -29,7 +31,18 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={BUTTON_CLASS} aria-hidden />;
+    // tabIndex={-1} rather than `disabled`: disabled would paint the
+    // opacity-50 state for one frame before mount, which the plain <div>
+    // placeholder never did.
+    return (
+      <Button
+        type="button"
+        variant="secondary"
+        className={ICON_BUTTON_CLASS}
+        aria-hidden
+        tabIndex={-1}
+      />
+    );
   }
 
   const current = (ORDER.includes(theme as ThemeChoice) ? theme : "system") as ThemeChoice;
@@ -37,14 +50,15 @@ export function ThemeToggle() {
   const Icon = ICONS[current];
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
       onClick={() => setTheme(next)}
       title={`Theme: ${LABELS[current]} — switch to ${LABELS[next]}`}
       aria-label={`Theme: ${LABELS[current]}. Switch to ${LABELS[next]}.`}
-      className={BUTTON_CLASS}
+      className={ICON_BUTTON_CLASS}
     >
-      <Icon className="size-4" />
-    </button>
+      <Icon className="size-5" stroke={1.75} />
+    </Button>
   );
 }

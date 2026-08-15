@@ -12,9 +12,9 @@ export function HighValueTrack({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-sm font-semibold">High-Value</h2>
+      <h2 className="text-title">High-Value</h2>
       {leads.length === 0 ? (
-        <p className="text-sm text-ink-muted">No active leads yet.</p>
+        <p className="text-body-md text-ink-muted">No active leads yet.</p>
       ) : (
         leads.map((lead) => (
           <LeadCard

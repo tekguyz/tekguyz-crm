@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { isOverdue, formatDueAt } from "@/lib/format";
 import type { TaskDue } from "@/lib/tasks/queries";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 // Named to match its real siblings (SlaCriticalQueue / HighValueTrack /
 // StarredWorkspace), which use a <Concept><Container> shape with no "Section"
@@ -21,9 +23,9 @@ export function TasksDueQueue({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-sm font-semibold">Tasks Due</h2>
+      <h2 className="text-title">Tasks Due</h2>
       {tasks.length === 0 ? (
-        <p className="text-sm text-ink-muted">No tasks due.</p>
+        <p className="text-body-md text-ink-muted">No tasks due.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {tasks.map((task) => {
@@ -36,24 +38,30 @@ export function TasksDueQueue({
                 {/* Reuses the app-wide ?leadId= deep link that
                     ProfileSheetController (mounted in AppShell) already
                     listens for — no second sheet-opening mechanism. */}
-                <Link
-                  href={`/?leadId=${task.lead_id}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-hairline bg-canvas-pure p-3 shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{task.title}</p>
-                    <p className="truncate text-xs text-ink-muted">{task.client_name}</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {overdue && (
-                      <span className="rounded-full bg-pill-orange-bg px-2 py-0.5 text-xs font-medium text-pill-orange-fg">
-                        Overdue
+                <Link href={`/?leadId=${task.lead_id}`} className="block">
+                  {/* Card is Level 0, so v1's elevation-1 → elevation-2 hover
+                      is replaced by a canvas-soft wash, same as the lead
+                      cards. `cold` is deliberately NOT passed — see the note
+                      above on why an overdue task and an SLA-breaching lead
+                      must not share a visual language. */}
+                  <Card className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-canvas-soft">
+                    <div className="min-w-0">
+                      <p className="text-body-md truncate font-medium">{task.title}</p>
+                      <p className="text-body-sm truncate text-ink-muted">
+                        {task.client_name}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {overdue && (
+                        <Badge tone="orange" className="rounded-full px-2">
+                          Overdue
+                        </Badge>
+                      )}
+                      <span className="text-body-sm text-ink-muted">
+                        {formatDueAt(task.due_at, orgTimezone)}
                       </span>
-                    )}
-                    <span className="text-xs text-ink-muted">
-                      {formatDueAt(task.due_at, orgTimezone)}
-                    </span>
-                  </div>
+                    </div>
+                  </Card>
                 </Link>
               </li>
             );

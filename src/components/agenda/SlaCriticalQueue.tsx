@@ -12,9 +12,9 @@ export function SlaCriticalQueue({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-sm font-semibold">SLA Critical</h2>
+      <h2 className="text-title">SLA Critical</h2>
       {leads.length === 0 ? (
-        <p className="text-sm text-ink-muted">Nothing overdue.</p>
+        <p className="text-body-md text-ink-muted">Nothing overdue.</p>
       ) : (
         leads.map((lead) => (
           <LeadCard

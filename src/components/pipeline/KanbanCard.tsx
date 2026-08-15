@@ -5,6 +5,8 @@ import { IconStar } from "@tabler/icons-react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils/cn";
 
 export function KanbanCard({
   lead,
@@ -26,7 +28,11 @@ export function KanbanCard({
 
   return (
     <>
-      <div
+      {/* Card renders a <div> and spreads every prop, so the drag surface,
+          the role="button" affordance and the keyboard handler all survive
+          the swap untouched. Only the styling moved. */}
+      <Card
+        cold={overdue}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData("text/plain", lead.id);
@@ -40,30 +46,36 @@ export function KanbanCard({
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") setOpen(true);
         }}
-        className={`w-full cursor-grab rounded-lg border bg-canvas-pure p-3 text-left shadow-elevation-1 transition-shadow hover:shadow-elevation-2 active:cursor-grabbing ${
-          overdue ? "border-dashed border-cold" : "border-hairline"
-        } ${dragging ? "opacity-40" : ""}`}
+        className={cn(
+          "w-full cursor-grab p-3 text-left transition-colors active:cursor-grabbing",
+          "hover:bg-canvas-soft",
+          dragging && "opacity-40",
+        )}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{lead.client_name}</p>
+            <p className="text-body-md truncate font-medium">{lead.client_name}</p>
             {lead.company && (
-              <p className="truncate text-xs text-ink-muted">{lead.company}</p>
+              <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
             )}
           </div>
           {lead.is_starred && (
             <IconStar
-              className={`size-4 shrink-0 ${
-                overdue ? "fill-ink-muted text-ink-muted" : "fill-pill-orange-fg text-pill-orange-fg"
-              }`}
+              stroke={1.75}
+              className={cn(
+                "size-5 shrink-0",
+                overdue
+                  ? "fill-ink-muted text-ink-muted"
+                  : "fill-pill-orange-fg text-pill-orange-fg",
+              )}
             />
           )}
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs text-ink-muted">
+        <div className="text-body-sm mt-2 flex items-center justify-between text-ink-muted">
           <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
           <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
         </div>
-      </div>
+      </Card>
 
       <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />
     </>
