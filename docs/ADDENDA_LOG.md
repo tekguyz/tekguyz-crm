@@ -1295,3 +1295,46 @@ place. In the "v2 primitives are now verified by eye" bullet, Escape-to-close
 came off the "Still unverified" list (a human supplied the real keypress; the
 earlier failure was the CDP synthetic-key limitation it was suspected to be) and
 the remaining two items were renumbered.
+
+---
+
+## Dev-only sign-in route for browser verification (2026-08-15)
+
+Recorded retroactively during the 2026-08-15 handoff audit: commit `e5b2c5a`
+shipped `src/app/api/dev-login/route.ts` with no entry in any of the three
+status docs. It is a small surface but a security-adjacent one, so leaving it
+undocumented is exactly the drift the Known-Gaps discipline exists to prevent.
+
+**What it is.** `GET /api/dev-login` signs in the disposable demo owner that
+`scripts/seed/lib/demo-org.ts` creates, then redirects to `/`. Its reason to
+exist is that every app route is auth-gated and an agent cannot type a password
+into a form, so before this route no screenshot of any authenticated view was
+reachable — which made "verified in the browser" impossible to satisfy for any
+signed-in surface.
+
+**It is a real sign-in, not an auth bypass.** It calls
+`supabase.auth.signInWithPassword` with the seeded credentials, so RLS, org
+membership and role enforcement all apply exactly as for any other user. That
+is the point: a faked session would let broken tenant scoping pass verification
+unnoticed, which is the opposite of what a verification shortcut should do.
+
+**Two deliberate design points, so neither reads as an oversight later:**
+
+- **It is gated by an allowlist, not a denylist** — `if (process.env.NODE_ENV
+  !== "development") return 404`. On any build whose `NODE_ENV` is unset or
+  unexpected the route does not exist, rather than existing everywhere that
+  merely fails to be labelled production.
+- **It lives under `/api/` for a reason.** `isApiRoute` in
+  `src/lib/supabase/middleware.ts` already exempts that prefix from the
+  unauthenticated redirect, so the route needed no change to the auth
+  middleware at all.
+
+**Two live hazards worth knowing.** The credentials are duplicated by hand
+between this route and `scripts/seed/lib/demo-org.ts` — change one, change the
+other, or the route 401s with a hint to re-run `npm run seed:demo`. And the
+redirect reads `process.env.NEXT_PUBLIC_SITE_URL`, which this repo **eliminated**
+in favour of `NEXT_PUBLIC_APP_URL` during the Prompt 14/15a env consolidation.
+That read is therefore always undefined and the `?? "http://localhost:3000"`
+fallback always wins. Harmless here — localhost is the correct target for a
+dev-only route — but it is a dead env reference, not a working one, and should
+not be copied as a pattern.
