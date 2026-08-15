@@ -4,6 +4,8 @@ import { useState, useTransition, type FormEvent } from "react";
 import { IconMicrophone, IconSquare } from "@tabler/icons-react";
 import { addManualNote, addAudioTranscript } from "@/lib/activity/actions";
 import { useAudioRecorder } from "@/lib/hooks/use-audio-recorder";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
 
 export type RecordingSettleResult = { ok: true } | { ok: false; message: string };
 
@@ -74,46 +76,51 @@ export function NoteCaptureForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-hairline pt-3">
-      {error && <p className="text-xs text-cold">{error}</p>}
+      {/* All three states move off --cold onto --danger: --cold is the Going
+          Cold SLA signal, not a generic error colour. */}
+      {error && <p className="text-body-sm text-danger">{error}</p>}
       {recorderStatus === "denied" && (
-        <p className="text-xs text-cold">
+        <p className="text-body-sm text-danger">
           Microphone access is blocked. Enable it in your browser settings to record a voice note.
         </p>
       )}
       {recorderStatus === "error" && (
-        <p className="text-xs text-cold">Couldn&apos;t start recording. Please try again.</p>
+        <p className="text-body-sm text-danger">Couldn&apos;t start recording. Please try again.</p>
       )}
 
       <div className="flex items-end gap-2">
-        <textarea
+        <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Add a note…"
           rows={3}
-          className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none placeholder:text-ink-muted"
         />
-        <button
+        {/* Recording is a live, stoppable state, so it takes the danger
+            variant — the previous --cold fill borrowed the SLA signal. */}
+        <Button
           type="button"
+          variant={recorderStatus === "recording" ? "danger" : "secondary"}
           onClick={handleMicClick}
           disabled={micBusy}
           aria-label={recorderStatus === "recording" ? "Stop recording" : "Record a voice note"}
-          className={`flex size-9 shrink-0 items-center justify-center rounded-md border border-hairline transition-colors disabled:opacity-60 ${
-            recorderStatus === "recording"
-              ? "bg-cold text-canvas-pure"
-              : "bg-canvas-pure text-ink-muted hover:bg-canvas-soft hover:text-ink-main"
-          }`}
+          className="size-8 shrink-0 px-0"
         >
-          {recorderStatus === "recording" ? <IconSquare className="size-4" /> : <IconMicrophone className="size-4" />}
-        </button>
+          {recorderStatus === "recording" ? (
+            <IconSquare stroke={1.75} className="size-4" />
+          ) : (
+            <IconMicrophone stroke={1.75} className="size-4" />
+          )}
+        </Button>
       </div>
 
-      <button
+      <Button
         type="submit"
+        variant="primary"
         disabled={isPending || !content.trim()}
-        className="self-end rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
+        className="self-end"
       >
         {isPending ? "Saving…" : "Add note"}
-      </button>
+      </Button>
     </form>
   );
 }

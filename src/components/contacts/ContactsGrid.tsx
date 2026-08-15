@@ -10,7 +10,7 @@ export function ContactsGrid({
 }) {
   if (contacts.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-hairline text-sm text-ink-muted">
+      <div className="text-body-md flex h-full items-center justify-center rounded-lg border border-dashed border-hairline p-4 text-ink-muted">
         {emptyMessage}
       </div>
     );

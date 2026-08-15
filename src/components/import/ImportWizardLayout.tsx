@@ -5,6 +5,8 @@ import { ColumnMappingTable } from "@/components/import/ColumnMappingTable";
 import { ValidationResultsTable } from "@/components/import/ValidationResultsTable";
 import { ImportSummary } from "@/components/import/ImportSummary";
 import { useImportWizard } from "@/components/import/useImportWizard";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import type { WizardStep } from "@/lib/types/csv-import";
 
 const STEPS: { id: WizardStep; label: string }[] = [
@@ -34,13 +36,13 @@ export function ImportWizardLayout() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold">Import leads</h1>
-        <p className="text-sm text-ink-muted">
+        <h1 className="text-h1">Import leads</h1>
+        <p className="text-body-md text-ink-muted">
           Bring an existing list of leads in from a spreadsheet.
         </p>
       </div>
 
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <ol className="text-body-sm flex flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((s, index) => (
           <li key={s.id} className="flex items-center gap-2">
             <span
@@ -64,19 +66,18 @@ export function ImportWizardLayout() {
           {/* Parsed rows are kept when stepping back, so returning here offers
               the loaded file rather than silently discarding it. */}
           {file && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-hairline bg-canvas-pure p-3 shadow-elevation-1">
-              <p className="text-sm">
+            <Card className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <p className="text-body-md">
                 <span className="font-medium">{file.fileName}</span>
-                <span className="text-ink-muted"> · {file.rows.length.toLocaleString()} rows loaded</span>
+                <span className="text-ink-muted">
+                  {" "}
+                  · {file.rows.length.toLocaleString()} rows loaded
+                </span>
               </p>
-              <button
-                type="button"
-                onClick={() => setStep("map")}
-                className="rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-              >
+              <Button type="button" variant="primary" onClick={() => setStep("map")}>
                 Continue with this file
-              </button>
-            </div>
+              </Button>
+            </Card>
           )}
           <CsvUploadDropzone onParsed={handleParsed} />
         </>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchActivityLogs } from "@/lib/activity/actions";
 import type { ActivityLog } from "@/lib/activity/queries";
+import { Button } from "@/components/ui/Button";
 
 const LOG_TYPE_LABEL: Record<ActivityLog["log_type"], string> = {
   WEBHOOK: "Inbound Webhook",
@@ -57,12 +58,15 @@ export function ActivityTimeline({
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Activity</h3>
+      <h3 className="text-label uppercase text-ink-muted">Activity</h3>
 
-      {error && <p className="text-sm text-cold">{error}</p>}
-      {!error && logs === null && <p className="text-sm text-ink-muted">Loading…</p>}
+      {/* Errors move off --cold onto --danger. --cold is the Going Cold SLA
+          signal and must not double as a generic error colour; v2 added
+          --danger precisely so it does not have to. */}
+      {error && <p className="text-body-md text-danger">{error}</p>}
+      {!error && logs === null && <p className="text-body-md text-ink-muted">Loading…</p>}
       {!error && logs !== null && !hasEntries && (
-        <p className="text-sm text-ink-muted">No activity yet.</p>
+        <p className="text-body-md text-ink-muted">No activity yet.</p>
       )}
 
       {!error && logs !== null && hasEntries && (
@@ -71,17 +75,19 @@ export function ActivityTimeline({
             <li className="relative">
               <span className="absolute top-1.5 -left-[18.5px] size-2 animate-pulse rounded-full border border-canvas-pure bg-accent" />
               {pendingEntry.status === "transcribing" ? (
-                <p className="text-sm text-ink-muted">🎙️ Transcribing…</p>
+                <p className="text-body-md text-ink-muted">🎙️ Transcribing…</p>
               ) : (
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-cold">{pendingEntry.message}</p>
-                  <button
+                  <p className="text-body-md text-danger">{pendingEntry.message}</p>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={onDismissPending}
-                    className="shrink-0 text-xs text-ink-muted underline"
+                    className="shrink-0"
                   >
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
               )}
             </li>
@@ -90,10 +96,15 @@ export function ActivityTimeline({
           {logs?.map((log) => (
             <li key={log.id} className="relative">
               <span className="absolute top-1.5 -left-[18.5px] size-2 rounded-full border border-canvas-pure bg-hairline" />
-              <p className="text-xs text-ink-muted">
+              <p className="text-caption text-ink-muted">
                 {LOG_TYPE_LABEL[log.log_type]} · {new Date(log.created_at).toLocaleString()}
               </p>
-              <p className="whitespace-pre-wrap text-sm text-ink-main">{log.content}</p>
+              {/* break-words: a WEBHOOK entry logs the raw JSON payload, which
+                  has no spaces to wrap on and pushed a horizontal scrollbar
+                  across the whole sheet body. */}
+              <p className="text-body-md whitespace-pre-wrap break-words text-ink-main">
+                {log.content}
+              </p>
               {log.audio_url && (
                 <audio controls src={log.audio_url} className="mt-1 h-8 w-full" />
               )}

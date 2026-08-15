@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/Button";
 import type { Lead } from "@/lib/leads/queries";
 
 // The archive/unarchive lifecycle control. Separated cleanly because it lives
@@ -86,14 +87,16 @@ export function ArchiveControls({ lead }: { lead: Lead }) {
   if (lead.archived) {
     return (
       <div className="mt-3 border-t border-hairline pt-3">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           disabled={unarchiving}
           onClick={handleUnarchive}
-          className="text-sm text-accent underline disabled:opacity-60"
+          className="-ml-2 text-accent hover:text-accent"
         >
           {unarchiving ? "Restoring…" : "Unarchive lead"}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -101,13 +104,13 @@ export function ArchiveControls({ lead }: { lead: Lead }) {
   return (
     <div className="mt-3 border-t border-hairline pt-3">
       <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        {/* asChild keeps Radix's trigger wiring (ref + focus return) on the
+            Button primitive — React 19 passes ref through as a plain prop, so
+            Button needs no forwardRef for Slot to reach the real <button>. */}
         <AlertDialogTrigger asChild>
-          <button
-            type="button"
-            className="text-sm text-ink-muted underline transition-colors hover:text-ink-main"
-          >
+          <Button type="button" variant="ghost" size="sm" className="-ml-2">
             Archive lead
-          </button>
+          </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>

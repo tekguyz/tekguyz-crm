@@ -1,5 +1,6 @@
 import type { Lead } from "@/lib/leads/queries";
-import { inputClass, labelClass } from "@/components/leads/edit-modal/field-styles";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 // How the lead closed. Its own group rather than part of PipelineFields because
 // outcome/actual_revenue are terminal facts the analytics cron reads to separate
@@ -11,22 +12,20 @@ import { inputClass, labelClass } from "@/components/leads/edit-modal/field-styl
 // logic lives here, unchanged by this split.
 export function OutcomeFields({ lead }: { lead: Lead }) {
   return (
-    <div className="border-t border-hairline pt-3">
-      <label className={labelClass}>Outcome</label>
-      <select name="outcome" defaultValue={lead.outcome ?? ""} className={inputClass}>
+    <div className="flex flex-col gap-2 border-t border-hairline pt-3">
+      <Select label="Outcome" name="outcome" defaultValue={lead.outcome ?? ""}>
         <option value="">Not closed</option>
         <option value="WON">Won</option>
         <option value="LOST">Lost</option>
         <option value="ABANDONED">Abandoned</option>
-      </select>
-      <label className={`${labelClass} mt-2`}>Actual revenue (if closed)</label>
-      <input
+      </Select>
+      <Input
+        label="Actual revenue (if closed)"
         name="actual_revenue"
         type="number"
         min="0"
         step="0.01"
         defaultValue={lead.actual_revenue ?? ""}
-        className={inputClass}
       />
     </div>
   );

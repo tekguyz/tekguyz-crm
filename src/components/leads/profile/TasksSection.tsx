@@ -9,21 +9,10 @@ import {
 } from "@/lib/tasks/actions";
 import type { Task } from "@/lib/tasks/queries";
 import { formatDueAt } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 const initialState: TaskFormState = null;
-
-const inputClass =
-  "w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none placeholder:text-ink-muted";
-
-// Same token vocabulary as ContactsPage's Active/Archived tabs, sized down a
-// step for an in-sheet section header — not a reuse of that component, which
-// is a server-rendered <Link> pair.
-const tabClass = (active: boolean) =>
-  `rounded-sm border border-hairline px-3 py-1 text-xs transition-colors ${
-    active
-      ? "bg-canvas-pure font-medium text-ink-main shadow-elevation-1"
-      : "text-ink-muted hover:bg-canvas-soft hover:text-ink-main"
-  }`;
 
 // Sibling of ActivityTimeline / NoteCaptureForm — ProfileSheet mounts all
 // three directly rather than nesting them.
@@ -90,43 +79,54 @@ export function TasksSection({ leadId }: { leadId: string }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Tasks</h3>
+        <h3 className="text-label uppercase text-ink-muted">Tasks</h3>
+        {/* Open/Completed is a two-state filter, so the selected tab takes the
+            bordered secondary Button and the other takes ghost. v1's
+            elevation-1 on the active tab is gone — v2 tabs are Level 0. */}
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setShowCompleted(false)} className={tabClass(!showCompleted)}>
+          <Button
+            type="button"
+            variant={showCompleted ? "ghost" : "secondary"}
+            size="sm"
+            aria-pressed={!showCompleted}
+            onClick={() => setShowCompleted(false)}
+          >
             Open
-          </button>
-          <button type="button" onClick={() => setShowCompleted(true)} className={tabClass(showCompleted)}>
+          </Button>
+          <Button
+            type="button"
+            variant={showCompleted ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={showCompleted}
+            onClick={() => setShowCompleted(true)}
+          >
             Completed
-          </button>
+          </Button>
         </div>
       </div>
 
       <form ref={formRef} action={formAction} className="flex flex-col gap-2">
-        {state?.error && <p className="text-xs text-cold">{state.error}</p>}
-        <input name="title" placeholder="Add a task…" required className={inputClass} />
-        <div className="flex items-center gap-2">
-          <input
+        {/* --danger, not --cold: --cold is the Going Cold SLA signal. */}
+        {state?.error && <p className="text-body-sm text-danger">{state.error}</p>}
+        <Input name="title" placeholder="Add a task…" required />
+        <div className="flex items-end gap-2">
+          <Input
             type="datetime-local"
             required
             value={dueLocal}
             onChange={(e) => setDueLocal(e.target.value)}
-            className={inputClass}
           />
           <input type="hidden" name="due_at" value={dueIso} />
-          <button
-            type="submit"
-            disabled={isPending}
-            className="shrink-0 rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-          >
+          <Button type="submit" variant="primary" disabled={isPending} className="shrink-0">
             {isPending ? "Adding…" : "Add"}
-          </button>
+          </Button>
         </div>
       </form>
 
-      {error && <p className="text-sm text-cold">{error}</p>}
-      {!error && tasks === null && <p className="text-sm text-ink-muted">Loading…</p>}
+      {error && <p className="text-body-md text-danger">{error}</p>}
+      {!error && tasks === null && <p className="text-body-md text-ink-muted">Loading…</p>}
       {!error && tasks !== null && visible.length === 0 && (
-        <p className="text-sm text-ink-muted">
+        <p className="text-body-md text-ink-muted">
           {showCompleted ? "No completed tasks." : "No open tasks."}
         </p>
       )}
@@ -143,10 +143,14 @@ export function TasksSection({ leadId }: { leadId: string }) {
                 className="mt-0.5 size-4 shrink-0 rounded-xs border-hairline accent-accent"
               />
               <div className="min-w-0">
-                <p className={`text-sm ${task.completed ? "text-ink-muted line-through" : "text-ink-main"}`}>
+                <p
+                  className={`text-body-md ${task.completed ? "text-ink-muted line-through" : "text-ink-main"}`}
+                >
                   {task.title}
                 </p>
-                <p className="text-xs text-ink-muted">{formatDueAt(task.due_at, timeZone)}</p>
+                <p className="text-body-sm text-ink-muted">
+                  {formatDueAt(task.due_at, timeZone)}
+                </p>
               </div>
             </li>
           ))}

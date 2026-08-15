@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Lead } from "@/lib/leads/queries";
-import { inputClass, labelClass } from "@/components/leads/edit-modal/field-styles";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 // datetime-local inputs work in the browser's own local timezone, with no
 // offset in the value string. Converting here (client-side) rather than on
@@ -39,41 +40,36 @@ export function PipelineFields({ lead }: { lead: Lead }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelClass}>Status</label>
-          <select name="status" defaultValue={lead.status} className={inputClass}>
-            <option value="NEW">New</option>
-            <option value="DISCOVERY">Discovery</option>
-            <option value="QUOTED">Quoted</option>
-            <option value="ACTIVE">Active</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Estimated revenue</label>
-          <input
-            name="estimated_revenue"
-            type="number"
-            min="0"
-            step="0.01"
-            defaultValue={lead.estimated_revenue}
-            className={inputClass}
-          />
-        </div>
+        <Select label="Status" name="status" defaultValue={lead.status}>
+          <option value="NEW">New</option>
+          <option value="DISCOVERY">Discovery</option>
+          <option value="QUOTED">Quoted</option>
+          <option value="ACTIVE">Active</option>
+        </Select>
+        <Input
+          label="Estimated revenue"
+          name="estimated_revenue"
+          type="number"
+          min="0"
+          step="0.01"
+          defaultValue={lead.estimated_revenue}
+        />
       </div>
 
       <div>
-        <label className={labelClass}>Follow-up due (Going Cold when overdue)</label>
-        <input
+        <Input
+          label="Follow-up due (Going Cold when overdue)"
           type="datetime-local"
           required
           value={nextActionLocal}
           onChange={(e) => setNextActionLocal(e.target.value)}
-          className={inputClass}
         />
+        {/* The visible field is local-time and unnamed; this hidden sibling is
+            the only next_action_at in the FormData. */}
         <input type="hidden" name="next_action_at" value={nextActionIso} />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-ink-main">
+      <label className="text-body-md flex items-center gap-2 text-ink-main">
         <input
           type="checkbox"
           name="is_starred"

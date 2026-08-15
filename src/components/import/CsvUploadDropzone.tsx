@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { IconCloudUpload } from "@tabler/icons-react";
+import { Button } from "@/components/ui/Button";
 import {
   MAX_IMPORT_ROWS,
   type ParsedCsvFile,
@@ -77,22 +78,24 @@ export function CsvUploadDropzone({ onParsed }: { onParsed: (file: ParsedCsvFile
           dragging ? "border-accent bg-canvas-soft" : "border-hairline"
         }`}
       >
-        <IconCloudUpload className="mx-auto mb-3 size-8 text-ink-muted" />
-        <p className="mb-1 text-sm font-medium">
+        {/* size-6 is v2's spacious-context icon size; this is an empty state,
+            not a dense row. */}
+        <IconCloudUpload stroke={1.75} className="mx-auto mb-3 size-6 text-ink-muted" />
+        <p className="text-body-md mb-1 font-medium">
           {parsing ? "Reading your file…" : "Drop a CSV file here"}
         </p>
-        <p className="mb-4 text-xs text-ink-muted">
+        <p className="text-body-sm mb-4 text-ink-muted">
           Up to {MAX_IMPORT_ROWS.toLocaleString()} rows per import. The first row should be your
           column headers.
         </p>
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => inputRef.current?.click()}
           disabled={parsing}
-          className="rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
         >
           Choose a file
-        </button>
+        </Button>
         <input
           ref={inputRef}
           type="file"
@@ -108,7 +111,7 @@ export function CsvUploadDropzone({ onParsed }: { onParsed: (file: ParsedCsvFile
       </div>
 
       {error && (
-        <p className="mt-3 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+        <p className="text-body-md mt-3 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           {error}
         </p>
       )}

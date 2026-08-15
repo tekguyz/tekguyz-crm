@@ -1,6 +1,17 @@
 "use client";
 
 import { HelpTooltip } from "@/components/help/HelpTooltip";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@/components/ui/TableRow";
 import {
   MAPPABLE_FIELDS,
   type ColumnMapping,
@@ -22,6 +33,10 @@ function findDuplicate(mapping: ColumnMapping) {
   return null;
 }
 
+// Kept as a <section> rather than the Card primitive: Card renders a <div> and
+// this is a real landmark for the wizard step. Same deliberate landmark-vs-Card
+// split KanbanColumn makes. The tokens are Card's own, minus the v1 shadow —
+// wizard panels are Level 0 in v2.
 export function ColumnMappingTable({
   file,
   mapping,
@@ -45,107 +60,93 @@ export function ColumnMappingTable({
     : null;
 
   return (
-    <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
-      <h2 className="mb-1 flex items-center gap-1.5 text-base font-semibold">
+    <section className="rounded-lg border border-hairline bg-canvas-pure p-4">
+      <h2 className="text-h2 mb-1 flex items-center gap-1.5">
         Match your columns
         <HelpTooltip
           topicId="csv-import"
           blurb="Columns are auto-matched when the header is unambiguous. Change any row's dropdown to fix a mapping, or set it to Ignore to skip that column."
         />
       </h2>
-      <p className="mb-4 text-xs text-ink-muted">
+      <p className="text-body-sm mb-4 text-ink-muted">
         {file.rows.length.toLocaleString()} rows from {file.fileName}. Anything you leave as
         &ldquo;Ignore&rdquo; won&rsquo;t be imported.
       </p>
 
+      {/* Green = this required field is satisfied, orange = still missing. A
+          functional readiness signal wearing a Badge, not decoration — the
+          green/orange split is exactly what `blocked` below is computed from. */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-ink-muted">Required:</span>
-        {REQUIRED_FIELDS.map((field) => {
-          const satisfied = mapped.has(field.id);
-          return (
-            <span
-              key={field.id}
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                satisfied
-                  ? "bg-pill-green-bg text-pill-green-fg"
-                  : "bg-pill-orange-bg text-pill-orange-fg"
-              }`}
-            >
-              {field.label}
-            </span>
-          );
-        })}
+        <span className="text-body-sm text-ink-muted">Required:</span>
+        {REQUIRED_FIELDS.map((field) => (
+          <Badge
+            key={field.id}
+            tone={mapped.has(field.id) ? "green" : "orange"}
+            className="rounded-full px-2"
+          >
+            {field.label}
+          </Badge>
+        ))}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-hairline text-left text-xs text-ink-muted">
-              <th className="pb-2 pr-4 font-medium">CSV column</th>
-              <th className="pb-2 pr-4 font-medium">First value</th>
-              <th className="pb-2 font-medium">Maps to</th>
-            </tr>
-          </thead>
-          <tbody>
-            {file.headers.map((header) => (
-              <tr key={header} className="border-b border-hairline last:border-0">
-                <td className="max-w-48 truncate py-2 pr-4 font-medium">{header}</td>
-                <td className="max-w-48 truncate py-2 pr-4 text-ink-muted">
-                  {file.rows[0]?.[header]?.trim() || "—"}
-                </td>
-                <td className="py-2">
-                  <select
-                    value={mapping[header] ?? "ignore"}
-                    onChange={(e) =>
-                      onChange({ ...mapping, [header]: e.target.value as MappableField })
-                    }
-                    className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-                  >
-                    <option value="ignore">Ignore this column</option>
-                    {MAPPABLE_FIELDS.map((field) => (
-                      <option key={field.id} value={field.id}>
-                        {field.label}
-                        {field.required ? " (required)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>CSV column</TableHeaderCell>
+            <TableHeaderCell>First value</TableHeaderCell>
+            <TableHeaderCell>Maps to</TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {file.headers.map((header) => (
+            <TableRow key={header} className="last:border-0">
+              <TableCell className="max-w-48 truncate font-medium">{header}</TableCell>
+              <TableCell className="max-w-48 truncate text-ink-muted">
+                {file.rows[0]?.[header]?.trim() || "—"}
+              </TableCell>
+              <TableCell>
+                <Select
+                  aria-label={`Map ${header} to`}
+                  value={mapping[header] ?? "ignore"}
+                  onChange={(e) =>
+                    onChange({ ...mapping, [header]: e.target.value as MappableField })
+                  }
+                >
+                  <option value="ignore">Ignore this column</option>
+                  {MAPPABLE_FIELDS.map((field) => (
+                    <option key={field.id} value={field.id}>
+                      {field.label}
+                      {field.required ? " (required)" : ""}
+                    </option>
+                  ))}
+                </Select>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       {duplicate && (
-        <p className="mt-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+        <p className="text-body-md mt-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           &ldquo;{duplicate.columns[0]}&rdquo; and &ldquo;{duplicate.columns[1]}&rdquo; are both
           mapped to {duplicateLabel}. Each field can only be filled by one column — set one of them
           to Ignore.
         </p>
       )}
       {!duplicate && missingRequired.length > 0 && (
-        <p className="mt-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+        <p className="text-body-md mt-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           Map a column to {missingRequired.map((field) => field.label).join(" and ")} before
           continuing.
         </p>
       )}
 
       <div className="mt-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
+        <Button type="button" variant="secondary" onClick={onBack}>
           Back
-        </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={blocked}
-          className="rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-        >
+        </Button>
+        <Button type="button" variant="primary" onClick={onContinue} disabled={blocked}>
           Continue
-        </button>
+        </Button>
       </div>
     </section>
   );

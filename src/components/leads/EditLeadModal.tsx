@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { updateLead, type LeadFormState } from "@/lib/leads/actions";
 import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import type { Lead } from "@/lib/leads/queries";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
 import { IdentityFields } from "@/components/leads/edit-modal/IdentityFields";
@@ -46,20 +47,22 @@ export function EditLeadModal({
 
   return (
     <Modal open={open} onClose={onClose} title={lead.client_name}>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => {
           setProfileOpen(true);
           onClose();
         }}
-        className="mb-3 text-sm text-accent underline"
+        className="-ml-2 mb-3 text-accent hover:text-accent"
       >
         View full profile & activity
-      </button>
+      </Button>
 
       <form action={formAction} className="space-y-3">
         {state?.error && (
-          <p className="rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+          <p className="text-body-md rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
             {state.error}
           </p>
         )}
@@ -69,13 +72,9 @@ export function EditLeadModal({
         <PipelineFields lead={lead} />
         <OutcomeFields lead={lead} />
 
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-        >
+        <Button type="submit" variant="primary" disabled={isPending} className="w-full">
           {isPending ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </form>
 
       <ArchiveControls lead={lead} />

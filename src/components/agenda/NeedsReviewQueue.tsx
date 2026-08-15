@@ -5,6 +5,9 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { dismissSpamFlag } from "@/lib/leads/spam-actions";
 import type { FlaggedLead } from "@/lib/leads/spam-review";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 // Sits at the very top of Today's Agenda — above Tasks Due — because an
 // unreviewed lead is the most time-sensitive thing on the page: it's a
@@ -35,43 +38,50 @@ export function NeedsReviewQueue({ leads }: { leads: FlaggedLead[] }) {
 
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
+      <h2 className="text-title flex items-center gap-2">
         Needs Review
-        <span className="rounded-full bg-pill-orange-bg px-2 py-0.5 text-xs font-medium text-pill-orange-fg">
+        {/* Count badge: same orange status pill as before, now the shared
+            Badge primitive. It is a queue-depth signal, not decoration. */}
+        <Badge tone="orange" className="rounded-full px-2">
           {visible.length}
-        </span>
+        </Badge>
       </h2>
-      <p className="text-xs text-ink-muted">
+      <p className="text-body-sm text-ink-muted">
         Flagged as possible spam by the AI Spam Shield. They are still real leads in your
         pipeline — nothing has been deleted or hidden.
       </p>
 
       <ul className="flex flex-col gap-2">
         {visible.map((lead) => (
-          <li
-            key={lead.id}
-            className="flex items-start justify-between gap-3 rounded-md border border-hairline bg-canvas-pure p-3 shadow-elevation-1"
-          >
-            <div className="min-w-0">
-              <Link
-                href={`/?leadId=${lead.id}`}
-                className="truncate text-sm font-medium text-ink-main hover:text-accent hover:underline"
+          <li key={lead.id}>
+            {/* Level 0: the v1 elevation-1 row is now a flat hairline Card,
+                matching every other agenda row. */}
+            <Card className="flex items-start justify-between gap-3 p-3">
+              <div className="min-w-0">
+                <Link
+                  href={`/?leadId=${lead.id}`}
+                  className="text-body-md truncate font-medium text-ink-main hover:text-accent hover:underline"
+                >
+                  {lead.client_name}
+                </Link>
+                <p className="text-body-sm truncate text-ink-muted">
+                  {[lead.company, lead.email].filter(Boolean).join(" · ")}
+                </p>
+                {/* Verbatim flag reason, kept on the orange status colour so
+                    the reason reads as the same signal as the count badge. */}
+                <p className="text-body-sm mt-1 text-pill-orange-fg">{lead.reason}</p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleDismiss(lead)}
+                disabled={isPending}
+                className="shrink-0"
               >
-                {lead.client_name}
-              </Link>
-              <p className="truncate text-xs text-ink-muted">
-                {[lead.company, lead.email].filter(Boolean).join(" · ")}
-              </p>
-              <p className="mt-1 text-xs text-pill-orange-fg">{lead.reason}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleDismiss(lead)}
-              disabled={isPending}
-              className="shrink-0 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft disabled:opacity-60"
-            >
-              Not spam
-            </button>
+                Not spam
+              </Button>
+            </Card>
           </li>
         ))}
       </ul>

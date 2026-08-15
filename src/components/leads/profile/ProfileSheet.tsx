@@ -9,6 +9,7 @@ import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
 import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
 import { NoteCaptureForm } from "@/components/leads/profile/NoteCaptureForm";
 import { TasksSection } from "@/components/leads/profile/TasksSection";
+import { Button } from "@/components/ui/Button";
 
 export function ProfileSheet({
   lead,
@@ -68,21 +69,23 @@ export function ProfileSheet({
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
             className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-hairline bg-canvas-pure shadow-elevation-2 sm:max-w-lg"
           >
-            <div className="flex items-center justify-between border-b border-hairline p-6">
+            <div className="flex items-center justify-between gap-3 border-b border-hairline p-6">
               <div className="min-w-0">
-                <p className="truncate text-base font-semibold">{lead.client_name}</p>
+                <p className="text-h2 truncate">{lead.client_name}</p>
                 {lead.company && (
-                  <p className="truncate text-xs text-ink-muted">{lead.company}</p>
+                  <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
                 )}
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
                 aria-label="Close"
-                className="rounded-md p-1 text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
+                className="size-7 shrink-0 px-0"
               >
-                <IconX className="size-4" />
-              </button>
+                <IconX stroke={1.75} className="size-4" />
+              </Button>
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
