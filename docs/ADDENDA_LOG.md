@@ -697,6 +697,7 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **Lockup SVGs were built with a stand-in font.** ✅ Closed 2026-08-14 — never shipped in that state. `build_brand.py` was re-run in-repo against real Inter from `@fontsource/inter` (name table confirmed `Inter` Bold / `Inter Medium`); the pipeline has no font-substitution fallback, it skips lockups outright when no font is supplied. All four lockups emitted with the wordmark outlined to two `<path>` elements and zero `<text>`. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
 - **The agency mark may still be referenced somewhere in `src/`.** ✅ Closed 2026-08-14 — audited; no component referenced a logo asset at all, so nothing needed repointing. The real exposure was three App Router file conventions serving the old mark — `src/app/favicon.ico`, `src/app/icon.png` and `src/app/apple-icon.png` — all three deleted. The bundle's brief named only `favicon.ico`; `icon.png` and `apple-icon.png` override `metadata.icons` the same silent way. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling.
 - **OG card tagline is unreviewed copy.** ✅ Closed 2026-08-15 — "Every lead, one pipeline." approved by the owner. Now single-sourced in `src/lib/brand/copy.ts` alongside the product name and description, so the card, the manifest and the page metadata cannot drift apart. Full history: `docs/ADDENDA_LOG.md` § Brand application pass.
+- **No brand SVG has been composited into a screenshot.** ✅ Closed 2026-08-15 — the owner signed off on the mark as implemented. Resolved across three narrowings rather than one check: the geometry was first proven by pixel-diffing `icon.svg` (browser SVG engine) against the Pillow-generated `icon-512.png`, 0.34% of pixels differing grossly and aspect ratios within 0.5%, so there is no renderer drift between the pipeline and a real browser; then the Browser pane's non-compositing problem cleared, making real screenshots possible; then the mark was reviewed in the contexts that actually matter — the favicon chosen from a rendered 16/32px mockup against both a light and a dark tab, and the auth-screen mark and OG card screenshotted in both themes. Full history: `docs/ADDENDA_LOG.md` § Brand identity + `--accent` sampling, § Brand application pass.
 
 ## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
 
@@ -1195,3 +1196,24 @@ so the standing Supabase MCP rule applies unchanged: hand the human the exact
 2026-08-15; verified afterwards at 1 lead in TEKGUYZ, the Demo org's 20
 untouched, zero orphaned tasks (`activity_logs` and `tasks` are
 `ON DELETE CASCADE` from `leads`).
+
+### Two dispositions recorded after the fact (2026-08-15)
+
+Both surfaced during the pass and were deliberately left rather than folded in,
+so they are written down instead of carried in someone's head.
+
+- **`theme_color` disagrees between `manifest.ts` (`#3063D3`) and `layout.tsx`
+  (`#FAFAFA` / `#1A1A1D`).** Neither is wrong in isolation — one matches the
+  resolved light `--accent`, the other matches the canvas the browser chrome
+  sits against — but they are two answers to one question. Only surfaces on an
+  installed Android PWA. Owner's call, deferred deliberately; now a Known Gaps
+  item rather than an undocumented inconsistency.
+- **No `robots.txt`, deliberately.** The meta `noindex` in `layout.tsx` is the
+  correct tool for a login-gated app. A `Disallow: /` would stop crawlers
+  fetching the page and therefore stop them reading the `noindex` — the two
+  signals conflict rather than reinforce, and a URL can still be indexed from an
+  external link with no snippet. Recorded as a decision so a later session does
+  not "fix" it by adding one.
+
+The brand proof-sheet gap closed the same day on the owner's sign-off; its
+one-liner is in the Resolved Items Archive above.
