@@ -7,6 +7,10 @@ export const DEMO_ORG_NAME = "TEKGUYZ Demo";
 // a real authenticated auth.uid() (see clients.ts), so something has to be
 // able to sign in and call it. Fixed, known credentials so re-running these
 // scripts is idempotent without persisting a generated password anywhere.
+//
+// Duplicated by hand in src/app/api/dev-login/route.ts, the dev-only sign-in
+// shortcut. Change one, change the other — the route cannot import from here
+// because this module pulls in the service-role client.
 const DEMO_OWNER_EMAIL = "tekguyz.demo.owner@example.com";
 const DEMO_OWNER_PASSWORD = "Tekguyz-Demo-Seed-Owner-2026!";
 
