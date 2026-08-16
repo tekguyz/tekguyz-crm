@@ -1537,3 +1537,59 @@ stays: `DO NOTHING` does happen to skip intra-statement duplicates via
 speculative insertion, but `dedup.ts` is what produces the user-visible
 "Duplicates in file" count — removing it would silently delete a report
 category.
+
+---
+
+## Doc-vs-doc contradiction repair, and the handoff check that now catches it (2026-08-15)
+
+A documentation-only pass. No application code was read into, changed, or
+verified beyond confirming what it already does. Commit `0baeb0a`.
+
+**The contradiction.** The § CSV import chunk-write RPC entry above, written
+the same day, listed under "Deliberately not touched" — "the webhook path and
+its known missing `.toLowerCase()`". That fix had shipped on **2026-07-26**,
+almost three weeks earlier. `src/lib/validation/webhook-payload-schema.ts`
+declares `email: z.string().trim().toLowerCase().email(...)`, and
+`src/lib/webhooks/ingest-lead.ts` reads `payload.email` directly in both its
+existing-lead lookup (`.eq("email", payload.email)`) and its insert, so both
+receive an already-normalized value. Read in full and confirmed, not inferred.
+
+**Why it survived.** Three older entries in this very file already said the
+opposite — § Webhook Email Normalization addendum (the fix itself, with live
+receipts), § Email Case-Insensitivity: Full Fix addendum ("every code path
+that can write `leads.email` … now normalizes"), and the Resolved Items
+Archive entry marking the gap closed. The register was right and the newest
+entry was wrong. Nothing in the handoff skill's checks 1–3 could catch that:
+they compare **new commits** against the docs, and no commit was involved. The
+contradiction was entirely doc-vs-doc, and a doc audit that only looks forward
+will reproduce it indefinitely.
+
+**Repair convention, applied here and now written down.** A dated entry is a
+historical record, so the two older entries that described the pre-fix state
+(§ Prompt 10 addendum, § Case-Insensitive Email Constraint addendum) were
+**not** rewritten — each gained a short `(State as of 2026-07-26 only —
+superseded by …)` clause pointing at what replaced it. Only the entry that was
+wrong *as of today* was corrected outright.
+
+**The skill change.** `.claude/skills/handoff/SKILL.md` Job 1 gains check 4:
+before trusting or citing any entry in this file — including a new one about
+to be written — grep for the same file path, function, column or behaviour and
+read every older hit. Two entries asserting opposite things is a stale-doc
+finding, repaired in that same audit exactly like an unmentioned commit, then
+propagated to `docs/KNOWN_GAPS.md` and `CLAUDE.md` § 3 if either repeats the
+losing claim. The old checks 4–7 renumbered to 5–8; nothing else in the skill
+changed.
+
+**One real count error found alongside it.** `docs/KNOWN_GAPS.md`'s
+`get_advisors` bullet still said **eight** SECURITY DEFINER findings, triaged
+2026-08-14. `import_leads_chunk` shipped after that pass and is a ninth — the
+CSV import entry above already documents its `0029` WARN, and
+`docs/SCHEMA_REFERENCE.md` § already called it "the ninth `SECURITY DEFINER`
+function". Corrected to nine, with the ninth named and its self-check noted.
+The "eight pre-existing" phrasings in the 2026-08-14 entry and in the CSV
+import entry are correct in their own context and were left alone.
+
+**Gates, run this session against the doc-only change**: `npm run build`,
+`npx tsc --noEmit`, `npm run lint` and `npm test` (8 files, 49 tests) all
+pass. `npm run test:rls` was not run — no schema, RLS or trigger surface was
+touched.
