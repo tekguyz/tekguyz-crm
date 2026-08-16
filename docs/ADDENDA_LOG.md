@@ -1589,6 +1589,18 @@ function". Corrected to nine, with the ninth named and its self-check noted.
 The "eight pre-existing" phrasings in the 2026-08-14 entry and in the CSV
 import entry are correct in their own context and were left alone.
 
+**The new check found a second contradiction on its first real run.** `CLAUDE.md`
+§ 3's Brand Identity entry still read "Two open items remain in
+`docs/KNOWN_GAPS.md`: nobody has eyeballed the mark against
+`docs/brand/PROOF-SHEET.png`, and the OG tagline is unapproved copy." Both had
+been closed on 2026-08-15 — the owner signed off on the mark (commit `34b50d2`)
+and approved "Every lead, one pipeline." — and both one-liners had already been
+relocated to the Resolved Items Archive above, exactly as the maintenance rule
+requires. `KNOWN_GAPS.md` was right; the § 3 summary pointing at it was stale.
+This is the same shape as the webhook claim (a summary outliving the register
+it cites) and the same shape check 4 exists to catch, which is the argument for
+the check being a standing step rather than a one-off cleanup.
+
 **Gates, run this session against the doc-only change**: `npm run build`,
 `npx tsc --noEmit`, `npm run lint` and `npm test` (8 files, 49 tests) all
 pass. `npm run test:rls` was not run — no schema, RLS or trigger surface was
