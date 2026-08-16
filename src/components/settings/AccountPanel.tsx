@@ -9,16 +9,10 @@ import {
 } from "@/lib/account/actions";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 
 const initialState: AccountFormState = null;
-
-// Restates Button's `secondary` classes rather than composing Button, for the
-// same reason alert-dialog.tsx does: this control is a navigation <Link>, and
-// Button renders a <button> with no asChild escape hatch. Keep in sync with
-// Button's secondary variant + md size.
-const LINK_BUTTON_CLASS =
-  "text-body-md inline-flex h-8 items-center justify-center rounded-md border border-hairline bg-canvas-pure px-3 font-medium text-ink-main transition-colors hover:bg-canvas-soft";
 
 export function AccountPanel({
   userEmail,
@@ -51,9 +45,11 @@ export function AccountPanel({
         <p className="text-caption mb-2 text-ink-muted">
           Set a new password for your account.
         </p>
-        <Link href="/reset-password" className={LINK_BUTTON_CLASS}>
-          Change password
-        </Link>
+        {/* A real navigation <a>, not a button styled like one — asChild gives
+            it Button's classes from the primitive itself. */}
+        <Button asChild variant="secondary">
+          <Link href="/reset-password">Change password</Link>
+        </Button>
       </div>
 
       <form
@@ -101,34 +97,20 @@ export function AccountPanel({
         <p className="text-caption mb-2 text-ink-muted">
           Only applies while you&apos;re an owner or admin — these emails never go to members.
         </p>
-        {/* These two stay raw <input type="checkbox">: src/components/ui/ has no
-            Checkbox primitive, and Input is a labelled text field (w-full,
-            px-2 py-1, label stacked above) that cannot be bent into a 16px
-            inline box without fighting it. Prompt 2c's fence says to report a
-            missing primitive rather than extend one inline, so that is what
-            this is. They are unstyled-by-token but keyboard-reachable: the
-            global :focus-visible rule in globals.css deliberately excludes
-            [type=checkbox] from the field ring so they get the standard
-            2px accent outline instead. */}
+        {/* Radix keeps a hidden native checkbox in the form for each of these,
+            so formData.get("notify_new_lead") === "on" in the action still
+            reads exactly as it did with a raw <input type="checkbox">. */}
         <div className="space-y-2">
-          <label className="text-body-md flex items-center gap-2 text-ink-main">
-            <input
-              type="checkbox"
-              name="notify_new_lead"
-              defaultChecked={notifyNewLead}
-              className="size-4 rounded-xs border-hairline"
-            />
-            New lead alerts
-          </label>
-          <label className="text-body-md flex items-center gap-2 text-ink-main">
-            <input
-              type="checkbox"
-              name="notify_weekly_report"
-              defaultChecked={notifyWeeklyReport}
-              className="size-4 rounded-xs border-hairline"
-            />
-            Weekly revenue report
-          </label>
+          <Checkbox
+            name="notify_new_lead"
+            defaultChecked={notifyNewLead}
+            label="New lead alerts"
+          />
+          <Checkbox
+            name="notify_weekly_report"
+            defaultChecked={notifyWeeklyReport}
+            label="Weekly revenue report"
+          />
         </div>
         <Button type="submit" variant="primary" loading={prefsIsPending}>
           {prefsIsPending ? "Saving…" : "Save preferences"}

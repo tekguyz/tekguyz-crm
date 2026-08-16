@@ -4,6 +4,7 @@ import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/Button";
 import { ModalPortalContext } from "@/components/ui/Modal";
 
 // Standard shadcn/ui alert-dialog structure (Radix primitives, "data-slot"
@@ -115,45 +116,37 @@ function AlertDialogDescription({
   );
 }
 
+// Action and Cancel compose Button rather than restating its classes. Radix
+// needs its own props on the rendered element, which is what its `asChild`
+// delivers: AlertDialogPrimitive.Action passes them down to Button, and
+// Button's own `asChild` is not involved here. Level 0 is deliberate — under
+// v2 elevation is reserved for popovers and modals, and a button inside a
+// modal is not itself elevated.
 function AlertDialogAction({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
   return (
-    <AlertDialogPrimitive.Action
-      data-slot="alert-dialog-action"
-      // Mirrors Button's `primary` variant: Level 0, hairline-or-transparent
-      // border, no shadow. v1 gave this a Level-1 shadow that grew to Level 2
-      // on hover; under v2 elevation is reserved for popovers and modals, and a
-      // button inside a modal is not itself elevated. Radix needs its own props
-      // forwarded onto the element, so this restates Button's classes rather
-      // than composing it.
-      //
-      // text-accent-fg, not text-canvas-pure: --accent flips lightness between
-      // themes, which is the whole reason the -fg pair exists.
-      className={cn(
-        "text-body-md inline-flex h-8 items-center justify-center rounded-md border border-transparent bg-accent px-3 font-medium text-accent-fg transition-colors hover:opacity-90 disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
+    <AlertDialogPrimitive.Action asChild {...props}>
+      <Button data-slot="alert-dialog-action" variant="primary" className={className}>
+        {children}
+      </Button>
+    </AlertDialogPrimitive.Action>
   );
 }
 
 function AlertDialogCancel({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
   return (
-    <AlertDialogPrimitive.Cancel
-      data-slot="alert-dialog-cancel"
-      // Mirrors Button's `secondary` variant — see AlertDialogAction above.
-      className={cn(
-        "text-body-md inline-flex h-8 items-center justify-center rounded-md border border-hairline bg-canvas-pure px-3 font-medium text-ink-main transition-colors hover:bg-canvas-soft",
-        className,
-      )}
-      {...props}
-    />
+    <AlertDialogPrimitive.Cancel asChild {...props}>
+      <Button data-slot="alert-dialog-cancel" variant="secondary" className={className}>
+        {children}
+      </Button>
+    </AlertDialogPrimitive.Cancel>
   );
 }
 

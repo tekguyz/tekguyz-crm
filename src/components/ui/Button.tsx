@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { Slot } from "@radix-ui/react-slot";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -26,6 +27,7 @@ export function Button({
   variant = "secondary",
   size = "md",
   loading = false,
+  asChild = false,
   disabled,
   className,
   children,
@@ -34,10 +36,24 @@ export function Button({
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  asChild?: boolean;
 }) {
+  // asChild exists so a control that must NOT be a <button> — a next/link
+  // navigation, a protocol href (tel:/mailto:), a Radix Trigger — still gets
+  // Button's real classes instead of a hand-maintained copy of them. Copies
+  // drift from the primitive silently; that is the whole reason this prop is
+  // here. `disabled` is not spread onto a Slot child: an <a> has no disabled
+  // attribute and React would warn. The loading spinner is also suppressed
+  // under asChild — Slot clones exactly one child, so prepending a <span> to
+  // `children` would throw React.Children.only. A navigation link has no
+  // pending state to show anyway.
+  const Comp = asChild ? Slot : "button";
+  const isDisabled = disabled ?? loading;
+  const showSpinner = loading && !asChild;
+
   return (
-    <button
-      disabled={disabled ?? loading}
+    <Comp
+      disabled={asChild ? undefined : isDisabled}
       aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center rounded-md border font-medium transition-colors",
@@ -48,13 +64,17 @@ export function Button({
       )}
       {...props}
     >
-      {loading ? (
-        <span
-          aria-hidden
-          className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
-        />
-      ) : null}
-      {children}
-    </button>
+      {showSpinner ? (
+        <>
+          <span
+            aria-hidden
+            className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+          />
+          {children}
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   );
 }

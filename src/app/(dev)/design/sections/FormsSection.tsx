@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -74,6 +75,15 @@ export function FormsSection() {
         <Select label="Status" defaultValue="won" disabled>
           {statusOptions()}
         </Select>
+      </div>
+
+      <h3 className="text-h2">Checkbox</h3>
+      <div className="flex flex-col gap-3">
+        <Checkbox label="Unchecked" />
+        <Checkbox label="Checked" defaultChecked />
+        <Checkbox label="Unchecked, disabled" disabled />
+        <Checkbox label="Checked, disabled" defaultChecked disabled />
+        <Checkbox aria-label="No label" />
       </div>
     </div>
   );

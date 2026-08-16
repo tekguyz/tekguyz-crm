@@ -13,3 +13,15 @@ import { afterEach } from "vitest";
 afterEach(() => {
   cleanup();
 });
+
+// jsdom ships no ResizeObserver. Radix needs one for the hidden native
+// <input type="checkbox"> it keeps inside a form (@radix-ui/react-use-size),
+// which is exactly the element that carries a Checkbox's name into FormData —
+// so without this stub the Form/Action field-parity tests cannot run at all.
+if (!("ResizeObserver" in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

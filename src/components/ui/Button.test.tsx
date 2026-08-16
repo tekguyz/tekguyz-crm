@@ -61,4 +61,48 @@ describe("Button", () => {
     render(<Button type="submit">Save</Button>);
     expect(screen.getByRole("button")).toHaveAttribute("type", "submit");
   });
+
+  // asChild is the escape hatch that replaces hand-copied class strings.
+  it("renders the child element instead of a button under asChild", () => {
+    render(
+      <Button asChild variant="secondary">
+        <a href="/reset-password">Change password</a>
+      </Button>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+    const link = screen.getByRole("link", { name: "Change password" });
+    expect(link).toHaveAttribute("href", "/reset-password");
+  });
+
+  it("gives the asChild child the same classes the button would get", () => {
+    render(
+      <Button asChild variant="secondary">
+        <a href="/x">Go</a>
+      </Button>,
+    );
+    const link = screen.getByRole("link");
+    expect(link).toHaveClass("border-hairline", "bg-canvas-pure", "text-ink-main", "text-body-md");
+    expect(link.className).not.toMatch(/shadow-elevation/);
+  });
+
+  it("never puts a disabled attribute on an asChild anchor", () => {
+    render(
+      <Button asChild disabled>
+        <a href="/x">Go</a>
+      </Button>,
+    );
+    expect(screen.getByRole("link")).not.toHaveAttribute("disabled");
+  });
+
+  // Slot clones exactly one child, so the spinner must not be prepended.
+  it("suppresses the loading spinner under asChild", () => {
+    render(
+      <Button asChild loading>
+        <a href="/x">Go</a>
+      </Button>,
+    );
+    const link = screen.getByRole("link");
+    expect(link.querySelector(".animate-spin")).toBeNull();
+    expect(link).toHaveTextContent("Go");
+  });
 });
