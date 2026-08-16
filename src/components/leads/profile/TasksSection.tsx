@@ -10,6 +10,7 @@ import {
 import type { Task } from "@/lib/tasks/queries";
 import { formatDueAt } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 
 const initialState: TaskFormState = null;
@@ -135,12 +136,17 @@ export function TasksSection({ leadId }: { leadId: string }) {
         <ul className="flex flex-col gap-2">
           {visible.map((task) => (
             <li key={task.id} className="flex items-start gap-2">
-              <input
-                type="checkbox"
+              {/* No `name` and no enclosing form: this is a controlled toggle
+                  that calls toggleTaskComplete directly, not a form field, so
+                  there is no FormData name to preserve here. `label` is not
+                  used because the task title and its due date are their own
+                  two-line block beside the box; aria-label carries the
+                  accessible name instead, unchanged from the native version. */}
+              <Checkbox
                 checked={task.completed}
-                onChange={() => handleToggle(task)}
+                onCheckedChange={() => handleToggle(task)}
                 aria-label={task.completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-                className="mt-0.5 size-4 shrink-0 rounded-xs border-hairline accent-accent"
+                className="mt-0.5"
               />
               <div className="min-w-0">
                 <p

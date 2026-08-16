@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { acceptInvite, type AcceptInviteState } from "@/lib/invites/actions";
+import { Button } from "@/components/ui/Button";
 
 const initialState: AcceptInviteState = null;
 
@@ -16,13 +17,12 @@ export function AcceptInviteButton({ token }: { token: string }) {
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-      >
+      {/* `loading` both disables the control and shows Button's own spinner, so
+          the hand-rolled disabled state is gone. The label still swaps — the
+          spinner says "busy", the label says what it is busy doing. */}
+      <Button type="submit" variant="primary" loading={isPending} className="w-full">
         {isPending ? "Joining…" : "Accept invite"}
-      </button>
+      </Button>
     </form>
   );
 }

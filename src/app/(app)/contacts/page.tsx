@@ -6,7 +6,7 @@ import { ContactsGrid } from "@/components/contacts/ContactsGrid";
 const tabClass = (active: boolean) =>
   `rounded-md border border-hairline px-3 py-1 text-sm transition-colors ${
     active
-      ? "bg-canvas-pure font-medium text-ink-main shadow-elevation-1"
+      ? "bg-canvas-pure font-medium text-ink-main"
       : "text-ink-muted hover:bg-canvas-soft hover:text-ink-main"
   }`;
 

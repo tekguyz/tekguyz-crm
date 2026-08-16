@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/brand/BrandMark";
+import { Card } from "@/components/ui/Card";
 
 // Shared by login, signup, forgot-password, reset-password and onboarding, so
 // the mark reaches all five signed-out screens from here.
@@ -13,9 +14,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <BrandMark height={52} />
         <p className="text-sm font-semibold tracking-tight">TEKGUYZ CRM</p>
       </div>
-      <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-2">
-        {children}
-      </div>
+      {/* Card, not a hand-rolled surface: v1 gave this panel a Level-2 shadow,
+          which v2 reserves for modals and the command palette. p-6 is kept for
+          the same reason the Settings panels keep it — this holds a whole form,
+          not a dense list row, and padding is layout rather than a token. */}
+      <Card className="w-full max-w-sm p-6">{children}</Card>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Lead } from "@/lib/leads/queries";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
@@ -69,15 +70,14 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         <input type="hidden" name="next_action_at" value={nextActionIso} />
       </div>
 
-      <label className="text-body-md flex items-center gap-2 text-ink-main">
-        <input
-          type="checkbox"
-          name="is_starred"
-          defaultChecked={lead.is_starred}
-          className="size-4 rounded-xs border-hairline accent-accent"
-        />
-        Starred
-      </label>
+      {/* Form/Action Field Parity: updateLead reads
+          formData.get("is_starred") === "on". Radix's box is a <button>, so the
+          name is carried by the hidden native checkbox it keeps in the form —
+          dropping `name` here would NULL the column with no error. Pinned by a
+          new FormData assertion in PipelineFields.test.tsx.
+          Checkbox's own `label` prop replaces the wrapping <label>: a <label>
+          around a <button> does not toggle it the way it toggles an <input>. */}
+      <Checkbox name="is_starred" defaultChecked={lead.is_starred} label="Starred" />
     </>
   );
 }

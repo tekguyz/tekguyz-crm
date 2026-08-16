@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { signUp } from "@/lib/auth/actions";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default async function SignupPage({
   searchParams,
@@ -20,27 +23,15 @@ export default async function SignupPage({
 
       <form action={signUp} className="space-y-3">
         {next && <input type="hidden" name="next" value={next} />}
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          required
-          className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          required
-          minLength={6}
-          className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-        />
-        <button
-          type="submit"
-          className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
+        <Input type="email" name="email" placeholder="Email" required />
+        {/* PasswordInput, matching login and reset-password: this was the only
+            one of the three password fields still raw, so the show/hide toggle
+            was missing here and nowhere else. minLength stays 6 — that is the
+            server action's own rule, not a styling detail. */}
+        <PasswordInput name="password" placeholder="Password" required minLength={6} />
+        <Button type="submit" variant="primary" className="w-full">
           Sign up
-        </button>
+        </Button>
       </form>
 
       <p className="mt-4 text-sm text-ink-muted">

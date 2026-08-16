@@ -1,8 +1,9 @@
+import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 function LeadCardSkeleton() {
   return (
-    <div className="rounded-lg border border-hairline bg-canvas-pure p-3 shadow-elevation-1">
+    <Card className="p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-1.5">
           <Skeleton className="h-3.5 w-3/4" />
@@ -14,7 +15,7 @@ function LeadCardSkeleton() {
         <Skeleton className="h-3 w-14" />
         <Skeleton className="h-3 w-16" />
       </div>
-    </div>
+    </Card>
   );
 }
 

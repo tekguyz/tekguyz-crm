@@ -1,4 +1,5 @@
 import { resetPassword } from "@/lib/auth/actions";
+import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default async function ResetPasswordPage({
@@ -22,12 +23,9 @@ export default async function ResetPasswordPage({
       <form action={resetPassword} className="space-y-3">
         <PasswordInput name="password" placeholder="New password" required minLength={8} />
         <PasswordInput name="confirmPassword" placeholder="Confirm new password" required minLength={8} />
-        <button
-          type="submit"
-          className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
+        <Button type="submit" variant="primary" className="w-full">
           Update password
-        </button>
+        </Button>
       </form>
     </div>
   );

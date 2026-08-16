@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 // Root fallback: covers the moment before (app)/layout.tsx's own
@@ -9,10 +10,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function RootLoading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas-soft p-6">
-      <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
+      {/* Card, standing in for the (auth) card this fallback covers — both
+          are Level 0 now, so the skeleton and the real panel match. */}
+      <Card className="w-full max-w-sm p-6">
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="mt-3 h-3 w-1/2" />
-      </div>
+      </Card>
     </div>
   );
 }

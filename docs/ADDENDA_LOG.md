@@ -746,6 +746,46 @@ The Design System v2 rollout (Prompt 1, then 2a/2b/2c) put every signed-in view 
 
 ---
 
+## Design System v2 — pre-auth surfaces, error/loading boundaries, and the last two raw checkboxes (2026-08-16)
+
+Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fenced in signed-in views only, so the screens a prospect actually sees first — login, signup, forgot-password, reset-password, onboarding, `invite/[token]` — were still on v1 chrome, along with every error and loading boundary. This pass put all of them onto `src/components/ui/`.
+
+**Measured, not estimated.** Same grep the primitive audit used, so the two numbers are comparable:
+`grep -rnE "<(button|input|select|textarea)(\s|>|$)" src/ --include=*.tsx --include=*.ts | grep -v "^src/components/ui/"` → **34 hits / 23 files before, 19 hits / 15 files after.** Of the 19 remaining, 12 are prose inside comments (including three new ones this pass wrote to explain the checkbox swaps), 4 are `<input type="hidden">` form carriers, and **3 are real raw controls, all three pre-documented**: `CommandResultItem.tsx` (held for the nav/shell redesign), `LeadCard.tsx`'s outer wrapper (a real `<button>` kept rather than downgraded to `Card` + `role="button"`; carries layout only, no tokens), and `CsvUploadDropzone.tsx`'s hidden `<input type="file">` (driven by a real `Button` beside it). Token greps: `text-canvas-pure` on `bg-accent` → **0**. `shadow-elevation-1` outside `src/components/ui/` → **0 in application code**; the four survivors are the token definition in `globals.css`, `popover.tsx` (Level 1, which is what the rule reserves it for), `/design`'s `TokensSection` (it renders the elevation ramp on purpose), and two prose comments.
+
+**Sixteen raw controls converted.** Every `(auth)` submit `<button>` → `Button variant="primary" className="w-full"` (login, signup, forgot-password, reset-password, onboarding); every `(auth)` text field → `Input` (login email, signup email, forgot-password email, onboarding name); `invite/[token]`'s two `<Link>`s → `Button asChild` primary/secondary, its sign-out `<button>` → `Button variant="secondary"`; `AcceptInviteButton`'s `<button>` → `Button variant="primary" loading={isPending}`; and all four boundaries' "Try again" → `Button variant="secondary"`, with the "Back home"/"Back to Today" links → `Button asChild variant="ghost"`.
+
+**`asChild` was the escape hatch every time a control had to stay a link.** No primitive was forked and no class string was hand-copied — the rule the primitive audit wrote is what made this pass mechanical rather than a redesign.
+
+**Three judgment calls, stated rather than buried.**
+- **Signup's password field became `PasswordInput`, not `Input`.** It was the only one of the app's three password fields still raw, so the show/hide toggle existed on login and reset-password and nowhere else. `minLength={6}` is preserved — that is the server action's rule, not styling.
+- **The two-action stacks are `secondary` + `ghost`, not `primary` + accent text.** The boundaries previously paired a bordered button with an accent-coloured link. Ghost keeps the recovery action visually dominant instead of putting two accent-weight controls in one stack.
+- **`(auth)/layout.tsx`, `invite/[token]` and all four boundaries dropped from Level 2 to Level 0.** They were on `shadow-elevation-2`, which v2 reserves for modals and the command palette. An auth card and an error page are pages, not overlays. They keep `p-6` over `Card`'s stock `p-4`, the same reasoning the Settings panels already documented: padding is layout, not a token.
+
+**Six `loading.tsx` skeleton containers also moved onto `Card`** (root, `(app)`, pipeline, contacts, settings) — they were hand-rolled surfaces carrying `shadow-elevation-1`, so a skeleton was standing in for a Level 0 card with Level 1 chrome. Also removed `shadow-elevation-1` from the active tab in `(app)/contacts/page.tsx` — outside this prompt's stated in-scope list, but the Definition of Done asked for zero `shadow-elevation-1`, and it was a one-token v1 leftover rather than a redesign.
+
+**Both checkboxes swapped, and the two call sites are NOT symmetric — this matters.**
+- `PipelineFields`' "Starred" **is** a form field. `updateLead` reads `formData.get("is_starred") === "on"`, so `name` had to survive onto the hidden native checkbox Radix keeps in the form. Verified live in the real edit modal: `form.querySelector('input[name=is_starred]')` is present and is a real `type="checkbox"`, and its `<label for>` resolves to the box's id. Pinned by two `new FormData(form)` assertions in the new `PipelineFields.test.tsx` — `"on"` when checked, `null` when a real user click unchecks it — plus a third asserting the hidden `next_action_at` ISO carrier still posts.
+- `TasksSection`' per-task toggle **is not** a form field: no `name`, outside the `<form>`, calls `toggleTaskComplete` directly. There is no FormData name to preserve, so the prompt's "a FormData assertion for each of the two" could only be honoured for one of them. The new `TasksSection.test.tsx` asserts the equivalent instead — the toggle calls `toggleTaskComplete("task-1", true)`, keeps its `aria-label`, renders as `data-slot="checkbox"`, and contributes **nothing** to the sibling form (its FormData keys stay exactly `["due_at", "title"]`).
+
+**Live verification, both themes, real computed styles** (dev server, `/api/dev-login`, theme driven through the app's own `next-themes` store rather than a hand-set class — setting `.dark` directly does not re-theme and reads as a false negative). Light: submit button `background-color: lab(43.55 14.45 -63.74)` = `--accent` exactly, `color: lab(98.84 0 0)` = `--accent-fg`, while the card beside it is `lab(100 0 0)` = `--canvas-pure` — so the foreground is demonstrably *not* canvas-pure. Dark: `lab(63.97 5.62 -55.18)` on the button with `lab(3.69 -0.11 -0.93)` text, i.e. the pair flips and no white is hardcoded. `box-shadow: none` on button, input and card in both themes; radii 6px / 3px / 8px (`rounded-md` / `rounded-xs` / `rounded-lg`), button height 32px. All five `(auth)` routes plus `invite/[token]` return 200 with **zero** `shadow-elevation` and **zero** `text-canvas-pure` in the served HTML, and every field `name` (`email`, `password`, `name`, `confirmPassword`) is intact in the rendered markup.
+
+**Keyboard reaches every control on every touched route, with a visible focus ring** — walked with real Tab presses on `/login`: `:focus-visible` matched on all seven focusable elements including the Button-rendered submit.
+
+**One pre-existing defect found while measuring that ring, reported and deliberately not fixed.** `globals.css`'s `:focus-visible { outline: 2px solid var(--accent) }` is not painting its colour: on every element measured, `outline-color` computes to exactly the element's own `color` (currentColor), and on `<a>`/`<input>` the width is the browser's UA auto ring rather than 2px. Confirmed **pre-existing and app-wide**, not caused by this pass, by measuring shipped controls this prompt never touched — `PasswordInput`'s eye toggle and all four Buttons on `/design` behave identically. The accessibility floor still holds (a visible ring paints on every control, and on accent-coloured links it happens to land on `--accent` anyway), which is why it is a finding rather than a blocker. Fixing a global focus rule is app-wide and was outside this fence; it is now open in `docs/KNOWN_GAPS.md` beside the related dead `input:focus-visible` border rule.
+
+**Screenshots: taken on the second pass, after the pane was displayed.** The first pass ran with the Browser pane closed, where `computer{action:"screenshot"}` times out with "the page is not compositing frames" and suspense-held elements measure 0x0 — the exact state `CLAUDE.md` warns about, and the reason every measurement above is a computed-style read rather than a geometry assertion. With the pane open, `/login`, `/signup` and `/invite/[token]` were captured in both themes and confirm the numbers by eye: flat hairline cards with no shadow, the accent button carrying light text in light mode and **dark** text in dark mode (the `--accent-fg` flip is visible, not inferred), and signup's password field now showing the show/hide eye it never had. The four error boundaries were **not** screenshotted — forcing a throw would mean temporarily editing app code, and they are static markup built from the same two primitives proven on the page beside them.
+
+**One thing the pane still could not do.** A programmatic `.click()` on a Radix checkbox no-ops here: the **shipped** `AccountPanel` checkbox, untouched by this prompt, fails the same way, so it is the harness rather than the swap. Toggling is therefore proven by `PipelineFields.test.tsx` / `TasksSection.test.tsx` (real `userEvent` clicks) rather than live; the live evidence covers the tokens, the hidden name carrier and the label wiring. Same limitation class the primitive audit hit on the space key. The focus ring likewise resisted visual capture at the pane's resolution — it is proven by the computed-style walk above, not by pixels.
+
+**Not fixed, with reasons.** `CommandResultItem` — explicitly out of this fence, held for the nav/shell redesign. `Badge`'s `cold` tone — explicitly out of fence, still unused, gap left standing. The `(auth)` fields remain placeholder-only with no visible `<label>`; `Input` supports one, but adding labels is a design change rather than a chrome conversion, and the placeholder still supplies an accessible name. `prettier` was briefly run against three files and reverted — this repo has no prettier config and stock `printWidth: 80` reflows against the ~100-column house style; the final edits are hand-written.
+
+**Gates:** `tsc --noEmit` clean, `eslint src/` clean, `next build` clean, `npm test` **74 passed (12 files)** — up from 67/10, with 4 new `PipelineFields` tests and 3 new `TasksSection` tests. No migration, no RLS policy, no schema change, and nothing written to the database, so there is no test residue to clean up.
+
+**Files changed (20).** `src/app/(auth)/layout.tsx`, `(auth)/login/page.tsx`, `(auth)/signup/page.tsx`, `(auth)/forgot-password/page.tsx`, `(auth)/reset-password/page.tsx`, `(auth)/onboarding/page.tsx`, `src/app/invite/[token]/page.tsx`, `src/components/invites/AcceptInviteButton.tsx`, `src/app/error.tsx`, `src/app/global-error.tsx`, `src/app/(app)/error.tsx`, `src/app/(app)/pipeline/error.tsx`, `src/app/loading.tsx`, `src/app/(app)/loading.tsx`, `src/app/(app)/pipeline/loading.tsx`, `src/app/(app)/contacts/loading.tsx`, `src/app/(app)/settings/loading.tsx`, `src/app/(app)/contacts/page.tsx`, `src/components/leads/edit-modal/PipelineFields.tsx`, `src/components/leads/profile/TasksSection.tsx`. New: `PipelineFields.test.tsx`, `TasksSection.test.tsx`. No file in `src/components/ui/` was edited — no primitive was built or changed.
+
+---
+
 ## Known Gaps — Resolved Items Archive
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
@@ -778,6 +818,8 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **OG card wordmark/tagline spacing.** ✅ Closed 2026-08-15 — the gap was 69px against a 44px icon gap, so the tagline read as detached rather than subordinate; now 41px. Relocated out of `docs/KNOWN_GAPS.md` on 2026-08-16, having been left inline past its close date. Full history: `docs/ADDENDA_LOG.md` § Metadata & doc cleanup pass.
 - **There is no `Checkbox` primitive in `src/components/ui/`.** ✅ Closed 2026-08-16 — built on Radix with every state derived from an existing primitive, and `AccountPanel`'s two notification checkboxes swapped onto it; both themes verified against real computed styles. Full history: `docs/ADDENDA_LOG.md` § Primitive audit.
 - **`Button` has no `asChild` escape hatch, so link-shaped controls restate its classes.** ✅ Closed 2026-08-16 — `asChild` added on `@radix-ui/react-slot`, and all three class copies collapsed (`AccountPanel`'s `LINK_BUTTON_CLASS` deleted; `AlertDialogAction`/`AlertDialogCancel` now compose `Button`). Full history: `docs/ADDENDA_LOG.md` § Primitive audit.
+- **The pre-auth `(auth)` route group and the four error boundaries still ran v1 chrome.** ✅ Closed 2026-08-16 — all five `(auth)` pages, `invite/[token]`, `AcceptInviteButton` and all four boundaries now consume `Button`/`Input`/`Card`; raw-element grep 34 hits/23 files → 19/15, `text-canvas-pure` on `bg-accent` → 0, `shadow-elevation-1` → 0 in application code. Both themes verified against real computed styles. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — pre-auth surfaces.
+- **Two raw `<input type="checkbox">` remained outside `AccountPanel`.** ✅ Closed 2026-08-16 — `PipelineFields`' "Starred" and `TasksSection`' per-task toggle both on the `Checkbox` primitive. `is_starred` field parity pinned by a `new FormData(form)` assertion; `TasksSection`' toggle carries no form name by design and is pinned by a callback assertion instead. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — pre-auth surfaces.
 
 ## Design System v2 — by-eye verification pass and two real fixes (2026-08-14, later same day)
 
@@ -1799,3 +1841,131 @@ A/B revert. `npm run test:rls` not run — no schema, RLS or trigger surface
 touched. `field-styles.ts` confirmed still absent, with no import of it anywhere
 in `src/`. No test data was written to the database — every check was a
 read, a search or a form left unsubmitted.
+
+---
+
+## Accepted invites stuck at PENDING — Settings → Team (2026-08-16)
+
+Defect: accepted team invites kept rendering as "Pending" in Settings → Team.
+The stale UI was the symptom. The real damage is that a row left at `PENDING`
+occupies the partial unique index
+`unique_pending_invite_per_org_email ON organization_invites(organization_id, email) WHERE status = 'PENDING'`,
+so it permanently blocks re-inviting that email address — the insert in
+`createInvite` fails on conflict.
+
+### Step zero — what the live database actually held
+
+The UI query was read first, verbatim, from `src/lib/invites/queries.ts`
+(`getPendingInvites`, the only feeder of `TeamPanel`):
+
+```ts
+supabase
+  .from("organization_invites")
+  .select("id, email, role, token, expires_at")
+  .eq("organization_id", orgId)
+  .eq("status", "PENDING")
+  .order("created_at", { ascending: false });
+```
+
+It already filtered `status = 'PENDING'` positively, which rules out CASE 1
+before touching the database.
+
+Org resolved from `organization_members`, not assumed: `TEKGUYZ`
+(`95c1bc71-2645-4e35-a9f6-078993f1c586`, 1 member, 0 invites) and `TEKGUYZ Demo`
+(`cdf8217a-573a-4970-a88a-2c1541fc6d7b`, 3 members, 2 invites). All invite rows
+in the project belong to the demo org.
+
+`organization_invites` (whole project, both orgs):
+
+| id | email | role | status | created_at | expires_at |
+|---|---|---|---|---|---|
+| `3427ea42-8695-41eb-960b-1a06ab5d1b43` | joemaiello@eclipsecat.com | MEMBER | PENDING | 2026-07-25 17:48:25.883855+00 | 2026-08-01 17:48:25.883855+00 |
+| `a6fcec4c-56cc-4e7e-a8db-972942ed030f` | 4tekguyz@gmail.com | MEMBER | PENDING | 2026-07-25 17:48:58.284432+00 | 2026-08-01 17:48:58.284432+00 |
+
+`organization_members` (emails joined from `auth.users`):
+
+| organization | user_id | role | email | created_at |
+|---|---|---|---|---|
+| TEKGUYZ | `3e64b668-1fb2-4737-b09a-a0b99aaff448` | OWNER | admin@tekguyz.com | 2026-07-07 01:26:53.974478+00 |
+| TEKGUYZ Demo | `e2c1cbca-17a4-4e85-aa74-6ce2d4d2cdaa` | OWNER | tekguyz.demo.owner@example.com | 2026-07-25 10:16:21.834054+00 |
+| TEKGUYZ Demo | `3e6ca7a2-02b6-43fb-a3d8-6a8a6f58a0e1` | MEMBER | 4tekguyz@gmail.com | 2026-07-25 18:00:17.319114+00 |
+| TEKGUYZ Demo | `5be43dc7-0f21-4681-af06-ee07ce43cf8d` | MEMBER | joemaiello@eclipsecat.com | 2026-07-25 18:00:17.319114+00 |
+
+### Verdict: CASE 2
+
+Both invites were `PENDING` **and** a matching member row already existed for
+each. Membership was created outside `accept_organization_invite`.
+
+The supporting evidence, so a future reader doesn't have to re-derive it:
+
+- Both member rows carry the byte-identical `created_at`
+  `2026-07-25 18:00:17.319114+00` — a single multi-row `INSERT`, not two
+  independent RPC calls minutes apart.
+- Both users genuinely signed up and signed in (`auth.users`: created
+  17:55:14 and 17:57:49, `last_sign_in_at` 17:58:36 and 18:00:58, provider
+  `email`), so the accounts are real — only the *membership* was hand-granted.
+- `accept_organization_invite` was read from `pg_proc` and is correct as
+  written: it inserts the member row and sets `status = 'ACCEPTED'` in the same
+  transaction. Had it run, the status would have moved. It did not run.
+
+So this was not a code defect in the accept funnel and not a UI status-filter
+defect. It was a manual membership grant, done during the 2026-07-25 demo-org
+session, that left two invite rows orphaned at `PENDING` — and therefore left
+both addresses permanently un-invitable.
+
+### Repair, stated before it was run
+
+Both stuck rows were moved to `ACCEPTED` — exactly what the RPC would have
+done, and never a delete (no hard deletes anywhere in this codebase). Per this
+project's Supabase MCP tool-access rule, the write went through a disposable
+service-role script (`scripts/repair-stuck-invites.ts`, deleted immediately
+after use), never `execute_sql`. The predicate matched invites by
+`organization_id` + `status = 'PENDING'` + existence of a member row whose
+`auth.users` email matches the invite's, case-insensitively — it names the
+condition that defines "stuck," rather than hardcoding two ids.
+
+**Rows affected: 2.** Confirmed by follow-up `SELECT`: both rows now
+`ACCEPTED`, and the demo org holds no `PENDING` invite.
+
+Re-invitation then verified live, not assumed: a probe invite to
+`4tekguyz@gmail.com` (previously blocked) inserted successfully with
+`status = 'PENDING'`, proving the unique index no longer rejects it. The probe
+row was removed afterwards per the Test-Data Cleanup rule, and the org
+confirmed back to exactly its two `ACCEPTED` rows.
+
+### Code changes
+
+- **`src/lib/invites/queries.ts`** — `getPendingInvites` → `getOpenInvites`,
+  now returning `{ pending, expired }`. The `status = 'PENDING'` filter is kept
+  as an explicit positive comparison (never `<> 'REVOKED'`, which would
+  silently start rendering any status added later). A new pure, exported
+  `partitionInvitesByExpiry(invites, now)` does the clock split, so the filter
+  is testable without a database.
+- **`src/components/settings/TeamPanel.tsx`** — renders two groups. "Pending
+  invites" is unchanged in shape and now genuinely only holds live invites.
+  "Expired invites" is new: it shows the row with a neutral `Badge` reading
+  "Expired", a one-line explanation that it blocks re-inviting that address,
+  and a Revoke control. Expired rows deliberately do **not** render
+  `CopyInviteLinkButton`, so their capability token is never sent to the client
+  — a link that cannot be accepted has no reason to leave the server.
+- **`src/lib/invites/queries.test.ts`** (new, 5 tests) — covers that an expired
+  `PENDING` invite stays out of the pending bucket, that a mixed list splits
+  without loss or duplication, and that the query issues `.eq("status",
+  "PENDING")` and never a `REVOKED`-shaped negative filter, which is why an
+  `ACCEPTED` invite can never reach either bucket.
+
+**Expired invites are surfaced, not hidden.** An expired `PENDING` row still
+occupies the unique index and still blocks re-invitation, so dropping it from
+the UI would have hidden the block rather than fixed it. Both of the rows found
+in step zero were expired as well as stuck, which is exactly the state this
+grouping is meant to make visible.
+
+Nothing else was touched: no RLS policy, no migration, no schema change, no RPC
+edit, no `(auth)` file, no design-system work, and no second writer of
+`organization_members`.
+
+### Gates run
+
+`npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` clean,
+`npm test` 10 files / 67 tests passing (was 9 / 62). `npm run test:rls` not run
+— no schema, RLS, trigger or RPC surface was touched.

@@ -1,8 +1,9 @@
+import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 function ContactCardSkeleton() {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
+    <Card className="flex flex-col gap-3 p-6">
       <div className="min-w-0 space-y-1.5">
         <Skeleton className="h-3.5 w-2/3" />
         <Skeleton className="h-3 w-1/3" />
@@ -12,7 +13,7 @@ function ContactCardSkeleton() {
         <Skeleton className="h-6 w-16 rounded-md" />
         <Skeleton className="h-6 w-16 rounded-md" />
       </div>
-    </div>
+    </Card>
   );
 }
 

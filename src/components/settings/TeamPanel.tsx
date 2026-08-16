@@ -1,7 +1,8 @@
-import { getTeamMembers, getPendingInvites } from "@/lib/invites/queries";
+import { getTeamMembers, getOpenInvites } from "@/lib/invites/queries";
 import { InviteMemberForm } from "@/components/settings/InviteMemberForm";
 import { CopyInviteLinkButton } from "@/components/settings/CopyInviteLinkButton";
 import { RevokeInviteButton } from "@/components/settings/RevokeInviteButton";
+import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 
 export async function TeamPanel({
@@ -11,9 +12,9 @@ export async function TeamPanel({
   orgId: string;
   canManage: boolean;
 }) {
-  const [members, invites] = await Promise.all([
+  const [members, { pending, expired }] = await Promise.all([
     getTeamMembers(orgId),
-    getPendingInvites(orgId),
+    getOpenInvites(orgId),
   ]);
 
   return (
@@ -32,10 +33,10 @@ export async function TeamPanel({
         ))}
       </div>
 
-      {invites.length > 0 && (
+      {pending.length > 0 && (
         <div className="mb-6 space-y-2 border-t border-hairline pt-4">
           <h3 className="text-label text-ink-muted">Pending invites</h3>
-          {invites.map((invite) => (
+          {pending.map((invite) => (
             <div
               key={invite.id}
               className="text-body-md flex items-center justify-between gap-2"
@@ -52,6 +53,34 @@ export async function TeamPanel({
                   <RevokeInviteButton inviteId={invite.id} />
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Expired invites are shown, not hidden: the row still occupies
+          `unique_pending_invite_per_org_email`, so it keeps blocking a fresh
+          invite to that address until someone revokes it. */}
+      {expired.length > 0 && (
+        <div className="mb-6 space-y-2 border-t border-hairline pt-4">
+          <h3 className="text-label text-ink-muted">Expired invites</h3>
+          <p className="text-caption text-ink-muted">
+            These invites can no longer be accepted, and they block a new invite
+            to the same address. Revoke one to free up its email address.
+          </p>
+          {expired.map((invite) => (
+            <div
+              key={invite.id}
+              className="text-body-md flex items-center justify-between gap-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-ink-main">{invite.email}</span>
+                <span className="text-label text-ink-muted">{invite.role}</span>
+                {/* `neutral`, not `cold` — Badge's cold tone is the Going Cold
+                    SLA signal and is never repurposed for styling. */}
+                <Badge tone="neutral">Expired</Badge>
+              </div>
+              {canManage && <RevokeInviteButton inviteId={invite.id} />}
             </div>
           ))}
         </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth/actions";
 import { AcceptInviteButton } from "@/components/invites/AcceptInviteButton";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 type InvitePreview = {
   organization_name: string;
@@ -48,18 +50,15 @@ export default async function InvitePage({
           <strong className="text-ink-main">{invite.email}</strong> to join{" "}
           <strong className="text-ink-main">{invite.organization_name}</strong>.
         </p>
-        <Link
-          href={`/login?next=${encodeURIComponent(nextPath)}`}
-          className="block w-full rounded-md bg-accent px-3.5 py-1 text-center text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
-          Sign in
-        </Link>
-        <Link
-          href={`/signup?next=${encodeURIComponent(nextPath)}`}
-          className="block w-full rounded-md border border-hairline px-3.5 py-1 text-center text-sm font-medium text-ink-main shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
-          Sign up
-        </Link>
+        {/* asChild, not a copy of Button's class string: these must stay
+            next/link navigations, and a restated class set drifts from the
+            primitive silently. */}
+        <Button asChild variant="primary" className="w-full">
+          <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Sign in</Link>
+        </Button>
+        <Button asChild variant="secondary" className="w-full">
+          <Link href={`/signup?next=${encodeURIComponent(nextPath)}`}>Sign up</Link>
+        </Button>
       </div>
     );
   } else if (user.email?.toLowerCase() !== invite.email.toLowerCase()) {
@@ -71,12 +70,9 @@ export default async function InvitePage({
           <strong className="text-ink-main">{user.email}</strong>.
         </p>
         <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full rounded-md border border-hairline px-3.5 py-1 text-sm font-medium text-ink-main shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-          >
+          <Button type="submit" variant="secondary" className="w-full">
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
     );
@@ -94,11 +90,13 @@ export default async function InvitePage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas-soft p-6">
-      <div className="w-full max-w-sm rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-2">
+      {/* Same Level 0 surface the (auth) layout now uses — this page sits
+          outside that route group but is the same signed-out card. */}
+      <Card className="w-full max-w-sm p-6">
         <p className="mb-6 text-sm font-semibold tracking-tight">TEKGUYZ CRM</p>
         <h1 className="mb-4 text-lg font-semibold">You&apos;re invited</h1>
         {body}
-      </div>
+      </Card>
     </div>
   );
 }

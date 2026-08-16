@@ -1,11 +1,12 @@
+import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 function PanelSkeleton({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
+    <Card className="p-6">
       <Skeleton className="mb-4 h-4 w-32" />
       {children}
-    </section>
+    </Card>
   );
 }
 

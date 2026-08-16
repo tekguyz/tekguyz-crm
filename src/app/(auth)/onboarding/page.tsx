@@ -1,4 +1,6 @@
 import { createOrganization } from "@/lib/auth/actions";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default async function OnboardingPage({
   searchParams,
@@ -21,19 +23,10 @@ export default async function OnboardingPage({
       )}
 
       <form action={createOrganization} className="space-y-3">
-        <input
-          type="text"
-          name="name"
-          placeholder="Organization name"
-          required
-          className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-        />
-        <button
-          type="submit"
-          className="w-full rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2"
-        >
+        <Input type="text" name="name" placeholder="Organization name" required />
+        <Button type="submit" variant="primary" className="w-full">
           Create organization
-        </button>
+        </Button>
       </form>
     </div>
   );
