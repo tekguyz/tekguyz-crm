@@ -1642,6 +1642,44 @@ the check being a standing step rather than a one-off cleanup.
 pass. `npm run test:rls` was not run — no schema, RLS or trigger surface was
 touched.
 
+### Third run, third finding: the "every view in the app" overclaim (2026-08-16, commit `cf4857c`)
+
+Check 4 caught a scope overclaim on its next real run, in **three** places at
+once. Prompt 2c's completion language — "every view in the app now consumes
+`src/components/ui/`" — appeared verbatim in `CLAUDE.md` § 3, in the Resolved
+Items Archive entry for "Most views still do not consume the v2 primitives",
+and by implication in the Prompt 2c addendum itself. The § Primitive audit pass
+measured it as false: the five `(auth)` pages, `invite/[token]`,
+`AcceptInviteButton` and the four error boundaries hold 13 raw controls still
+carrying v1 `shadow-elevation-1`, three of them painting `text-canvas-pure` on
+`bg-accent` — a live `--accent-fg` violation, not merely stale styling. Prompts
+2a/2b/2c only ever fenced in **signed-in** surfaces, so the claim was true of
+what those prompts touched and false of the app. All three sites now say
+"signed-in view" and name the measured remainder; the remaining scope is open in
+`docs/KNOWN_GAPS.md`.
+
+Same shape as the two findings above — a summary outliving what it summarises —
+but with a new wrinkle worth naming: here the losing claim was not stale *by
+later events*, it was **over-broad on the day it was written**. Check 4 catches
+that too, because the repair trigger is "two entries assert opposite things
+about the same behaviour," not "an entry has been overtaken."
+
+**Two related repairs in the same pass.** The § Design System v2 — Prompt 2c
+"Three primitive gaps" list gained a state-as-of clause for gaps 1 and 2, both
+superseded by § Primitive audit; gap 3 (`CommandResultItem`) is still open. And
+the "`AlertDialogTrigger asChild` works on `Button` with no `forwardRef`" entry
+gained a clause stating explicitly that it is about **Radix's** `Trigger
+asChild` accepting a `Button` as its child, and says nothing about `Button`
+having an `asChild` prop of its own. That entry had been misread on 2026-08-16
+as proof `Button` already supported `asChild` — a documentation entry that is
+true but readable two ways is its own defect class, distinct from a stale one.
+
+**One count error alongside it**, same as last time: `docs/KNOWN_GAPS.md`'s
+"Existing components have no tests" bullet still read 49 tests / 8 suites.
+The primitive audit took it to 62 / 9. Corrected. A resolved OG-card-spacing
+item was also still sitting inline in `docs/KNOWN_GAPS.md` past its 2026-08-15
+close date and was relocated to the archive per that file's own rule.
+
 ---
 
 ## Design System v2 — Prompt 2c (2026-08-15)
