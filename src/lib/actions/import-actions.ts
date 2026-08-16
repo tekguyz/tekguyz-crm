@@ -32,10 +32,15 @@ const emptyResult = (): BatchInsertResult => ({
 });
 
 export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInsertResult> {
-  // organization_id comes from the caller's own session, never the payload.
-  // Combined with the session-bound client below (NOT admin.ts, which would
-  // bypass RLS entirely), the "Members create tenant leads" WITH CHECK
-  // policy is a real enforcement boundary rather than a formality.
+  // organization_id comes from the caller's own session, never the payload,
+  // and is handed to insertLeadChunks explicitly. The client below stays the
+  // session-bound one (NOT admin.ts, which would bypass RLS entirely), so the
+  // JWT reaches the database and auth.uid() resolves.
+  //
+  // The chunk write itself now runs inside a SECURITY DEFINER RPC, which
+  // bypasses RLS — so on that one path the tenant boundary is the RPC's own
+  // membership re-check, not the "Members create tenant leads" WITH CHECK
+  // policy. Every other statement in this action still goes through RLS.
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 
@@ -63,6 +68,7 @@ export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInser
 
   const { insertedIds, skippedEmails, failedChunks, failedChunkRows } = await insertLeadChunks(
     supabase,
+    orgId,
     insertRows,
   );
 

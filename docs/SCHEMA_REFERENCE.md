@@ -514,4 +514,62 @@ CREATE OR REPLACE TRIGGER trigger_enforce_lead_role_restrictions
 
 Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enforcement.rls.test.ts`, run with `npm run test:rls` (deliberately excluded from `npm test` — it creates and tears down real auth users). Full narrative: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
 
+**CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
+
+**This is the ninth `SECURITY DEFINER` function, and it self-checks.** Running inventory of which of the nine re-assert authorization inside the body rather than trusting their arguments:
+
+| Function | Self-check inside the body |
+| --- | --- |
+| `private.current_org_ids()` | n/a — reads `auth.uid()` only, takes no argument to forge |
+| `create_organization_with_owner` | ✅ raises on NULL `auth.uid()`; makes the caller the OWNER, never a supplied user id |
+| `get_invite_preview` | ❌ none by design — an unauthenticated invitee must be able to read it (only `anon`-callable function in the schema) |
+| `accept_organization_invite` | ✅ raises on NULL `auth.uid()`; matches invite email against the caller's own |
+| `get_organization_members` | ✅ `p_org_id IN (SELECT private.current_org_ids())` in the WHERE clause |
+| `get_org_webhook_secret` | ✅ re-checks the caller's OWNER/ADMIN role for the specific `p_org_id` |
+| `vault_set_org_credential` | ✅ internal OWNER/ADMIN role check |
+| `vault_clear_org_credential` | ✅ internal OWNER/ADMIN role check |
+| `import_leads_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id` |
+
+`import_leads_chunk`'s check is **membership, not role** — `leads` INSERT keeps full MEMBER parity by design, so any member of the org may import. `search_path` is pinned to `''` (verified live: `proconfig = {search_path=""}`), `EXECUTE` is revoked from `PUBLIC`/`anon` and granted to `authenticated` only (verified live: `proacl` is `postgres=X | service_role=X | authenticated=X`, with no `anon` entry and no `=X/` PUBLIC grant). Because `SECURITY DEFINER` bypasses RLS, that internal membership check — not the `"Members create tenant leads"` policy — is the tenant boundary on this one path. Proven live: a signed-in member of a different org calling it with TEKGUYZ Demo's `organization_id` gets `IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.` and writes zero rows.
+
+Why the function exists at all, and why the OUT columns are named `lead_id`/`lead_email` rather than `id`/`email`: `docs/ADDENDA_LOG.md` § CSV import chunk-write RPC.
+
+```sql
+-- Abbreviated; full body with its reasoning comments is in the migration file.
+CREATE OR REPLACE FUNCTION public.import_leads_chunk(p_organization_id UUID, p_rows JSONB)
+RETURNS TABLE (lead_id UUID, lead_email TEXT)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_uid UUID := (SELECT auth.uid());
+BEGIN
+    IF v_uid IS NULL THEN
+        RAISE EXCEPTION 'IMPORT_NOT_AUTHORIZED: authentication required.' USING ERRCODE = '42501';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.organization_members m
+        WHERE m.organization_id = p_organization_id AND m.user_id = v_uid
+    ) THEN
+        RAISE EXCEPTION 'IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.'
+            USING ERRCODE = '42501';
+    END IF;
+
+    RETURN QUERY
+    WITH inserted AS (
+        INSERT INTO public.leads (organization_id, client_name, email, /* ...9 more... */)
+        SELECT p_organization_id, r.client_name, lower(trim(r.email)), /* ... */
+        FROM jsonb_to_recordset(p_rows) AS r(client_name TEXT, email TEXT /* ... */)
+        ON CONFLICT (organization_id, lower(email)) DO NOTHING   -- inference form: expression index
+        RETURNING leads.id, leads.email
+    )
+    SELECT inserted.id, inserted.email FROM inserted;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.import_leads_chunk(UUID, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.import_leads_chunk(UUID, JSONB) TO authenticated;
+```
+
 **Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` was added to this file, in scope for the work that just shipped; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.

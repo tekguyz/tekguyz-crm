@@ -1338,3 +1338,198 @@ That read is therefore always undefined and the `?? "http://localhost:3000"`
 fallback always wins. Harmless here — localhost is the correct target for a
 dev-only route — but it is a dead env reference, not a working one, and should
 not be copied as a pattern.
+
+---
+
+## CSV import chunk-write RPC — `import_leads_chunk` (2026-08-15)
+
+Closes the "CSV import can never insert a row" gap opened during Prompt 2b QA
+the same day. That bullet is deleted from `docs/KNOWN_GAPS.md` outright rather
+than archived as ✅, per the register's own rule that resolved items are true
+deletions there; its full history is this section.
+
+### The root cause was the transport, not the index
+
+`insertLeadChunks` wrote through PostgREST:
+
+```ts
+.upsert(chunk, { onConflict: "organization_id,email", ignoreDuplicates: true })
+```
+
+The only unique index on `leads` is
+`unique_tenant_client_email_ci ON public.leads (organization_id, lower(email))`
+— an **expression** index. PostgREST's `on_conflict` query parameter takes a
+column-name list and cannot express `lower(email)`, so every chunk threw
+`there is no unique or exclusion constraint matching the ON CONFLICT
+specification` and the wizard reported "0 imported / 1 batch(es) failed".
+
+The index is correct and stays exactly as it is. Raw SQL **can** infer an
+expression index, so the fix moves the write into
+`public.import_leads_chunk(p_organization_id uuid, p_rows jsonb)`, a
+`SECURITY DEFINER` function — the same shape `vault_set_org_credential`,
+`create_organization_with_owner` and `get_org_webhook_secret` already use for
+work PostgREST cannot express.
+
+Migration: `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`,
+written here and applied by the human via the SQL editor, per the standing DDL
+rule. It adds a function and its grants and nothing else — no table, no policy,
+no index, no trigger. The three `leads` RLS policies and
+`unique_tenant_client_email_ci` are byte-for-byte unchanged.
+
+### The four requirements, and what each one prevents
+
+1. **`ON CONFLICT (organization_id, lower(email))`, the inference form — not
+   `ON CONFLICT ON CONSTRAINT unique_tenant_client_email_ci`.**
+   `unique_tenant_client_email_ci` is a bare unique *index*; `pg_constraint` on
+   `leads` holds only `leads_pkey`, one FK and two CHECKs. Re-verified
+   first-hand on a temp-table replica during this prompt: the `ON CONSTRAINT`
+   form fails with
+   `ERROR: 42704: constraint "…" for table "…" does not exist`, and the
+   inference form succeeds. It cannot be promoted either — Postgres unique
+   *constraints* cannot be built on expressions, so
+   `ALTER TABLE … ADD CONSTRAINT … USING INDEX` is unavailable. **Prevents:** a
+   migration that looks tidier and fails on apply.
+2. **`DO NOTHING`, never `DO UPDATE`.** `DO UPDATE` would let a CSV silently
+   overwrite real leads — the overwrite hazard still open on the webhook path.
+   **Prevents:** turning a duplicate-skip into silent data loss. Proven live:
+   a CSV row for `AMANDA.CHU@GREENSCAPELANDSCAPING.COM` carrying
+   `estimated_revenue` 7000 left the stored lead at 6100.00 with its original
+   `lead_source` and its single pre-existing `WEBHOOK` activity log untouched.
+3. **Keep `RETURNING id, email`.** `insertLeadChunks` diffs the chunk's emails
+   against the rows the write actually returned — returned means inserted,
+   absent means pre-existing. **Prevents:** the cross-chunk TOCTOU race that
+   § Prompt 10 addendum designed the diff away from. A pre-`SELECT` would
+   reintroduce it; the diff is atomic with the write or it is not correct.
+4. **Re-check `organization_id` against the caller's membership inside the
+   body, and `RAISE EXCEPTION` on failure.** `SECURITY DEFINER` bypasses RLS,
+   so `"Members create tenant leads"` — the only thing otherwise stopping a
+   forged `organization_id` — stops applying the moment this function runs.
+   `auth.uid()` still resolves under `SECURITY DEFINER` because it reads the
+   request JWT GUC, not the executing role. **Prevents:** converting a
+   PostgREST bug into a cross-tenant write primitive. The check is *membership,
+   not role* — `leads` INSERT keeps full MEMBER parity by design.
+
+Plus, from the same prompt: `organization_id` is written from the parameter and
+the row payload's own `organization_id` is omitted from the
+`jsonb_to_recordset` column definition list, so it is structurally unreachable
+rather than merely ignored; `lower(trim(email))` is applied inside the function
+as a backstop; `search_path` is pinned to `''` with every identifier
+schema-qualified; and `EXECUTE` is revoked from `PUBLIC`/`anon` and granted to
+`authenticated` only.
+
+### The naming trap the temp-table replica caught
+
+The first draft declared `RETURNS TABLE (id uuid, email text)` — matching what
+`insertLeadChunks` already read. It **fails at runtime**:
+
+```
+ERROR: 42702: column reference "email" is ambiguous
+DETAIL: It could refer to either a PL/pgSQL variable or a table column.
+```
+
+`ON CONFLICT (organization_id, lower(email))` is an inference expression and
+Postgres does not allow the target table to be qualified there, so that bare
+`email` collides with the OUT parameter. The `RETURNING` and final `SELECT`
+*can* be qualified; the inference clause cannot.
+
+Fixed by naming the OUT columns `lead_id` / `lead_email`, not by
+`#variable_conflict use_column` — the pragma would resolve it invisibly and
+leave the identical trap armed for the next editor. **This is why the SQL was
+dry-run against a temp-table replica before the file was handed over:** the
+migration was otherwise complete, reviewed, and wrong, and nothing in
+`tsc`/`eslint`/`next build` would ever have caught it.
+
+### The TS side
+
+`src/lib/import/insert-chunks.ts` calls the RPC instead of `.upsert()`, and
+`insertLeadChunks` gains an `organizationId` parameter (the one sanctioned
+change in `src/lib/actions/import-actions.ts` passes `orgId` through). The
+per-chunk `try`/`catch` is unchanged — one bad chunk still costs 250 rows, not
+the import.
+
+One follow-on fix the live run surfaced: the diff now normalizes **both** sides
+with `email.trim().toLowerCase()`, mirroring the function's own backstop. The
+Zod layer already lowercases, so this changes nothing on the real path — but
+without it a caller that skipped Zod would have its rows genuinely inserted and
+then reported as "already existed", a silent miscount rather than an error.
+That is the same class as the silent-NULL-on-save bug: wrong numbers, green
+build, no exception.
+
+The session-bound client from `src/lib/supabase/server.ts` remains the only
+path — `src/lib/supabase/admin.ts` is never imported here. A service-role
+client would resolve `auth.uid()` to NULL and the function would raise, which
+is the correct outcome: the RPC's membership check replaces the RLS policy a
+service-role client would have bypassed anyway.
+
+### Live receipts (TEKGUYZ Demo only; TEKGUYZ asserted at 1 lead throughout)
+
+**Applied-state check.** `prosecdef = true`, `proconfig = {search_path=""}`,
+`proacl = postgres=X/postgres | service_role=X/postgres | authenticated=X/postgres`
+— no `anon` entry, no PUBLIC grant.
+
+**Mixed fixture, end to end through the real wizard** (signed in via
+`GET /api/dev-login`, 9 data rows). Predicted before running, matched exactly:
+
+| Category | Predicted | Wizard receipt |
+| --- | --- | --- |
+| Imported | 3 | **3** |
+| Already existed | 2 (1 active · 1 archived) | **2 (1 active · 1 archived)** |
+| Duplicates in file | 2 | **2** |
+| Failed validation | 2 | **2** |
+
+SQL readback confirmed 3 new leads each with exactly one
+`SYSTEM_ALERT` / "Lead created via CSV import." audit row, and **zero** audit
+rows for either skipped lead.
+
+**Archived lead not resurrected.** A CSV row naming an archived demo lead's
+email in uppercase: `insertLeadChunks` returned
+`{"insertedIds":[],"skippedEmails":["imp-verify-…-archived@example.com"]}` and
+SQL read back `{"archived":true,"status":"QUOTED","lead_source":"Trade Show"}`
+with `activity_logs = 0`. Resurrection stays exclusive to the webhook path.
+
+**Cross-tenant call refused.** A throwaway user in its own org called the RPC
+with TEKGUYZ Demo's `organization_id`:
+
+```
+IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.
+```
+
+Confirmed by SQL, not by return value: rows written into TEKGUYZ Demo = **0**.
+An unauthenticated `anon` call is refused earlier still, at the grant layer:
+`permission denied for function import_leads_chunk`.
+
+**Failed-chunk branch, by fault injection.** 501 rows (chunks of 250/250/1),
+chunk 2 forced to error. Result:
+`imported=251 skipped=0 failedChunks=1 failedChunkRows=250`, rendering
+`"1 batch(es) covering 250 rows failed to process — retry recommended for those
+rows."` SQL confirmed 251 rows actually committed — the other two chunks
+survived the failure, which is the whole point of the per-chunk `catch`.
+
+**Cleanup.** Baseline `real=1 demo=20`; post-cleanup `real=1 demo=20`. A
+follow-up sweep confirmed 0 test leads, 0 probe orgs, 0 probe users and 0
+leftover CSV audit rows. The disposable script (`scripts/verify-import-rpc.ts`)
+was deleted; every fixture delete was scoped by `organization_id` **and** this
+run's own email prefix.
+
+### `get_advisors` after apply
+
+One new WARN attributable to this change:
+`authenticated_security_definer_function_executable` on `import_leads_chunk` —
+the 0029 lint, which fires on **every** `SECURITY DEFINER` function callable by
+`authenticated`, and which the schema's eight pre-existing ones already trip.
+Intentional: this is an RPC endpoint for signed-in users and it self-checks
+membership. It does **not** appear in the 0028 (`anon`) lint, which is the
+observable proof the `REVOKE … FROM PUBLIC, anon` landed. No other new finding.
+
+### Deliberately not touched
+
+The `leads` RLS policies, the `enforce_lead_role_restrictions` trigger
+(`BEFORE UPDATE`, irrelevant to an INSERT path), `unique_tenant_client_email_ci`,
+the webhook path and its known missing `.toLowerCase()`, CSV export,
+`src/components/**` (Design System v2 Prompt 2c owns the wizard's remaining
+surfaces), and the two deliberately-separate Zod schemas in
+`csv-lead-schema.ts` / `validate-rows.ts`. `dedup.ts`'s intra-file dedup also
+stays: `DO NOTHING` does happen to skip intra-statement duplicates via
+speculative insertion, but `dedup.ts` is what produces the user-visible
+"Duplicates in file" count — removing it would silently delete a report
+category.
