@@ -2,6 +2,7 @@ import { ButtonsSection } from "./sections/ButtonsSection";
 import { FormsSection } from "./sections/FormsSection";
 import { NavSection } from "./sections/NavSection";
 import { OverlaysSection } from "./sections/OverlaysSection";
+import { ShellPartsSection } from "./sections/ShellPartsSection";
 import { SurfacesSection } from "./sections/SurfacesSection";
 import { TableSection } from "./sections/TableSection";
 import { TokensSection } from "./sections/TokensSection";
@@ -31,6 +32,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
           <NavSection />
           <TableSection />
           <OverlaysSection />
+          <ShellPartsSection />
         </div>
       </div>
     </section>

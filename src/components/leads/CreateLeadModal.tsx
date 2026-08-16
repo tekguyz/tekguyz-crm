@@ -9,7 +9,10 @@ import { createLead, type LeadFormState } from "@/lib/leads/actions";
 
 const initialState: LeadFormState = null;
 
-export function CreateLeadModal() {
+// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
+// sr-only span so the control still has an accessible name. Nothing about the
+// modal or the form changes with it — only the trigger.
+export function CreateLeadModal({ compact = false }: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createLead, initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -30,10 +33,11 @@ export function CreateLeadModal() {
         type="button"
         variant="secondary"
         onClick={() => setOpen(true)}
-        className="w-full"
+        title={compact ? "New Lead" : undefined}
+        className={compact ? "w-full px-0" : "w-full"}
       >
         <IconPlus className="size-5" stroke={1.75} />
-        New Lead
+        <span className={compact ? "sr-only" : undefined}>New Lead</span>
       </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="New lead">

@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/Input";
 
 const MAX_RESULTS = 8;
 
+// One palette is mounted per shell, so a fixed id is unambiguous. The rows
+// need stable ids of their own for aria-activedescendant to point at.
+const LISTBOX_ID = "command-bar-results";
+const optionId = (leadId: string) => `${LISTBOX_ID}-${leadId}`;
+
 export function CommandBar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
   const [contacts, setContacts] = useState<ContactLead[] | null>(null);
@@ -113,8 +118,20 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
                   arrow-key handling and the Fuse config above are untouched. */}
               <div className="border-b border-hairline p-3">
                 <div className="relative">
+                  {/* Combobox pattern: the input keeps DOM focus throughout and
+                      names the highlighted row with aria-activedescendant. The
+                      rows themselves are non-focusable options — see
+                      OptionRow — so arrow keys move a highlight rather than
+                      the tab ring. */}
                   <Input
                     autoFocus
+                    role="combobox"
+                    aria-expanded
+                    aria-controls={LISTBOX_ID}
+                    aria-autocomplete="list"
+                    aria-activedescendant={
+                      results[activeIndex] ? optionId(results[activeIndex].id) : undefined
+                    }
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
@@ -122,6 +139,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
                     }}
                     onKeyDown={handleInputKeyDown}
                     placeholder="Search contacts…"
+                    aria-label="Search contacts"
                     className="pl-8"
                   />
                   <IconSearch
@@ -132,7 +150,12 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
                 </div>
               </div>
 
-              <div className="max-h-80 overflow-y-auto p-2">
+              <div
+                id={LISTBOX_ID}
+                role="listbox"
+                aria-label="Contacts"
+                className="max-h-80 overflow-y-auto p-2"
+              >
                 {contacts === null ? (
                   <p className="text-body-md p-3 text-ink-muted">Loading…</p>
                 ) : results.length === 0 ? (
@@ -141,6 +164,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
                   results.map((lead, index) => (
                     <CommandResultItem
                       key={lead.id}
+                      id={optionId(lead.id)}
                       lead={lead}
                       active={index === activeIndex}
                       onSelect={() => handleSelect(lead)}

@@ -123,6 +123,157 @@ Group-by, Kanban compact/dense toggle, Team Role Management UI.
 
 ---
 
+## The Application Shell (2026-08-16)
+
+The shell is the frame every signed-in view sits inside: sidebar, header, and
+the mobile navigation model. Waves 2a–2c applied the v2 tokens to the shell's
+existing *structure*; this section defines the structure itself. Six decisions,
+all binding.
+
+### 1. Search is a control, not a field
+
+There is no search field in the header. Command entry is one compact `⌘K`
+button (`CommandTrigger`) that opens the existing command palette. A field
+cannot survive a collapsed sidebar or a phone viewport — it needs width it will
+not have — whereas one button works at every width.
+
+The `⌘K` / `Ctrl-K` listener lives in `ShellContext`, not in the header, so the
+shortcut works from every route whether or not the affordance is on screen. The
+keycap hint is `hidden md:inline`: a phone has no ⌘, and printing a shortcut
+nobody can press is noise. **Search never moves into the sidebar.**
+
+### 2. The header holds exactly two things
+
+Command entry on the left, the identity menu on the right. At every width.
+
+Name, avatar, theme toggle, help and sign out were five controls doing one job.
+They are now one avatar-triggered `DropdownMenu`:
+
+- The **theme control renders inline in the menu** as a `DropdownMenuRadioGroup`
+  of three items (System / Light / Dark) — not the old cycle button. A cycle
+  hides the current state behind one glyph; three explicit rows show it and cost
+  the same single interaction. Radio semantics are also what "one of three, this
+  one is on" means to a screen reader, and menu items join the menu's roving
+  focus, which loose buttons would not.
+- **Help and sign out are menu items.** Help stays a drawer; it does not need
+  permanent header real estate.
+- Sign out submits a `<form action={signOut}>` that lives *outside* the portaled
+  menu content, via `requestSubmit()`. A form nested inside the content would be
+  racing its own removal when the menu closes.
+- Opening the Help drawer from a menu item focuses the menu trigger first, on
+  the next animation frame. `HelpContext` restores focus to whatever was focused
+  at open time, and a menu row is about to unmount.
+
+**Workspace identity is not a header concern.** On desktop it is the sidebar's
+`WorkspaceBlock`; on mobile it is the "More" sheet's title.
+
+### 3. Sidebar navigation is flat — permanently
+
+No nesting, no groups, no disclosure triangles, at any width, ever. All five
+destinations render as one unbroken list. When Saved Views ships it belongs in
+the content area as a view switcher above the table, **not** as sidebar
+children. This is a deliberate divergence from Twenty CRM, which nests views in
+the sidebar and gets noisy.
+
+`PRIMARY_NAV` / `SECONDARY_NAV` in `src/components/shell/nav-items.ts` is *not*
+a hierarchy. The split exists only because the mobile tab bar has four slots and
+the fourth is "More".
+
+### 4. Collapse is manual, desktop-only, and cookie-persisted
+
+A toggle in the sidebar footer collapses it to a **56px icon rail** (expanded:
+**240px**). It never fires off a viewport query — below `md` the sidebar is not
+displayed in either state, so an automatic collapse would be a third state
+nobody asked for.
+
+**The state is a cookie (`tg_sidebar`), never localStorage.** localStorage
+cannot be read on the server and cannot be read before hydration, so a
+localStorage-backed sidebar paints expanded and snaps to collapsed a frame
+later — a visible flash on every navigation for anyone who prefers the rail. The
+cookie travels with the request, `src/app/(app)/layout.tsx` reads it during
+render, and the HTML that arrives already carries `w-14`. Default when unset is
+expanded: a first-time user should see labels, not an unexplained column of
+icons. Helpers live in `src/lib/shell/sidebar-cookie.ts`.
+
+The width change is a plain CSS `transition-[width]`, so the global
+`prefers-reduced-motion` block in `globals.css` clamps it. Never animate the
+collapse with anything that block cannot reach.
+
+**Colour alone is never the active-nav signal.** Every `NavItem` layout also
+paints a solid `--accent` marker bar — down the leading edge for `row`/`rail`,
+across the top edge for `tab`. In the rail there is no label to carry a weight
+change, and a hue shift on a 20px icon is not an unambiguous answer to "which
+page am I on".
+
+Collapsed, each item keeps its label as an `sr-only` span *and* gets a Radix
+`Tooltip` that fires on hover **and** on keyboard focus. A `title` attribute
+would not do the second.
+
+### 5. Mobile is not a collapsed sidebar
+
+**The breakpoint is Tailwind `md` (768px).**
+
+Below it the sidebar is not displayed in either collapse state, and navigation
+is a fixed **bottom tab bar**: Today / Pipeline / Contacts / More. "More" opens
+a bottom `Sheet` holding the secondary items — Import, Settings, the theme
+choices, Help, sign out — plus the workspace name and the signed-in email.
+
+- **Never both.** `hidden md:flex` on the sidebar and `md:hidden` on the tab bar
+  make them mutually exclusive at every width. `display: none` removes a subtree
+  from the accessibility tree and the tab order, so a phone has exactly one
+  navigation landmark and one set of focusable nav links.
+- This is CSS, not a JS media query, deliberately. A viewport check cannot run
+  on the server, so a JS-gated sidebar would render on a phone's first paint and
+  unmount a frame later — the exact flash the collapse cookie exists to avoid.
+  The tradeoff is that the sidebar markup is still present (though never
+  rendered) in mobile HTML.
+- **Navigation comes before content in the DOM**, even though the bar paints at
+  the bottom. It is `position: fixed`, so source order costs nothing visually,
+  and tab order then matches desktop: nav → header → content.
+- **No hamburger.** The tab bar is primary navigation; "More" holds only
+  secondary items.
+- Mobile is **triage-first** — optimised for viewing, starring, calling and
+  quick status changes. Full CRUD stays reachable but is not what the three
+  primary slots are tuned for.
+
+### 6. Org switcher: slot reserved, switcher not built
+
+`WorkspaceBlock` renders the mark and the org name as **static content**. There
+is no persisted "active org" concept in the schema, so a switcher is a feature
+with a migration behind it, not a menu. The component takes the shape a trigger
+will need — one row, mark and name inside it — so it can later become a
+`DropdownMenuTrigger` without restructuring the sidebar. Do not add switching
+behaviour, a route, a column or a query ahead of that decision.
+
+### Shell primitives
+
+Four parts were added to `src/components/ui/` for this, each with a live
+consumer: `dropdown-menu.tsx` (identity menu), `sheet.tsx` (mobile More,
+bottom-edge only), `tooltip.tsx` (collapsed rail labels) and `OptionRow.tsx`
+(command-palette rows). All follow the alert-dialog/dialog/popover recipe.
+Elevation: dropdown and tooltip are **Level 1**, the sheet is **Level 2** —
+it dims the page and traps focus, so it is a modal in every sense the ramp
+cares about.
+
+**`outline-none` is not copied onto a menu row, and that is deliberate.**
+shadcn's `DropdownMenuItem` ships with it; this app's does not. The class
+deletes the global `:focus-visible` rule in `globals.css` for every row, leaving
+`focus:bg-canvas-soft` — a `canvas-soft` tint on `canvas-pure` — as the only
+signal, which is close to invisible on the dark canvas and is exactly where five
+keyboard-driven controls now live. Dropping it does not make the menu noisy
+under a mouse: Radix highlights a row by calling `.focus()` on `pointermove`,
+and Chromium only matches `:focus-visible` on a programmatic focus when the last
+real input was a keyboard. `DropdownMenuContent` keeps `outline-none` — it is
+focused programmatically on open and should not ring.
+
+`OptionRow` is a `div role="option"`, **not** a button. In the combobox pattern
+the palette input keeps DOM focus throughout and names the highlighted row with
+`aria-activedescendant`; focusable rows would put eight extra tab stops between
+the query field and everything after it.
+
+
+---
+
 ## Brand Identity — "Converging Funnel" (2026-08-14)
 
 The CRM has its own mark, separate from the TEKGUYZ agency logo that serves

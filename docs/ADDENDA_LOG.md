@@ -751,7 +751,7 @@ The Design System v2 rollout (Prompt 1, then 2a/2b/2c) put every signed-in view 
 Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fenced in signed-in views only, so the screens a prospect actually sees first — login, signup, forgot-password, reset-password, onboarding, `invite/[token]` — were still on v1 chrome, along with every error and loading boundary. This pass put all of them onto `src/components/ui/`.
 
 **Measured, not estimated.** Same grep the primitive audit used, so the two numbers are comparable:
-`grep -rnE "<(button|input|select|textarea)(\s|>|$)" src/ --include=*.tsx --include=*.ts | grep -v "^src/components/ui/"` → **34 hits / 23 files before, 19 hits / 15 files after.** Of the 19 remaining, 12 are prose inside comments (including three new ones this pass wrote to explain the checkbox swaps), 4 are `<input type="hidden">` form carriers, and **3 are real raw controls, all three pre-documented**: `CommandResultItem.tsx` (held for the nav/shell redesign), `LeadCard.tsx`'s outer wrapper (a real `<button>` kept rather than downgraded to `Card` + `role="button"`; carries layout only, no tokens), and `CsvUploadDropzone.tsx`'s hidden `<input type="file">` (driven by a real `Button` beside it). Token greps: `text-canvas-pure` on `bg-accent` → **0**. `shadow-elevation-1` outside `src/components/ui/` → **0 in application code**; the four survivors are the token definition in `globals.css`, `popover.tsx` (Level 1, which is what the rule reserves it for), `/design`'s `TokensSection` (it renders the elevation ramp on purpose), and two prose comments.
+`grep -rnE "<(button|input|select|textarea)(\s|>|$)" src/ --include=*.tsx --include=*.ts | grep -v "^src/components/ui/"` → **34 hits / 23 files before, 19 hits / 15 files after.** Of the 19 remaining, 12 are prose inside comments (including three new ones this pass wrote to explain the checkbox swaps), 4 are `<input type="hidden">` form carriers, and **3 are real raw controls, all three pre-documented** **(counts are state as of 2026-08-16 morning only — superseded later the same day by § Application shell redesign, which removed the `CommandResultItem` hit; re-run the grep rather than citing these numbers)**: `CommandResultItem.tsx` (held for the nav/shell redesign), `LeadCard.tsx`'s outer wrapper (a real `<button>` kept rather than downgraded to `Card` + `role="button"`; carries layout only, no tokens), and `CsvUploadDropzone.tsx`'s hidden `<input type="file">` (driven by a real `Button` beside it). Token greps: `text-canvas-pure` on `bg-accent` → **0**. `shadow-elevation-1` outside `src/components/ui/` → **0 in application code**; the four survivors are the token definition in `globals.css`, `popover.tsx` (Level 1, which is what the rule reserves it for), `/design`'s `TokensSection` (it renders the elevation ramp on purpose), and two prose comments.
 
 **Sixteen raw controls converted.** Every `(auth)` submit `<button>` → `Button variant="primary" className="w-full"` (login, signup, forgot-password, reset-password, onboarding); every `(auth)` text field → `Input` (login email, signup email, forgot-password email, onboarding name); `invite/[token]`'s two `<Link>`s → `Button asChild` primary/secondary, its sign-out `<button>` → `Button variant="secondary"`; `AcceptInviteButton`'s `<button>` → `Button variant="primary" loading={isPending}`; and all four boundaries' "Try again" → `Button variant="secondary"`, with the "Back home"/"Back to Today" links → `Button asChild variant="ghost"`.
 
@@ -790,6 +790,9 @@ Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fe
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **The global `:focus-visible` outline never paints in `--accent`.** ✅ Closed 2026-08-16 by the shell close-out — **mostly withdrawn as mis-measured, and the one real part fixed.** The app-wide claim does not reproduce: measured with a real Tab and one element per read, every focusable shell control already resolves to `outline: 2px solid var(--accent); outline-offset: 2px`, confirmed visually in both themes and on the 56px rail. The original currentColor readings came from two artifacts — `transition-colors` transitions `outline-color`, so a same-task read returns the start value, and `getComputedStyle` lags one element behind in a focus loop. What *was* real: `DropdownMenuItem` carried shadcn's `outline-none`, deleting the rule for all five identity-menu rows; that class is now removed from the primitive. Full history: `docs/ADDENDA_LOG.md` § Shell redesign close-out.
+- **Mobile AppShell/Sidebar has no responsive collapse.** ✅ Fixed 2026-08-16 by the shell redesign — below `md` the sidebar is not displayed in either collapse state and navigation is a bottom tab bar (Today / Pipeline / Contacts / More) with a "More" sheet for secondary items; a manual, cookie-persisted desktop collapse to a 56px icon rail was added in the same pass. Deferred since 2026-07-25 on the stated trigger "before Focus List becomes the primary mobile view"; that trigger fired. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
+- **`CommandResultItem.tsx` is a raw `<button>` outside a primitive.** ✅ Fixed 2026-08-16 by the shell redesign — it became a thin mapper over a new `ui/OptionRow.tsx` (`div role="option"`), and `CommandBar` became a real combobox/listbox with `aria-activedescendant`. Button was correctly *not* the answer: the rows must not be focusable at all. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
 - **Password reset flow.** ✅ Fixed 2026-07-25 — `/forgot-password` + `/reset-password`, live-verified end to end with a real email. Full history: `docs/ADDENDA_LOG.md` § Password Reset Flow addendum.
 - **`leads.next_action_at` had no edit UI (P0).** ✅ Fixed 2026-07-25, live-verified (an overdue lead correctly moved out of SLA Critical after editing). Full history: `docs/ADDENDA_LOG.md` § P0 Fixes & Password Visibility addendum.
 - **Archiving a lead was a one-way trip with no recovery (P0).** ✅ Fixed 2026-07-25 — Contacts Active/Archived tabs + Unarchive, live-verified. Full history: `docs/ADDENDA_LOG.md` § P0 Fixes & Password Visibility addendum.
@@ -805,8 +808,8 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **CSV import can never insert a row — the upsert's `onConflict` did not match any index.** ✅ Fixed 2026-08-15 — the chunk write moved into the `import_leads_chunk` `SECURITY DEFINER` RPC, which can infer the expression index PostgREST could not address; live-verified end to end through the real wizard, including the cross-tenant refusal and the failed-chunk branch. Deleted outright from `docs/KNOWN_GAPS.md` rather than left inline as ✅. Full history: `docs/ADDENDA_LOG.md` § CSV import chunk-write RPC.
 - **The Table shell has no consumer.** ✅ Closed 2026-08-15 by Prompt 2b — `ColumnMappingTable` and `ValidationResultsTable` now consume `Table`/`TableHead`/`TableBody`/`TableRow`/`TableHeaderCell`/`TableCell`. Still bare on purpose: no sorting, selection or virtualisation, which belong with Table View. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2b.
 - **`NeedsReviewQueue` was left on one-off classes by Prompt 2a's scope fence.** ✅ Closed 2026-08-15 by Prompt 2b — rows are `Card`, the count is `Badge tone="orange"`, the dismissal is `Button variant="secondary"`; count badge, verbatim reason text, `?leadId=` deep link and "Not spam" all demonstrated live against a real flagged lead. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2b.
-- **Most views still do not consume the v2 primitives.** ✅ Fully closed 2026-08-15 by Prompt 2c — Settings (all four panels plus the three invite siblings), the Help drawer + inline tooltips, `CommandBar` and `CreateLeadModal`. Every **signed-in** view now consumes `src/components/ui/`. **(Corrected 2026-08-16: this line previously read "every view in the app," which the primitive audit measured as false — the five `(auth)` pages, `invite/[token]`, `AcceptInviteButton` and the four error boundaries hold 13 raw controls still on v1 `shadow-elevation-1`. Prompts 2a/2b/2c only ever fenced in signed-in surfaces. See § Primitive audit; the remaining scope is open in `docs/KNOWN_GAPS.md`.)** Of the three primitive gaps Prompt 2c reported, two closed on 2026-08-16 (`Checkbox`, `Button asChild`); `CommandResultItem` is still open. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c, § Primitive audit.
-- **`HelpTrigger` is still on one-off classes.** ✅ Closed 2026-08-15 by Prompt 2c — now `Button variant="secondary" className="w-8 px-0"`, the same treatment as `ThemeToggle` and sign-out. Parity measured rather than eyeballed: identical bounding box and identical computed background, colour, border colour, border width and radius in both themes. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c.
+- **Most views still do not consume the v2 primitives.** ✅ Fully closed 2026-08-15 by Prompt 2c — Settings (all four panels plus the three invite siblings), the Help drawer + inline tooltips, `CommandBar` and `CreateLeadModal`. Every **signed-in** view now consumes `src/components/ui/`. **(Corrected 2026-08-16: this line previously read "every view in the app," which the primitive audit measured as false — the five `(auth)` pages, `invite/[token]`, `AcceptInviteButton` and the four error boundaries hold 13 raw controls still on v1 `shadow-elevation-1`. Prompts 2a/2b/2c only ever fenced in signed-in surfaces. See § Primitive audit; the remaining scope is open in `docs/KNOWN_GAPS.md`.)** Of the three primitive gaps Prompt 2c reported, two closed on 2026-08-16 (`Checkbox`, `Button asChild`) and the third (`CommandResultItem`) closed later the same day — see § Application shell redesign. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c, § Primitive audit, § Application shell redesign.
+- **`HelpTrigger` is still on one-off classes.** ✅ Closed 2026-08-15 by Prompt 2c — now `Button variant="secondary" className="w-8 px-0"`, the same treatment as `ThemeToggle` and sign-out. **(State as of 2026-08-15 only — superseded by § Application shell redesign: `HelpTrigger.tsx` and `ThemeToggle.tsx` were both deleted on 2026-08-16 when Help, theme and sign-out moved into the identity menu. Neither file exists.)** Parity measured rather than eyeballed: identical bounding box and identical computed background, colour, border colour, border width and radius in both themes. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c.
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
 - **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
 - **`leads` CRUD has zero role enforcement — any MEMBER has full CRUD parity with OWNER/ADMIN.** ✅ Fixed 2026-08-14 — `archived`, `outcome`, `actual_revenue` and `closed_at` are now OWNER/ADMIN-only on UPDATE, enforced by a `BEFORE UPDATE` trigger, with a live three-role Vitest suite (`npm run test:rls`). Everything else on `leads` stays MEMBER-writable by design. Two narrower successors are open in `docs/KNOWN_GAPS.md` (the controls are still rendered to a MEMBER; there is still no `assigned_to`). Full history: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
@@ -1708,7 +1711,9 @@ about the same behaviour," not "an entry has been overtaken."
 
 **Two related repairs in the same pass.** The § Design System v2 — Prompt 2c
 "Three primitive gaps" list gained a state-as-of clause for gaps 1 and 2, both
-superseded by § Primitive audit; gap 3 (`CommandResultItem`) is still open. And
+superseded by § Primitive audit; gap 3 (`CommandResultItem`) was still open at
+the time of that repair and closed on 2026-08-16 — see § Application shell
+redesign. And
 the "`AlertDialogTrigger asChild` works on `Button` with no `forwardRef`" entry
 gained a clause stating explicitly that it is about **Radix's** `Trigger
 asChild` accepting a `Button` as its child, and says nothing about `Button`
@@ -1797,6 +1802,8 @@ primitive:
    for the same reason `alert-dialog.tsx` restates them for Radix.
 3. **`CommandResultItem.tsx`** was outside the fence and still has a raw
    `<button>`. It carries no v1 chrome, so nothing clashes visually.
+   **(State as of 2026-08-15 only — superseded by § Application shell redesign,
+   which replaced it with a `role="option"` row over the new `ui/OptionRow`.)**
 
 ### Scope extension, stated rather than silent
 
@@ -1969,3 +1976,276 @@ edit, no `(auth)` file, no design-system work, and no second writer of
 `npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` clean,
 `npm test` 10 files / 67 tests passing (was 9 / 62). `npm run test:rls` not run
 — no schema, RLS, trigger or RPC surface was touched.
+
+---
+
+## Application shell redesign — sidebar, header, mobile navigation (2026-08-16)
+
+The last unaddressed surface of Design System v2. Waves 2a–2c applied the v2
+tokens to the shell's existing structure but never changed that structure, and
+the structure had become the problem: five controls in the header top-right all
+doing one job, a search *field* that could not survive a collapsed sidebar or a
+phone, and no responsive behaviour at all below `md`.
+
+The six binding decisions, the breakpoint and the persistence mechanism are now
+written into `docs/DESIGN.md` § The Application Shell — they belong to the
+design system, not to a prompt. This entry records what was built and how it was
+verified.
+
+### What changed
+
+**New primitives in `src/components/ui/`** — four, each with a live consumer in
+this same pass, all built to the alert-dialog/dialog/popover recipe (structure
+copied by hand from the **live** shadcn registry via `npx shadcn@latest view`,
+Radix underneath, `data-slot` kept, every class remapped onto this project's
+OKLCH tokens, Tabler icons not lucide):
+
+- `dropdown-menu.tsx` (Level 1) — the identity menu. Deliberately partial: no
+  Group/Portal/CheckboxItem/Shortcut/Sub exports, because nothing calls them.
+- `sheet.tsx` (Level 2) — the mobile "More" surface. **Bottom edge only**, no
+  `side` prop; it dims the page and traps focus, so Level 1 would have made a
+  blocking surface read as light as a hint.
+- `tooltip.tsx` (Level 1) — collapsed-rail labels. Two departures from shadcn:
+  no inverted surface (it matches `popover.tsx` — canvas-pure + hairline, so it
+  reads as part of the system rather than a foreign chip) and no arrow (a filled
+  arrow cannot carry a hairline border across its own edges without seams).
+- `OptionRow.tsx` — command-palette rows.
+
+**`NavItem` grew three layouts, not three components.** `row` (expanded sidebar,
+More sheet), `rail` (collapsed sidebar, label `sr-only`), `tab` (mobile bottom
+bar, icon over label). One primitive means one definition of "you are here". It
+also now forwards `ref`, so a Radix `asChild` tooltip trigger can anchor to the
+real anchor element — React 19 passes `ref` as an ordinary prop, so no
+`forwardRef` wrapper was needed.
+
+**Shell files** — `AppShell` composes; `ShellContext` owns collapse state *and*
+the command palette (the ⌘K listener moved out of `Header`, which had tied it to
+the header's lifetime); `Sidebar` + `WorkspaceBlock` + `SidebarNav` +
+`SidebarCollapseToggle` + `SidebarQuickAction`; `Header` + `CommandTrigger` +
+`IdentityMenu` + `ThemeMenuChoices`; `MobileTabBar` + `MobileMoreSheet` +
+`ThemeChoiceGroup`; `nav-items.ts`; `ShellCommandBar`.
+`ThemeToggle.tsx` and `HelpTrigger.tsx` were **deleted** — both became orphans
+when their jobs moved into the identity menu, and a part with no caller is scope
+creep in either direction.
+
+**`CommandResultItem` became a mapper, and `CommandBar` became a real combobox.**
+The palette input now carries `role="combobox"` + `aria-activedescendant`, the
+list is `role="listbox"`, and the rows are non-focusable `role="option"`. Button
+was correctly *not* the fix: measured after the change, the open palette has
+**zero** focusable elements inside the list, where the old version had eight
+buttons sitting between the query field and everything after it.
+
+### The no-flash claim, and how it was actually verified
+
+Collapse state is a `tg_sidebar` cookie read by `src/app/(app)/layout.tsx`, not
+localStorage. The claim was not verified by eye — the raw server response was
+read directly, which is the JS-disabled test:
+
+    fetch('/pipeline', {credentials:'include'}) →
+      <aside class="… md:flex w-14">     hasW14: true, hasW60: false
+
+The delivered HTML carries the rail width and never the expanded one, so there
+is no frame in which the wrong state is painted. Toggling wrote
+`tg_sidebar=collapsed`, a full reload came back still collapsed, and the reverse
+toggle wrote `expanded` and round-tripped the same way.
+
+### Verified live (dev-login as the seeded demo owner)
+
+- **Mutual exclusion.** 1440 / 1024 / 768: `aside` `display: flex`, tab bar
+  `display: none`. 375: `aside` `display: none` (`offsetParent === null`), tab
+  bar `display: flex`. Checked in **both** collapse states — at 375 with
+  `tg_sidebar=expanded` the sidebar is still not displayed. Exactly one of the
+  two is ever visible.
+- **Keyboard traversal, desktop (collapsed):** Today → Pipeline → Contacts →
+  Import → Settings → New Lead → Expand sidebar → Search ⌘K → Account menu →
+  page content. Every icon-only control reported a real accessible name.
+- **Keyboard traversal, mobile:** Today → Pipeline → Contacts → More → Search →
+  Account menu → content. This is why `MobileTabBar` sits *before* `<main>` in
+  the DOM despite painting at the bottom — the first build had it last, which
+  put the entire page between the header and primary navigation.
+- **Rail tooltips fire on keyboard focus,** not just hover: one Tab onto the
+  collapsed "Today" item produced a `[data-slot="tooltip-content"]` reading
+  "Today".
+- **Identity menu:** Enter opens it; items are `menuitemradio` System/Light/Dark
+  plus `menuitem` Help and `menuitem` Sign out. ArrowDown + Enter onto "Light"
+  switched the root element to `.light` and the menu closed. Escape closes and
+  `document.activeElement === trigger`.
+- **Help from the menu** opens the drawer, and on Escape focus returns to the
+  **identity trigger** — the `requestAnimationFrame` + explicit `.focus()` step
+  is what makes that true, since `HelpContext` captures whatever was focused at
+  open time and a menu row is about to unmount.
+- **Sign out** — `requestSubmit()` on the out-of-portal form ran the untouched
+  Server Action and landed on `/login`.
+- **⌘K** opened the palette on `/` and on `/settings` with a real `ctrl+k`;
+  ArrowDown moved the highlight and `aria-activedescendant` tracked it; the
+  Search button opened it with a real pointer click, so the affordance works for
+  anyone who will not use the shortcut.
+- **More sheet** (375): title = org name, description = email, Import/Settings
+  nav, three theme buttons with `aria-pressed`, Help, Sign out, Close. Selecting
+  Dark switched the root element to `.dark`. Escape closes and focus returns to
+  the More trigger.
+- **Both themes** screenshotted at 375 (light and dark), 768 (dark, expanded),
+  1024 (light, collapsed, plus the open palette) and 1440 (dark, both states).
+
+### Deliberately not done, and why
+
+- **The sidebar is `display: none` below `md`, not absent from the DOM.** The
+  brief asked for absence. Removing it for real needs a viewport check, which
+  cannot run on the server — so a phone would paint the sidebar on first render
+  and unmount it a frame later, reintroducing exactly the flash the collapse
+  cookie exists to prevent. `display: none` already delivers everything the
+  requirement is *for*: the subtree is out of the accessibility tree and out of
+  the tab order (proven by the traversal above), so a phone has one nav
+  landmark, not two. The cost is markup bytes. Flagged rather than silently
+  substituted.
+- **The collapse animation is not verified.** This machine forces
+  `prefers-reduced-motion: reduce`, and `globals.css` clamps every transition to
+  0.01ms under it — correct behaviour, but it means the 200ms width transition
+  cannot be observed here. Implemented as a plain CSS `transition-[width]` so
+  the existing reduced-motion block reaches it, with no JS animation to slip
+  past. **Needs human visual sign-off.**
+- **`Import` was added to the More sheet**, though the brief listed only
+  Settings/Help/theme/sign-out there. With three tab slots and no sidebar on
+  mobile, leaving it out would have made a real route unreachable on a phone.
+- **`CreateLeadModal` gained a `compact` prop.** Its trigger lives in the
+  sidebar footer and had to shrink for the rail. Only the trigger changed — the
+  modal, the form and every `name=` attribute are untouched, so field parity
+  with `createLead` is unaffected.
+- **Three `/design` housekeeping edits**, since the route is the design system's
+  live reference: a new `ShellPartsSection` (tooltip, dropdown-menu, sheet,
+  OptionRow), `NavSection` extended to show all three `NavItem` layouts side by
+  side, and the page's stale "`--accent` is an unsampled placeholder" caption
+  corrected — it was sampled and closed on 2026-08-14.
+
+**No database surface.** No migration, no RLS policy, no RPC, no schema change,
+and no edit to `src/lib/actions/`, `src/lib/auth/actions.ts` or
+`src/lib/leads/actions.ts` — sign-out only moved its call site.
+
+### Gates run
+
+`npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` clean, `npm test`
+**13 files / 82 tests** passing (was 12 / 74) — new coverage for `NavItem`'s
+three layouts and the sidebar cookie's round trip. A grep for raw interactive
+elements across `src/components/shell/` and `src/components/command/` returns
+nothing. `npm run test:rls` not run: no schema, RLS, trigger or RPC surface was
+touched.
+
+---
+
+## Shell redesign close-out: cookie audit, collapse animation, focus ring (2026-08-16)
+
+The pass that shipped the shell redesign as one commit. Three open items were
+checked before committing; two of the three turned out differently from how
+they had been written down, which is the point of checking.
+
+### 1. The `tg_sidebar` cookie was already correct
+
+Audited rather than assumed. `writeSidebarCookie` in
+`src/lib/shell/sidebar-cookie.ts` is the only writer in the app — the server
+layout only reads it — and it already emitted both required attributes:
+
+```
+tg_sidebar=<state>; path=/; max-age=31536000; samesite=lax
+```
+
+`path=/` was present, and `max-age` was present as a named constant
+(`60 * 60 * 24 * 365`, one year), so the preference was never a session cookie.
+**No change was needed and none was made.** Confirmed live as well as by
+reading: the sidebar stayed collapsed across a full navigation from `/pipeline`
+to `/`, which a per-route cookie would not survive.
+
+### 2. The collapse animation is verified, and it janks on Pipeline
+
+This closes the "needs human visual sign-off" item above — no human was needed.
+The machine still forces `prefers-reduced-motion: reduce`, so the clamp was
+overridden for the sidebar alone, via an **inline** `transition-duration: 200ms`
+set with priority. That detail matters: the clamp in `globals.css` is
+`!important` inside `@layer base`, and for important declarations layer order is
+reversed, so an unlayered `!important` stylesheet **loses** to it. Only an
+inline important declaration wins. A first attempt with an injected `<style>`
+silently did nothing and read back as `1e-05s`.
+
+**The animated property is `width`**, on an `<aside>` that is a `shrink-0` flex
+sibling of the content area. Every frame therefore relays out the whole content
+area, not just the sidebar. This is measured, not inferred — frame deltas
+sampled with `requestAnimationFrame` between `transitionstart` and
+`transitionend`:
+
+| Page | Direction | Frame deltas (ms) |
+| --- | --- | --- |
+| idle baseline | — | 42 frames, all 16.2–17.2 |
+| Today | collapse 240→56 | 12 frames, all 16.4–16.9 |
+| Pipeline | expand 56→240 | 16.7 ×5, one 33.5, 16.7 ×4 |
+| Pipeline | collapse 240→56 (run 1) | 16.3, 33.3, 33.3, 33.3, 33.4 |
+| Pipeline | collapse 240→56 (run 2) | 16.7, 33.2, 50.1, 50.0 |
+
+The baseline is a clean 60fps, and so is the same collapse on Today — so the
+pane is not the bottleneck and the transition itself is not the problem. On the
+Pipeline board (77 cards across the Kanban columns) the collapse direction drops
+to 30fps and then to 20fps, reproducibly, across two runs. The expand direction
+is nearly clean; collapsing is the expensive one, because it *widens* the
+content area and the board relays out into the new space.
+
+**Deliberately not redesigned.** The prompt's instruction was to report jank and
+stop, and the fix is a real design decision — animating a `transform` on an
+overlaid rail, or dropping the transition on the board route — not a tweak.
+Logged in `docs/KNOWN_GAPS.md`.
+
+### 3. The focus ring: the recorded gap was mis-measured, the real gap was narrower
+
+`docs/KNOWN_GAPS.md` carried a bullet claiming the global `:focus-visible`
+outline "never paints in `--accent`" app-wide, with computed `outline-color`
+always equal to the element's own `color`. **That finding does not reproduce,
+and it was a measurement artifact.**
+
+Two artifacts, both worth writing down because they will bite again:
+
+- **`transition-colors` includes `outline-color`.** Reading
+  `getComputedStyle(el).outlineColor` in the same task that focused the element
+  returns the *start* value of the transition — currentColor — not the settled
+  one. The clamp to 0.01ms under reduced motion does not help, because the
+  transition still has not ticked.
+- **`getComputedStyle` in this pane lags one read behind** when several elements
+  are focused in a loop: each element reports the previously focused element's
+  settled value. A sweep therefore looks uniformly wrong while being uniformly
+  off-by-one.
+
+Measured properly — one real `Tab` to establish keyboard modality, then one
+element per tool call — every focusable control in the shell already resolved to
+`outline: 2px solid var(--accent); outline-offset: 2px`: all five nav links in
+both collapse states, `New Lead`, the collapse toggle, the `⌘K` trigger, the
+identity trigger, and the mobile `More` tab. Confirmed visually in screenshots
+in both themes, including on the 56px rail, where the offset ring is not clipped
+and the keyboard tooltip fires alongside it.
+
+**The one real gap was `DropdownMenuItem`.** `ITEM_CLASS` in
+`src/components/ui/dropdown-menu.tsx` carried shadcn's `outline-none`, which
+deletes the global rule for every menu row and leaves `focus:bg-canvas-soft` —
+a `canvas-soft` tint on `canvas-pure` — as the only signal. That is close to
+invisible on the dark canvas, and it is precisely where the redesign moved five
+keyboard-driven controls: System / Light / Dark, Help and sign out.
+
+The fix is one word removed from the primitive, so every consumer gets it, and
+it does not make the menu noisy for pointer users. Radix highlights a row by
+calling `.focus()` on `pointermove`, and Chromium only matches `:focus-visible`
+on a programmatic focus when the last real input was a keyboard — so the ring
+paints on arrow-key navigation and stays off under the mouse, which is what
+`outline-none` was reaching for in the first place. Verified both ways: with the
+last input a mouse click the row reported `fv: false` and no ring; after a real
+keydown the same row reported `outline: 2px solid <accent>` and the ring is
+visible in screenshots in light **and** dark.
+
+`DropdownMenuContent` keeps its `outline-none`. The content box is focused
+programmatically when the menu opens and should not paint a ring of its own.
+
+### Gates run
+
+`npx tsc --noEmit` clean, `npm run lint` clean, `npm run build` clean,
+`npm test` **13 files / 82 tests** passing. `npm run test:rls` not run: this
+pass had no schema, RLS, trigger or RPC surface, and touched no file under
+`src/lib/actions/` or `supabase/migrations/`.
+
+**No new tests were written**, by instruction. The coverage gap that leaves is
+named in `docs/KNOWN_GAPS.md`: nothing asserts that a menu row paints a focus
+ring, so a future `outline-none` copied back in from the shadcn registry would
+pass every gate.

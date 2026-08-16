@@ -16,8 +16,8 @@ export default function DesignSystemPage() {
           Every primitive, every state, both themes. Dev-only route.
         </p>
         <p className="text-caption mt-2 text-ink-muted">
-          --accent is an unsampled placeholder. No reference screenshot was ever
-          provided; do not treat its value as confirmed.
+          --accent was sampled from the brand mark and closed on 2026-08-14. This
+          caption previously called it an unsampled placeholder; that was stale.
         </p>
       </header>
 
