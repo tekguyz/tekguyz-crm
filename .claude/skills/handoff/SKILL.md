@@ -62,22 +62,49 @@ Check, in this order:
    resolved item inline "to clean up later" is exactly the drift this repo has
    already been burned by once (see KNOWN_GAPS.md's own preamble).
 
-4. **Uncommitted work.** `git status --short` and `git diff --stat`. Anything
+4. **What the docs claim about *each other* — old entries vs. newer ones.**
+   The checks above compare new work against the docs. This one compares the
+   docs against themselves, because a doc entry is evidence of what was true on
+   its own date, never of what is true now. Before trusting or citing any
+   `docs/ADDENDA_LOG.md` entry — including a brand-new one you are about to
+   write — grep the file for the same file path, function, column or behaviour
+   it names, and read every older hit. If two entries assert opposite things
+   about the same file or behaviour, **that is a stale-doc finding, handled
+   exactly like an unmentioned commit in check 1**: read the actual code, decide
+   which entry matches reality, and repair the wrong one in this same audit —
+   never leave both standing for a later reader to arbitrate.
+
+   Repair convention, since a dated entry is a historical record and must not be
+   silently rewritten: correct the entry that is wrong **as of today**, and mark
+   an entry that was accurate on its own date but has since been overtaken with
+   a short `**(State as of YYYY-MM-DD only — superseded by § <Title>.)**` clause
+   pointing at the entry that replaced it. Then check whether
+   `docs/KNOWN_GAPS.md` or `CLAUDE.md` § 3 repeats the losing claim, and fix
+   those in the same pass.
+
+   This check exists because it was skipped once: the webhook path's email
+   `.toLowerCase()` was added on 2026-07-26, yet a 2026-08-15 entry still listed
+   it as "the webhook path and its known missing `.toLowerCase()`" — a fix that
+   had shipped almost three weeks earlier, contradicted by three older entries in
+   the very same file. Nothing in checks 1–3 could catch it, because no new
+   commit was involved: the contradiction was entirely doc-vs-doc.
+
+5. **Uncommitted work.** `git status --short` and `git diff --stat`. Anything
    sitting in the tree is not shipped — say "uncommitted in the working tree"
    explicitly in the handoff block, never fold it into "shipped."
 
-5. **Unpushed commits.** `git status -sb`. A commit not on the remote has not
+6. **Unpushed commits.** `git status -sb`. A commit not on the remote has not
    deployed if this repo deploys off pushes (Vercel-style). Confirm the actual
    deploy trigger before asserting this — don't assume it if you haven't
    checked.
 
-6. **Whether the gates in CLAUDE.md's own verification discipline actually
+7. **Whether the gates in CLAUDE.md's own verification discipline actually
    pass**, if the handoff will claim anything is "done": `npm run build`,
    `npm run lint`, `npx tsc --noEmit`, `npm test`. A doc saying something is
    complete is not evidence; a green gate is closer to it, and CLAUDE.md itself
    says "verified" means the thing was actually run, not that it compiled.
 
-7. **Migration / schema drift, only if the session touched the database.**
+8. **Migration / schema drift, only if the session touched the database.**
    `docs/SCHEMA_REFERENCE.md` is edited alongside migrations, so it is rarely
    stale — but if recent commits touch `supabase/migrations/` or similar, spot
    check that the doc reflects the latest one. Per CLAUDE.md's Supabase
