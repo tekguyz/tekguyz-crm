@@ -10,6 +10,10 @@ import {
 import { CopyButton } from "@/components/ui/CopyButton";
 import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +28,11 @@ import {
 
 const initialState: OrgSettingsFormState = null;
 
+// All four Settings panels keep p-6 rather than Card's stock p-4: these are
+// page-width containers holding whole forms, not the dense list cards Card was
+// tuned for. Padding is layout, not a token — same reasoning as ThemeToggle's
+// `w-8 px-0`. What Card brings is the Level 0 surface: v1 gave these panels a
+// shadow-elevation-1, which v2 reserves for popovers.
 export function OrgDetailsPanel({
   orgName,
   orgTimezone,
@@ -62,8 +71,8 @@ export function OrgDetailsPanel({
   }
 
   return (
-    <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
-      <h2 className="mb-4 text-base font-semibold">Organization</h2>
+    <Card className="p-6">
+      <h2 className="text-h2 mb-4">Organization</h2>
 
       {canEdit ? (
         <form
@@ -72,59 +81,33 @@ export function OrgDetailsPanel({
           className="space-y-3"
         >
           {state?.error && (
-            <p className="rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+            <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
               {state.error}
             </p>
           )}
-          <div>
-            <label className="mb-1 block text-xs text-ink-muted">Organization name</label>
-            <input
-              name="name"
-              defaultValue={orgName}
-              required
-              className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-            />
-          </div>
+          <Input label="Organization name" name="name" defaultValue={orgName} required />
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs text-ink-muted">Timezone</label>
-              <select
-                name="timezone"
-                defaultValue={orgTimezone}
-                className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-              >
-                {TIMEZONES.map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-ink-muted">Currency</label>
-              <select
-                name="currency_format"
-                defaultValue={currencyFormat}
-                className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none"
-              >
-                {CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select label="Timezone" name="timezone" defaultValue={orgTimezone}>
+              {TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </Select>
+            <Select label="Currency" name="currency_format" defaultValue={currencyFormat}>
+              {CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </Select>
           </div>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-          >
+          <Button type="submit" variant="primary" loading={isPending}>
             {isPending ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </form>
       ) : (
-        <dl className="space-y-2 text-sm">
+        <dl className="text-body-md space-y-2">
           <div className="flex justify-between">
             <dt className="text-ink-muted">Name</dt>
             <dd className="text-ink-main">{orgName}</dd>
@@ -142,20 +125,22 @@ export function OrgDetailsPanel({
 
       {canEdit && currentWebhookUrl && (
         <div className="mt-4 border-t border-hairline pt-4">
-          <label className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
+          {/* Not a <label>: it names a read-only <code> block, not a form
+              control, so it never had an htmlFor to point at. */}
+          <div className="text-label mb-1 flex items-center gap-1.5 text-ink-muted">
             Webhook URL
             <HelpTooltip
               topicId="webhook-setup"
               blurb="POST inbound leads here from Zapier or a form provider. The secret is part of the URL, so treat the whole thing as a credential."
             />
-          </label>
-          <p className="mb-2 text-xs text-ink-muted">
+          </div>
+          <p className="text-caption mb-2 text-ink-muted">
             Send inbound leads here (e.g. from Zapier) as a POST request — this URL is
             tenant-scoped and authenticates the request on its own. Only owners and admins can
             view this.
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-xs text-ink-main">
+            <code className="text-caption flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-ink-main">
               {currentWebhookUrl}
             </code>
             <CopyButton text={currentWebhookUrl} />
@@ -163,12 +148,9 @@ export function OrgDetailsPanel({
 
           <AlertDialog open={rotateDialogOpen} onOpenChange={setRotateDialogOpen}>
             <AlertDialogTrigger asChild>
-              <button
-                type="button"
-                className="mt-2 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft"
-              >
+              <Button type="button" variant="secondary" className="mt-2">
                 Rotate webhook secret
-              </button>
+              </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -189,6 +171,6 @@ export function OrgDetailsPanel({
           </AlertDialog>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

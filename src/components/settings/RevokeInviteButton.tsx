@@ -1,14 +1,13 @@
 import { revokeInvite } from "@/lib/invites/actions";
 
+import { Button } from "@/components/ui/Button";
+
 export function RevokeInviteButton({ inviteId }: { inviteId: string }) {
   return (
     <form action={revokeInvite.bind(null, inviteId)}>
-      <button
-        type="submit"
-        className="text-xs text-ink-muted underline transition-colors hover:text-ink-main"
-      >
+      <Button type="submit" variant="ghost" size="sm">
         Revoke
-      </button>
+      </Button>
     </form>
   );
 }

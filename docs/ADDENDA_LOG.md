@@ -734,6 +734,8 @@ Living, append-only index — unlike the frozen historical record above, this se
 - **CSV import can never insert a row — the upsert's `onConflict` did not match any index.** ✅ Fixed 2026-08-15 — the chunk write moved into the `import_leads_chunk` `SECURITY DEFINER` RPC, which can infer the expression index PostgREST could not address; live-verified end to end through the real wizard, including the cross-tenant refusal and the failed-chunk branch. Deleted outright from `docs/KNOWN_GAPS.md` rather than left inline as ✅. Full history: `docs/ADDENDA_LOG.md` § CSV import chunk-write RPC.
 - **The Table shell has no consumer.** ✅ Closed 2026-08-15 by Prompt 2b — `ColumnMappingTable` and `ValidationResultsTable` now consume `Table`/`TableHead`/`TableBody`/`TableRow`/`TableHeaderCell`/`TableCell`. Still bare on purpose: no sorting, selection or virtualisation, which belong with Table View. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2b.
 - **`NeedsReviewQueue` was left on one-off classes by Prompt 2a's scope fence.** ✅ Closed 2026-08-15 by Prompt 2b — rows are `Card`, the count is `Badge tone="orange"`, the dismissal is `Button variant="secondary"`; count badge, verbatim reason text, `?leadId=` deep link and "Not spam" all demonstrated live against a real flagged lead. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2b.
+- **Most views still do not consume the v2 primitives.** ✅ Fully closed 2026-08-15 by Prompt 2c — Settings (all four panels plus the three invite siblings), the Help drawer + inline tooltips, `CommandBar` and `CreateLeadModal`. Every view in the app now consumes `src/components/ui/`, with three reported primitive gaps still open in `docs/KNOWN_GAPS.md` (no `Checkbox`, no `Button` `asChild`, `CommandResultItem` out of fence). Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c.
+- **`HelpTrigger` is still on one-off classes.** ✅ Closed 2026-08-15 by Prompt 2c — now `Button variant="secondary" className="w-8 px-0"`, the same treatment as `ThemeToggle` and sign-out. Parity measured rather than eyeballed: identical bounding box and identical computed background, colour, border colour, border width and radius in both themes. Full history: `docs/ADDENDA_LOG.md` § Design System v2 — Prompt 2c.
 - **Prompt 14/15a env-var and Redirect-URL gaps.** ✅ Fully closed, re-confirmed live 2026-07-24. Full history: `docs/ADDENDA_LOG.md` § Production Gaps Sweep addendum.
 - **`updateOrgSettings` had the same silent-RLS-no-op shape `rotateWebhookSecret` had before its `.select().single()` fix.** ✅ Fixed 2026-07-30 — `.select("id").single()` chained, PGRST116 surfaced as a real error; both directions live-verified. Full history: `docs/ADDENDA_LOG.md` § updateOrgSettings silent-RLS-no-op fix.
 - **`leads` CRUD has zero role enforcement — any MEMBER has full CRUD parity with OWNER/ADMIN.** ✅ Fixed 2026-08-14 — `archived`, `outcome`, `actual_revenue` and `closed_at` are now OWNER/ADMIN-only on UPDATE, enforced by a `BEFORE UPDATE` trigger, with a live three-role Vitest suite (`npm run test:rls`). Everything else on `leads` stays MEMBER-writable by design. Two narrower successors are open in `docs/KNOWN_GAPS.md` (the controls are still rendered to a MEMBER; there is still no `assigned_to`). Full history: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
@@ -1605,3 +1607,119 @@ the check being a standing step rather than a one-off cleanup.
 `npx tsc --noEmit`, `npm run lint` and `npm test` (8 files, 49 tests) all
 pass. `npm run test:rls` was not run — no schema, RLS or trigger surface was
 touched.
+
+---
+
+## Design System v2 — Prompt 2c (2026-08-15)
+
+Closes the initiative. Prompts 2a and 2b covered the shell, Today's Agenda,
+Pipeline, Contacts, the Profile Sheet, the edit modals and the CSV wizard, and
+fenced out four surfaces to keep each wave bounded. 2c is those four: Settings,
+the Help drawer + inline tooltips, `CommandBar` and `CreateLeadModal`.
+
+### What shipped, per file
+
+- **`OrgDetailsPanel.tsx`** — `<section>` shell → `Card`, name field → `Input`,
+  both option lists → `Select`, submit and the rotate trigger → `Button`. The
+  webhook block's `<label>` became a `<div>`: it names a read-only `<code>`
+  block, never had an `htmlFor`, and was never a form control.
+- **`TeamPanel.tsx`** — `Card` shell, v2 type roles. No controls of its own.
+- **`ApiKeysPanel.tsx`** — `Card`, both key fields → `Input type="password"`
+  (label prop carries the existing "· •••• configured" suffix verbatim), both
+  Clear buttons and the submit → `Button`. `items-end` on the row so Clear lines
+  up with the field, not with the top of `Input`'s label.
+- **`AccountPanel.tsx`** — `Card`, display name → `Input`, both submits →
+  `Button`. See the checkbox gap below.
+- **`src/app/(app)/settings/page.tsx`** — unchanged. The panels' own `Card`
+  shells carry the layout; the page's `space-y-6` was already correct.
+- **`HelpDrawer.tsx`** — search field → `Input` with the icon layered over it.
+  `HelpContext`, `onCloseAutoFocus`, the scroll-to-topic effect and the Fuse
+  config were not touched.
+- **`HelpTrigger.tsx`** — `Button variant="secondary" className="w-8 px-0"`,
+  icon `size-5` stroke 1.75. Byte-identical treatment to `ThemeToggle` and the
+  Header's sign-out control; this was the one user-visible seam.
+- **`HelpTooltip.tsx`** — trigger → `Button variant="ghost"` collapsed to the
+  16px glyph; "Learn more" → `Button variant="secondary" size="sm"`. v1 styled
+  it as an `--accent` text link; under v2 the popover already carries the
+  emphasis, so the action inside it is a plain Level 0 control.
+- **`CommandBar.tsx`** — search field → `Input` + layered icon. Fuse config,
+  `threshold: 0.35`, arrow-key handling, `MAX_RESULTS` and the motion/portal
+  wiring all untouched.
+- **`CreateLeadModal.tsx`** — the local `inputClass` constant deleted, all eight
+  fields → `Input`, trigger and submit → `Button`.
+
+### Search fields: icon layered over a real `Input`, not a hand-drawn box
+
+Both `HelpDrawer` and `CommandBar` had the same shape — a bordered `<div>`
+containing an icon and a bare `<input>` with `outline-none`. That box was an
+`Input` drawn by hand, and the `outline-none` suppressed the shared focus ring.
+Replacing it with a bare `Input` plus overrides (`border-0 bg-transparent px-0
+py-0 focus-visible:shadow-none`) would have been fighting the primitive.
+
+Instead the icon is layered over a real `Input` using the `relative` wrapper +
+absolutely-positioned Tabler icon recipe the `Select` primitive already uses for
+its chevron. Both fields now get the Level 0 border and the accent focus ring
+from the primitive rather than a local copy of them, and the recipe is an
+in-repo pattern rather than an invention.
+
+### Three primitive gaps found, none worked around inline
+
+Per the prompt's fence, these are reported rather than patched by bending a
+primitive:
+
+1. **No `Checkbox` primitive.** `AccountPanel`'s two notification checkboxes
+   stay raw `<input type="checkbox">`. `Input` is a labelled text field
+   (`w-full`, `px-2 py-1`, label stacked above) and cannot become a 16px inline
+   box without fighting it. They remain keyboard-reachable — `globals.css`
+   deliberately excludes `[type=checkbox]` from the field-ring rule, so they get
+   the standard 2px `:focus-visible` outline — but they paint in the browser's
+   own accent, not `--accent`.
+2. **`Button` has no `asChild`.** `AccountPanel`'s "Change password" is a
+   `next/link`, so it restates Button's secondary classes in a named constant,
+   for the same reason `alert-dialog.tsx` restates them for Radix.
+3. **`CommandResultItem.tsx`** was outside the fence and still has a raw
+   `<button>`. It carries no v1 chrome, so nothing clashes visually.
+
+### Scope extension, stated rather than silent
+
+`InviteMemberForm`, `CopyInviteLinkButton` and `RevokeInviteButton` were not on
+the prompt's file list, but they render **inside** `TeamPanel`, which was. Left
+alone, `InviteMemberForm`'s `bg-accent … text-canvas-pure shadow-elevation-1`
+submit would have sat directly beside three restyled Level 0 primary buttons on
+the same page. All three were converted.
+
+That `text-canvas-pure` is also the reason this matters beyond looks: it is the
+hardcoded-white-on-accent that `CLAUDE.md` bans, because `--accent` flips
+lightness between themes. Every accent button in scope now reads
+`--accent-fg` via `Button`.
+
+### Verification actually run
+
+Live, against the dev server via `GET /api/dev-login`, both themes:
+
+- **Header icon-button parity** measured, not eyeballed. `Help`, `Theme` and
+  `Sign out` return identical `getBoundingClientRect` (31.99 × 31.99) and
+  identical computed `backgroundColor`, `color`, `borderColor`, `borderWidth`
+  and `borderRadius` in light **and** dark.
+- **Field parity, `CreateLeadModal`.** Read off the live `form.elements` of the
+  open modal, not the source: eight names rendered, `createLead` reads eight,
+  zero missing either direction. Tab order is the eight fields in declaration
+  order then submit — unchanged.
+- **Help drawer.** Search is still case-insensitive (`WEBHOOK` → `webhook-setup`).
+  Four Tabs stayed inside the dialog. Escape closed it and focus returned to the
+  Header `?` button. Scroll-to-topic from the webhook `HelpTooltip` landed at
+  `scrollTop` 433.98 against a target offset of 434.
+- **The "Learn more" path lands focus on `<body>`, and that is not a regression.**
+  Its opener unmounts with the popover, so `HelpDrawer`'s `isConnected` guard
+  correctly declines to restore it. Verified by A/B: the pre-2c `HelpTooltip.tsx`
+  was checked out from HEAD, the same path re-run, and it landed on `<body>` too.
+- **CommandBar.** `WHITAKER` → Ben Whitaker (Fuse unchanged, still
+  case-insensitive), arrow-key selection still moves the active row.
+- Zero console errors across all of it.
+
+**Gates:** `npx tsc --noEmit`, `npx eslint src --max-warnings=0`,
+`npm run build` and `npm test` (8 files, 49 tests) all clean, re-run after the
+A/B revert. `npm run test:rls` not run — no schema, RLS or trigger surface
+touched. `field-styles.ts` confirmed still absent, with no import of it anywhere
+in `src/`. No test data was written to the database — every check was a
+read, a search or a form left unsubmitted.

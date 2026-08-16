@@ -9,6 +9,7 @@ import { fetchSearchableContacts } from "@/lib/leads/actions";
 import type { ContactLead } from "@/lib/leads/queries";
 import { CommandResultItem } from "@/components/command/CommandResultItem";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
+import { Input } from "@/components/ui/Input";
 
 const MAX_RESULTS = 8;
 
@@ -106,26 +107,36 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
               transition={{ duration: 0.15 }}
               className="fixed top-24 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-canvas-pure shadow-elevation-2"
             >
-              <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
-                <IconSearch className="size-4 shrink-0 text-ink-muted" />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setActiveIndex(0);
-                  }}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="Search contacts…"
-                  className="w-full bg-transparent text-sm text-ink-main outline-none placeholder:text-ink-muted"
-                />
+              {/* Icon layered over a real Input — the same relative-wrapper +
+                  absolute Tabler icon recipe Select uses for its chevron, and
+                  the same one HelpDrawer's search uses. Search behaviour,
+                  arrow-key handling and the Fuse config above are untouched. */}
+              <div className="border-b border-hairline p-3">
+                <div className="relative">
+                  <Input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setActiveIndex(0);
+                    }}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Search contacts…"
+                    className="pl-8"
+                  />
+                  <IconSearch
+                    aria-hidden="true"
+                    stroke={1.75}
+                    className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-ink-muted"
+                  />
+                </div>
               </div>
 
               <div className="max-h-80 overflow-y-auto p-2">
                 {contacts === null ? (
-                  <p className="p-3 text-sm text-ink-muted">Loading…</p>
+                  <p className="text-body-md p-3 text-ink-muted">Loading…</p>
                 ) : results.length === 0 ? (
-                  <p className="p-3 text-sm text-ink-muted">No contacts found.</p>
+                  <p className="text-body-md p-3 text-ink-muted">No contacts found.</p>
                 ) : (
                   results.map((lead, index) => (
                     <CommandResultItem

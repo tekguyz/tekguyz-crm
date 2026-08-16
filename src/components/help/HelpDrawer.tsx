@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/Input";
 
 // Mounted exactly once, in AppShell, and driven entirely by HelpContext —
 // the Header's "?" and every inline HelpTooltip's "Learn more" all open this
@@ -77,25 +78,34 @@ export function HelpDrawer() {
           <DialogDescription>
             Quick answers for the parts of the app that need one.
           </DialogDescription>
-          <div className="mt-3 flex items-center gap-2 rounded-xs border border-hairline bg-canvas-pure p-1.5">
-            <IconSearch className="size-4 shrink-0 text-ink-muted" />
-            <input
+          {/* The icon is layered over a real Input rather than sitting beside a
+              bare one in a hand-drawn box: same relative-wrapper + absolute
+              Tabler icon recipe the Select primitive uses for its chevron. The
+              field then gets v2's Level 0 border and shared accent focus ring
+              from the primitive instead of a local copy of them. */}
+          <div className="relative mt-3">
+            <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search help…"
-              className="w-full bg-transparent text-sm text-ink-main outline-none placeholder:text-ink-muted"
+              className="pl-8"
+            />
+            <IconSearch
+              aria-hidden="true"
+              stroke={1.75}
+              className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-ink-muted"
             />
           </div>
         </DialogHeader>
 
         <div ref={scrollRef} className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-4">
           {results.length === 0 ? (
-            <p className="text-sm text-ink-muted">No help topics match your search.</p>
+            <p className="text-body-md text-ink-muted">No help topics match your search.</p>
           ) : (
             results.map((topic) => (
               <article key={topic.id} data-topic-id={topic.id}>
-                <h3 className="mb-1 text-sm font-semibold text-ink-main">{topic.title}</h3>
-                <p className="text-sm whitespace-pre-line text-ink-muted">{topic.body}</p>
+                <h3 className="text-title mb-1 text-ink-main">{topic.title}</h3>
+                <p className="text-body-md whitespace-pre-line text-ink-muted">{topic.body}</p>
               </article>
             ))
           )}

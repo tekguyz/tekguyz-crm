@@ -21,6 +21,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { HelpTooltip } from "@/components/help/HelpTooltip";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 
 const initialState: CredentialsFormState = null;
 
@@ -63,90 +66,80 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <section className="rounded-lg border border-hairline bg-canvas-pure p-6 shadow-elevation-1">
-      <h2 className="mb-1 flex items-center gap-1.5 text-base font-semibold">
+    <Card className="p-6">
+      <h2 className="text-h2 mb-1 flex items-center gap-1.5">
         API Keys
         <HelpTooltip
           topicId="api-keys"
           blurb="Bring your own Gemini or Anthropic key. Keys are stored server-side, never shown back to you, and can be removed with Clear."
         />
       </h2>
-      <p className="mb-4 text-xs text-ink-muted">
+      <p className="text-caption mb-4 text-ink-muted">
         Bring your own Gemini and Anthropic keys for AI features. Leaving a field blank keeps
         the existing key unchanged.
       </p>
 
       {!canEdit ? (
-        <p className="text-sm text-ink-muted">Only owners and admins can manage API keys.</p>
+        <p className="text-body-md text-ink-muted">Only owners and admins can manage API keys.</p>
       ) : (
         <>
           <form action={formAction} className="space-y-3">
             {state?.error && (
-              <p className="rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-sm text-pill-orange-fg">
+              <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
                 {state.error}
               </p>
             )}
             {state?.success && (
-              <p className="rounded-xs border border-hairline bg-pill-green-bg px-3 py-2 text-sm text-pill-green-fg">
+              <p className="text-body-sm rounded-xs border border-hairline bg-pill-green-bg px-3 py-2 text-pill-green-fg">
                 Saved.
               </p>
             )}
 
-            <div>
-              <label className="mb-1 block text-xs text-ink-muted">
-                Gemini API key{status?.hasGeminiKey ? " · •••• configured" : ""}
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  name="api_key_gemini"
-                  type="password"
-                  autoComplete="off"
-                  placeholder={status?.hasGeminiKey ? "Leave blank to keep current key" : "Not configured"}
-                  className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none placeholder:text-ink-muted"
-                />
-                {status?.hasGeminiKey && (
-                  <button
-                    type="button"
-                    onClick={() => setClearDialogField("api_key_gemini")}
-                    className="shrink-0 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+            {/* items-end so Clear lines up with the field itself, not with the
+                top of Input's label. */}
+            <div className="flex items-end gap-2">
+              <Input
+                label={`Gemini API key${status?.hasGeminiKey ? " · •••• configured" : ""}`}
+                name="api_key_gemini"
+                type="password"
+                autoComplete="off"
+                placeholder={status?.hasGeminiKey ? "Leave blank to keep current key" : "Not configured"}
+              />
+              {status?.hasGeminiKey && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => setClearDialogField("api_key_gemini")}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs text-ink-muted">
-                Anthropic API key{status?.hasAnthropicKey ? " · •••• configured" : ""}
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  name="api_key_anthropic"
-                  type="password"
-                  autoComplete="off"
-                  placeholder={status?.hasAnthropicKey ? "Leave blank to keep current key" : "Not configured"}
-                  className="w-full rounded-xs border border-hairline bg-canvas-pure p-1.5 text-sm text-ink-main outline-none placeholder:text-ink-muted"
-                />
-                {status?.hasAnthropicKey && (
-                  <button
-                    type="button"
-                    onClick={() => setClearDialogField("api_key_anthropic")}
-                    className="shrink-0 rounded-md border border-hairline bg-canvas-pure px-3.5 py-1 text-sm font-medium text-ink-main transition-colors hover:bg-canvas-soft"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+            <div className="flex items-end gap-2">
+              <Input
+                label={`Anthropic API key${status?.hasAnthropicKey ? " · •••• configured" : ""}`}
+                name="api_key_anthropic"
+                type="password"
+                autoComplete="off"
+                placeholder={status?.hasAnthropicKey ? "Leave blank to keep current key" : "Not configured"}
+              />
+              {status?.hasAnthropicKey && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => setClearDialogField("api_key_anthropic")}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
 
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-md bg-accent px-3.5 py-1 text-sm font-medium text-canvas-pure shadow-elevation-1 transition-shadow hover:shadow-elevation-2 disabled:opacity-60"
-            >
+            <Button type="submit" variant="primary" loading={isPending}>
               {isPending ? "Saving…" : "Save keys"}
-            </button>
+            </Button>
           </form>
 
           <AlertDialog
@@ -175,6 +168,6 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
           </AlertDialog>
         </>
       )}
-    </section>
+    </Card>
   );
 }
