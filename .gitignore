@@ -7,3 +7,4 @@ tsconfig.tsbuildinfo
 # Python bytecode from scripts/brand
 __pycache__/
 *.pyc
+.claude/settings.json
