@@ -2249,3 +2249,122 @@ pass had no schema, RLS, trigger or RPC surface, and touched no file under
 named in `docs/KNOWN_GAPS.md`: nothing asserts that a menu row paints a focus
 ring, so a future `outline-none` copied back in from the shadcn registry would
 pass every gate.
+
+---
+
+## CLAUDE.md restructure: § 3 to a table, duplicated values to pointers (2026-08-16)
+
+CLAUDE.md is the only always-on file in this repo — confirmed by inspection, not
+assumption: there is no `AGENTS.md`, no `.claude/settings.json` and no hook that
+force-loads anything else. Every byte in it is paid on every session. An audit
+found roughly a third of its content was one of two things that do not earn
+always-on placement:
+
+- a **value that already lives in `src/app/globals.css` or `docs/DESIGN.md`**
+  with no failure story attached, so the CLAUDE.md copy could only drift; or
+- **closed-initiative narrative** already present verbatim in this log.
+
+The **landmines** — the rules written because something broke with no error, a
+green build and passing tests — are the opposite, and none were touched. They
+stayed in CLAUDE.md rather than moving to `docs/DESIGN.md` deliberately:
+`DESIGN.md` is not force-loaded by anything (verified — only the `handoff` skill
+even names it, and it attaches the file rather than reading it), so moving
+enforcement-bearing text there would silently remove the enforcement. That is the
+same failure class the file is full of, and it is not worth trading for tidiness.
+
+### What changed
+
+**§ 3 Post-Launch Feature Work is now a table** — initiative, status, ship date,
+and the `ADDENDA_LOG.md` § pointer — replacing seven paragraphs of shipped-work
+prose. The pointer column is what makes the collapse safe; every row keeps one,
+and every pointer was grep-checked against this file's real headings.
+
+**Five § 1 design-system bullets lost a restated value and kept their
+constraint:** `--accent` (kept the "raw logo blue fails AA as text" clause, lost
+the OKLCH numbers), the radius scale (kept "overrides Tailwind's stock names",
+lost `rounded-md` = 6px), elevation (kept the **~3x dark-mode alpha ratio**,
+which is stated nowhere else and is therefore not a duplicate; lost the
+level→component mapping that `DESIGN.md` § Elevation & Depth already tabulates),
+icons (kept "`lucide-react` fully removed 2026-08-14 — a new import is a bug",
+lost stroke width and sizes), and the reduced mark variant (the px thresholds
+are genuinely restated in `DESIGN.md` § Brand Identity → Two hard rules, checked
+for a unit mismatch before cutting, so this became a pointer). Every other § 1
+bullet is byte-for-byte unchanged.
+
+**Two landmines were rescued out of § 3 prose before the table replaced it** and
+now live as § 1 bullets, where they are enforced rather than narrated: the mark
+themes through the `--brand-mark` CSS variable and never a `dark:` utility (this
+codebase has no `dark:` variants, and Tailwind v4 maps them to
+`prefers-color-scheme`, not the `.dark` class), and `docs/DESIGN.md` was added to
+the Reference Index so the new pointers have a named destination.
+
+**Doc-maintenance policy is now stated once.** CLAUDE.md carried it in § Reference
+Index and again in § Session & Verification Discipline, on top of
+`docs/KNOWN_GAPS.md`'s own "How to maintain this file". The single copy now lives
+in `KNOWN_GAPS.md` — the file the policy governs — enriched with the two things
+the CLAUDE.md copies said that it did not: that a shipped initiative's deliberate
+non-goals belong here rather than in § 3, and *why* relocation of a resolved item
+must happen in the same session (deferred cleanup is what caused both CLAUDE.md
+compressions). CLAUDE.md's two copies are now one-line pointers.
+
+**One relocated non-goal:** Task/Calendar v1's no-edit/no-delete, no calendar
+view, and "unarchiving does not reopen auto-closed tasks" became a single
+`KNOWN_GAPS.md` bullet. Its fourth non-goal, no `assigned_to`, was already
+tracked there and was **not** duplicated.
+
+**One stale comment fixed in `src/app/globals.css`:** the dark `--accent-fg`
+comment read "Dark accent is light (L 0.62)" while the shipped `--accent` on the
+line above is `oklch(0.70 …)`. The 0.62 was the pre-sampling placeholder. The
+comment now matches the value.
+
+### Result, stated honestly
+
+**37,080 → 28,832 bytes, a 22% reduction — short of the ~30% the prompt
+targeted.** Nothing was cut to close that gap. The prompt's own fence made every
+§ 1 bullet other than the five named ones untouchable byte-for-byte, and § 1 is
+where the remaining bulk is (the Vault paragraph and the role-enforcement
+paragraph are each long, and both are permanent architectural law with their own
+"this doc has been wrong before" clause attached). 22% is what the permitted
+scope actually yields; the alternative was removing an invariant to hit a number,
+which this file has a standing rule against.
+
+See also § CLAUDE.md compression history above for the two earlier passes and the
+byte-size-not-line-count health metric this one was measured against.
+
+---
+
+## CLAUDE.md restructure follow-up: three rules restored, one count fixed (2026-08-16)
+
+**The entry directly above is incomplete without this one.** The restructure
+claimed it rescued the landmines out of § 3 prose before collapsing it to a
+table. It rescued two. An audit of CLAUDE.md, `docs/DESIGN.md` and
+`docs/KNOWN_GAPS.md` found two more that survived only inside this log's
+narrative, which nothing force-loads — so they were documented but not enforced.
+Each was re-verified against the real source file before being written down, and
+each is restored as a single bullet, since burial in long prose is what lost them.
+
+**1. The public-metadata-route landmine** → § Build discipline, adjacent to the
+App Router icon-convention bullet (same failure class: right file, silent wrong
+result). Confirmed live in `src/lib/supabase/middleware.ts` — the function is
+still named `isPublicMetadataRoute` and still covers all seven paths listed in
+§ Brand application pass, unchanged and unmoved.
+
+**2. The brand-copy single-sourcing rule** → § 1, next to "Logo colours are not
+UI tokens." `src/lib/brand/copy.ts` exists and exports a `const BRAND` of
+`name`, `shortName`, `description`, `tagline` — one field more than the addendum
+narrates, so the bullet names all four rather than the three.
+
+**3. The never-`localStorage` clause** → § 1, as a half-line pointing at
+`docs/DESIGN.md` § The Application Shell. Only that clause and its reason came
+back; the rest of the shell spec stays in DESIGN.md and was not touched.
+
+**4. A stale count.** The Reference Index said the `handoff` skill audits "all
+four" docs. Reading `.claude/skills/handoff/SKILL.md` shows nine checks across
+four docs *plus* a scripted `check-design-drift.mjs` comparing `docs/DESIGN.md`'s
+three value tables against `globals.css` on every run. The line now describes
+what it audits instead of counting.
+
+Two sessions produced this seam: the restructure and the DESIGN.md drift check
+landed the same day in isolation, and neither saw the other. Nothing under
+`src/` was modified — the middleware and `copy.ts` were read only, to confirm the
+restored rules name paths that are real today.
