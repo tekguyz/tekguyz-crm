@@ -790,6 +790,8 @@ Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fe
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **Webhook ingestion upserts by email, overwriting the earlier enquiry.** ✅ Fixed 2026-08-17 — `ingestWebhookLead` no longer writes `client_name`/`phone`/`company`/`website`/`physical_address`/`service_category`/`lead_source` on a resubmission; those are first-known values on `leads`, and each enquiry gets its own immutable `lead_submissions` row. Live-verified through the real webhook route: three enquiries at one address, one `leadId`, identity unchanged, three submission rows, Resurrection Engine still firing. Full history: `docs/ADDENDA_LOG.md` § 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
+- **`leads` has no `message` column — the visitor's own words are not first-class data.** ✅ Fixed 2026-08-17, and deliberately **not** by adding that column — `lead_submissions.message` is the home, so the enquiry text is a real column with a UI (`EnquiryHistory` in the profile sheet) and the Spam Shield scores it directly instead of re-parsing `activity_logs.content` JSON. Avoids the `EditLeadModal` field-parity plumbing a `leads.message` column would have dragged in. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
 - **10 pre-existing shield-archived leads are still hidden.** ✅ Closed 2026-08-16 as **moot, not fixed** — the backfill was finally attempted and the rows no longer exist: the real `TEKGUYZ` org (`95c1bc71-2645-4e35-a9f6-078993f1c586`, resolved live via Supabase MCP) holds 1 lead and 0 archived, and the whole project has zero archived leads across both orgs; `510c28db`, `7311d3e2` and `4c049981` all return no row. The "10" was a 2026-08-11 point-in-time figure, since removed by the test-data cleanup discipline. No `UPDATE` was run. Full history: `docs/ADDENDA_LOG.md` § Spam Shield routing fix, § 2026-08-16 — Wave decisions.
 - **The global `:focus-visible` outline never paints in `--accent`.** ✅ Closed 2026-08-16 by the shell close-out — **mostly withdrawn as mis-measured, and the one real part fixed.** The app-wide claim does not reproduce: measured with a real Tab and one element per read, every focusable shell control already resolves to `outline: 2px solid var(--accent); outline-offset: 2px`, confirmed visually in both themes and on the 56px rail. The original currentColor readings came from two artifacts — `transition-colors` transitions `outline-color`, so a same-task read returns the start value, and `getComputedStyle` lags one element behind in a focus loop. What *was* real: `DropdownMenuItem` carried shadcn's `outline-none`, deleting the rule for all five identity-menu rows; that class is now removed from the primitive. Full history: `docs/ADDENDA_LOG.md` § Shell redesign close-out.
 - **Mobile AppShell/Sidebar has no responsive collapse.** ✅ Fixed 2026-08-16 by the shell redesign — below `md` the sidebar is not displayed in either collapse state and navigation is a bottom tab bar (Today / Pipeline / Contacts / More) with a "More" sheet for secondary items; a manual, cookie-persisted desktop collapse to a 56px icon rail was added in the same pass. Deferred since 2026-07-25 on the stated trigger "before Focus List becomes the primary mobile view"; that trigger fired. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
@@ -2438,3 +2440,140 @@ that the same period introduced. Per the standing "if the live count is not
 exactly 10, stop" instruction, **no `UPDATE` was run and no script was written**.
 The gap is closed as moot, not as fixed — relocated to § Known Gaps — Resolved
 Items Archive.
+
+---
+
+## 2026-08-17 — `lead_submissions`: the immutable enquiry log
+
+Builds decision 1 of § 2026-08-16 — Wave decisions. Closes the webhook-overwrite
+gap and the "`leads` has no `message` column" gap in one change.
+
+**The bug being closed.** `ingestWebhookLead` looked a lead up by
+`organization_id + email` and then wrote the whole payload's identity fields
+over the matched row: `client_name`, `phone`, `company`, `website`,
+`physical_address`, `service_category`, `lead_source`. Every resubmission
+therefore destroyed the previous enquiry's version of the contact. Demonstrated
+live on `510c28db`, progressively rewritten from "Alex Rivera / Rivera Stone Co"
+into "Diagnostic Probe / TEKGUYZ Diagnostics" by later probes reusing that
+address. No error, no audit trail, and by the time anyone reviewed a spam
+verdict the row it was about had already changed.
+
+**Shape.** New `public.lead_submissions`, one row per inbound enquiry:
+`lead_id` → `leads` and `organization_id` → `organizations` (both
+`ON DELETE CASCADE`), plus `client_name`, `email`, `phone`, `company`,
+`message`, `service_category`, `lead_source`, `raw_payload jsonb`, `created_at`.
+`leads` still holds exactly one row per `(organization_id, lower(email))`, so
+`unique_tenant_client_email_ci` is preserved rather than worked around and no
+pipeline/contacts query has to de-duplicate anything.
+
+**Why the columns are denormalized rather than `raw_payload` alone.** A
+jsonb-only table forces every reader to parse JSON to render a list — which is
+precisely the shape this table exists to retire, since the Spam Shield
+previously had to reach a `WEBHOOK` `activity_logs` row whose `content` is a
+serialized string. The named columns are the read path; `raw_payload` is the
+receipt, and it is nullable because only the webhook has a real external body.
+`createLead` and CSV import synthesize their submission from their own inputs,
+and a `default '{}'` there would be a fake receipt rather than an honest absence.
+
+**Append-only, enforced by omission.** `grant select, insert` to
+`authenticated`, nothing to `anon`, and no UPDATE/DELETE policy at all — the
+same stance as `activity_logs`. RLS denies by default, so the *absence* of a
+policy is the enforcement; there is deliberately nothing to switch off later by
+accident. RLS otherwise mirrors `leads`/`tasks` byte-for-byte: plain
+`organization_id in (select private.current_org_ids())` on SELECT, paired
+`WITH CHECK` on INSERT, no role-based `EXISTS`. Verified live after apply:
+`rls_on = true`, exactly two policies (SELECT + INSERT), `authenticated` holds
+`INSERT,SELECT` only, `anon` holds nothing.
+
+**Dry-run before hand-off**, per § Session & Verification Discipline: a temp
+table replicating the column shape took both policy definitions (so the
+`private.current_org_ids()` predicate compiles), the index, and two rows sharing
+one email — confirming nothing in the table blocks a resubmission. Temp table
+dropped in the same session; no `public`-schema object touched.
+
+**Ingest rewrite.** On a matched lead the update object is now
+`{ updated_at }`, plus `{ archived: false, status: "NEW" }` only on a
+reactivation. `updated_at` is there for two reasons: an empty PostgREST patch
+object is rejected outright, and a resubmission should still bump the contact's
+recency — `trigger_update_leads_timestamp` overwrites the value with `now()`
+regardless, which is the intent. The identity columns are now **first-known**
+values, written once at creation and never again by ingestion. The Resurrection
+Engine's trigger condition is untouched: still "the matched row was archived",
+still the same two-column write and the same `[Returned Prospect]` SYSTEM_ALERT.
+
+**Every origin writes a submission**, so "every lead has at least one" is a
+property of `src/lib/submissions/record.ts` rather than a convention three call
+sites must remember: the webhook (both the new-lead and resubmission branches),
+`createLead`, CSV import, and the demo seed. The submission insert is placed
+*before* the `activity_logs` write and the Spam Shield on the webhook path — it
+is now the record of what was said, so it must be durable before anything
+downstream can fail — and it throws rather than logging, since losing it quietly
+is the exact failure shape the table exists to prevent. CSV import attaches one
+only to rows the RPC actually inserted; a `DO NOTHING` skip created no lead, so
+fabricating a submission for it would invent an enquiry the file never carried.
+
+**Spam Shield input.** `runSpamShieldAndNotify` now scores from the inserted
+`lead_submissions` row rather than the `leads` row or a re-parse of the WEBHOOK
+log's JSON. The `leads` row may legitimately hold an older enquiry's identity —
+that is now the point — so scoring it would judge the wrong text.
+
+**Live verification** (TEKGUYZ Demo, real `POST /api/v1/triage/<secret>`, dev
+server, not code review). Three enquiries at one address,
+`submissions-probe@tekguyz-test.invalid`, each with different identity and
+message. All three returned the **same** `leadId`
+(`c145ebbe-8b40-4a4e-bb27-d5862887a7fd`) — no duplicate row. After all three,
+the `leads` row still read `client_name` "Alex Rivera", `company` "Rivera Stone
+Co", `website` `riverastone.example`, `physical_address` "12 Quarry Rd,
+Charlotte NC", `phone` "(704) 555-0199", `service_category` "Stone Fabrication",
+`lead_source` "Website Contact Form" — every one the first enquiry's value —
+with only `updated_at` advancing (21:44:02 → 21:44:25 → 21:46:28). Three
+`lead_submissions` rows held the differing data ("Alex Rivera / Rivera Stone Co",
+"Diagnostic Probe / TEKGUYZ Diagnostics", "Returning Ghost / Ghost Co"). The
+lead was then archived and moved to `QUOTED` via a disposable service-role
+script; the third POST flipped it back to `archived = false` / `status = "NEW"`
+and wrote the `[Returned Prospect]` SYSTEM_ALERT — Resurrection Engine intact.
+The Shield scored each enquiry separately and flagged all three without
+archiving any of them, as the routing rule requires. Enquiry history was
+screenshotted rendering all three entries in both themes, with the sheet header
+still showing "Alex Rivera / Rivera Stone Co". All fixtures deleted afterwards
+(`probe_leads = 0`, `total_submissions = 0`, cascade confirmed on both children);
+the disposable script was removed in the same session.
+
+**Surfaced as its own sibling, not merged into `ActivityTimeline`.**
+`src/components/leads/profile/EnquiryHistory.tsx` renders newest-first,
+read-only, with `created_at · lead_source`, the message, and a neutral Badge for
+`service_category`; a hollow marker distinguishes it from the timeline's filled
+one. Submissions are visitor-authored; `activity_logs` is staff/system-authored.
+Interleaving them would erase that distinction, and the "this is evidence of
+what was said" argument only holds while the two stay visibly separate.
+
+**Migration:** `supabase/migrations/20260817120000_lead_submissions.sql`,
+applied by the human on 2026-08-17.
+
+**Note for the next reseed:** the 20 existing demo leads predate this table and
+have no submission rows, so their enquiry history reads "No enquiries recorded
+yet." `scripts/seed/lib/demo-data.ts` now writes one per lead, deriving the
+message from that lead's own WEBHOOK log payload rather than duplicating the
+copy — `npm run seed:demo:reset` backfills them.
+
+**`get_advisors` after apply.** Run on both `security` and `performance` once the
+table was live. **Security: zero new findings** — `lead_submissions` does not
+appear at all, in particular not under `rls_enabled_no_policy` (it has both
+policies) and not under either `SECURITY DEFINER` lint (it adds no function).
+Every security entry in the report is pre-existing and already triaged under
+`docs/KNOWN_GAPS.md` § "`get_advisors` (security + performance) findings".
+**Performance: exactly one new finding**, `lead_submissions_organization_id_fkey`
+unindexed. Unlike the other `unindexed_foreign_keys` entries — which point at
+`auth.users` and `vault.secrets` columns nothing filters on, and are accepted by
+design — `organization_id` is the tenant boundary and is evaluated by the SELECT
+policy on every read. Every other tenant table already carries an
+`organization_id`-leading index and is therefore absent from the report, so this
+was the new table failing to match an existing pattern rather than a new
+optimisation. Fixed by a second migration,
+`supabase/migrations/20260817140000_lead_submissions_org_index.sql`, dry-run on a
+temp-table replica and applied by the human the same day; the first migration was
+deliberately **not** edited after being applied. Re-run confirms
+`lead_submissions` no longer appears under `unindexed_foreign_keys`. It now shows
+once under `unused_index` — expected and not actionable: the index is minutes old
+against an empty table, so it has never been scanned. Same disposition as the
+other `unused_index` entries already triaged in `docs/KNOWN_GAPS.md`.

@@ -5,12 +5,17 @@ const CHUNK_SIZE = 250;
 
 export type ChunkedInsertResult = {
   insertedIds: string[];
+  // Additive, alongside insertedIds rather than replacing it: the caller needs
+  // the id↔email pairing to attach each new lead's first lead_submissions row
+  // to the CSV row it came from. The RPC's returned emails are already
+  // normalized the same way the stored value is, so the join is exact.
+  insertedLeads: ImportedLeadRow[];
   skippedEmails: string[];
   failedChunks: number;
   failedChunkRows: number;
 };
 
-type ImportedLeadRow = { lead_id: string; lead_email: string };
+export type ImportedLeadRow = { lead_id: string; lead_email: string };
 
 // Mirrors the lower(trim(...)) the RPC applies before storing, so the diff
 // below compares like with like.
@@ -23,6 +28,7 @@ export async function insertLeadChunks(
 ): Promise<ChunkedInsertResult> {
   const result: ChunkedInsertResult = {
     insertedIds: [],
+    insertedLeads: [],
     skippedEmails: [],
     failedChunks: 0,
     failedChunkRows: 0,
@@ -73,6 +79,7 @@ export async function insertLeadChunks(
         if (!insertedEmails.has(email)) result.skippedEmails.push(email);
       }
       result.insertedIds.push(...returned.map((row) => row.lead_id));
+      result.insertedLeads.push(...returned);
     } catch (err) {
       // One bad chunk must not abort the rest of the batch — record it and
       // keep going, so a transient failure costs 250 rows, not the import.

@@ -7,6 +7,7 @@ import { IconX } from "@tabler/icons-react";
 import type { Lead } from "@/lib/leads/queries";
 import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
 import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
+import { EnquiryHistory } from "@/components/leads/profile/EnquiryHistory";
 import { NoteCaptureForm } from "@/components/leads/profile/NoteCaptureForm";
 import { TasksSection } from "@/components/leads/profile/TasksSection";
 import { Button } from "@/components/ui/Button";
@@ -91,6 +92,10 @@ export function ProfileSheet({
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
               <ExecutiveBrief brief={lead.ai_brief} />
               <TasksSection leadId={lead.id} />
+              {/* Above Activity deliberately: what the customer sent comes
+                  before what we did about it, and the two stay separate
+                  columns rather than one interleaved stream. */}
+              <EnquiryHistory leadId={lead.id} />
               <ActivityTimeline
                 leadId={lead.id}
                 refreshKey={refreshKey}

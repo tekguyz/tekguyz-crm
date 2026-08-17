@@ -7,6 +7,7 @@ import { validatedRowSchema, type ValidatedRow } from "@/lib/validation/csv-lead
 import { dedupeByEmail, buildInsertRows } from "@/lib/import/dedup";
 import { insertLeadChunks, logImportedLeads } from "@/lib/import/insert-chunks";
 import { reportDuplicateBreakdown } from "@/lib/import/report-duplicates";
+import { recordLeadSubmissions } from "@/lib/submissions/record";
 
 export type BatchInsertResult = {
   imported: number;
@@ -66,14 +67,47 @@ export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInser
   const { unique, intraFileDuplicates } = dedupeByEmail(revalidated);
   const insertRows = buildInsertRows(unique, orgId);
 
-  const { insertedIds, skippedEmails, failedChunks, failedChunkRows } = await insertLeadChunks(
-    supabase,
-    orgId,
-    insertRows,
-  );
+  const { insertedIds, insertedLeads, skippedEmails, failedChunks, failedChunkRows } =
+    await insertLeadChunks(supabase, orgId, insertRows);
 
   if (insertedIds.length > 0) {
     await logImportedLeads(supabase, orgId, insertedIds);
+
+    // Every lead gets a first lead_submissions row whatever created it, so the
+    // profile sheet's enquiry history is never empty for a real lead. Only
+    // rows the RPC actually inserted are here — a skipped duplicate did NOT
+    // create a lead, so it must not create a submission either (that would
+    // fabricate an enquiry the CSV never represented, and DO NOTHING means we
+    // do not even know which existing lead it would attach to).
+    //
+    // Joined on the RPC's returned email, which is stored lower(trim(...))'d,
+    // against the same normalization insertLeadChunks uses for its own diff.
+    const rowsByEmail = new Map(insertRows.map((row) => [row.email.trim().toLowerCase(), row]));
+
+    await recordLeadSubmissions(
+      supabase,
+      insertedLeads.flatMap((inserted) => {
+        const row = rowsByEmail.get(inserted.lead_email.trim().toLowerCase());
+        if (!row) return [];
+        return [
+          {
+            leadId: inserted.lead_id,
+            organizationId: orgId,
+            clientName: row.client_name,
+            email: inserted.lead_email,
+            phone: row.phone,
+            company: row.company,
+            // A CSV has no per-enquiry message field; nothing was said, so
+            // nothing is recorded as having been said.
+            message: null,
+            serviceCategory: row.service_category,
+            // Defaulted to CSV_IMPORT_SOURCE by buildInsertRows, so the
+            // submission records the same origin the lead row does.
+            leadSource: row.lead_source,
+          },
+        ];
+      }),
+    );
   }
 
   const breakdown = await reportDuplicateBreakdown(supabase, orgId, skippedEmails);

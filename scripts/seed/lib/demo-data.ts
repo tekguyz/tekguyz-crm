@@ -9,6 +9,25 @@ function webhookPayload(payload: Record<string, string>): string {
   return JSON.stringify(payload);
 }
 
+// The demo leads' enquiry text already exists once, inside their WEBHOOK log
+// payloads. Reading it back out here gives each seeded lead_submissions row a
+// real message without a second copy of the same sentence to keep in sync.
+// Seed-only: the live ingest path writes lead_submissions.message directly
+// from the validated payload and never parses a log (that JSON-parsing shape
+// is exactly what lead_submissions exists to replace).
+function webhookMessageOf(logs: DemoLog[] | undefined): string | null {
+  const webhook = logs?.find((log) => log.log_type === "WEBHOOK");
+  if (!webhook) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(webhook.content);
+    const message = (parsed as Record<string, unknown>)?.message;
+    return typeof message === "string" ? message : null;
+  } catch {
+    return null;
+  }
+}
+
 type DemoLog = {
   log_type: "WEBHOOK" | "MANUAL_NOTE" | "SYSTEM_ALERT";
   content: string;
@@ -656,6 +675,31 @@ export async function seedDemoLeads(orgId: string): Promise<{ leadCount: number;
 
     leadCount += 1;
 
+    // Every lead carries at least one lead_submissions row whatever created
+    // it — the demo org included, or the profile sheet's enquiry history would
+    // render empty across all 20 seeded leads and look broken rather than
+    // seeded. Written inline with the admin client for the same reason the
+    // activity_logs insert below is: this script imports relatively and does
+    // not resolve the app's "@/" alias.
+    const { error: submissionError } = await admin.from("lead_submissions").insert({
+      lead_id: lead.id,
+      organization_id: orgId,
+      client_name: def.client_name,
+      email: def.email,
+      phone: def.phone,
+      company: def.company,
+      message: webhookMessageOf(logs),
+      service_category: def.service_category,
+      lead_source: def.lead_source,
+      created_at: daysFromNow(-createdDaysAgo),
+    });
+
+    if (submissionError) {
+      throw new Error(
+        `Failed to insert demo submission for "${def.client_name}": ${submissionError.message}`,
+      );
+    }
+
     if (logs?.length) {
       const rows = logs.map((log) => ({
         lead_id: lead.id,
@@ -690,8 +734,9 @@ export async function countDemoLeads(orgId: string): Promise<number> {
   return count ?? 0;
 }
 
-// Deletes every lead in the given org. activity_logs.lead_id has ON DELETE
-// CASCADE, so those rows are removed automatically — no separate delete.
+// Deletes every lead in the given org. activity_logs.lead_id and
+// lead_submissions.lead_id both have ON DELETE CASCADE, so those rows are
+// removed automatically — no separate delete.
 export async function wipeDemoLeads(orgId: string): Promise<number> {
   const admin = createAdminClient();
 

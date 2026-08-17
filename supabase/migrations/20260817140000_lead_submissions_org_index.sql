@@ -1,0 +1,34 @@
+-- Follow-up to 20260817120000_lead_submissions.sql: cover the
+-- organization_id foreign key.
+--
+-- Caught by `get_advisors(performance)` immediately after that migration was
+-- applied — `lead_submissions_organization_id_fkey` was the only new finding
+-- the whole change produced, and the only unindexed-FK entry in the report
+-- that is NOT already accepted-by-design in docs/KNOWN_GAPS.md.
+--
+-- WHY THIS ONE IS WORTH FIXING WHEN THE OTHER unindexed_foreign_keys ENTRIES
+-- ARE NOT
+-- The standing Known Gaps disposition ("mostly by-design or non-issues at
+-- current scale") covers FKs pointing at auth.users and vault.secrets — columns
+-- nothing filters on. organization_id is different: it is the tenant boundary,
+-- and the "Members read tenant submissions" RLS policy evaluates
+-- `organization_id in (select private.current_org_ids())` on every single read
+-- of this table. Every other tenant-scoped table already has an
+-- organization_id-leading index and is therefore absent from the report —
+-- leads has idx_leads_tenant_status, activity_logs has
+-- idx_logs_chronological_stream's sibling from
+-- 20260721120000_activity_logs_org_rate_limit_index.sql, tasks has
+-- idx_tasks_org_due. lead_submissions was the only tenant table missing one, so
+-- this restores the existing pattern rather than adding a new optimisation.
+--
+-- WHY NOT FOLD IT INTO THE ORIGINAL MIGRATION FILE
+-- That file is already applied to the live project. Editing an applied
+-- migration makes the file disagree with the database, which is the same
+-- silent-drift class this codebase avoids everywhere else. A second file is
+-- honest about what actually happened and in what order.
+--
+-- idx_submissions_chronological (lead_id, created_at desc) is unchanged and
+-- still serves the profile sheet's per-lead read; it cannot cover this FK
+-- because lead_id leads it.
+
+create index idx_submissions_tenant on public.lead_submissions(organization_id, created_at desc);

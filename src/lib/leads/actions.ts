@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
 import { isLeadRoleDenied, LEAD_ROLE_DENIED_MESSAGE } from "@/lib/leads/role-errors";
+import { recordLeadSubmission } from "@/lib/submissions/record";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
 // split out on 2026-07-28 to bring this file back under the 200-line cap.
@@ -35,24 +36,62 @@ export async function createLead(
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 
-  const { error } = await supabase.from("leads").insert({
-    organization_id: orgId,
-    client_name: clientName,
-    email,
-    phone: formData.get("phone") || null,
-    company: formData.get("company") || null,
-    website: formData.get("website") || null,
-    lead_source: formData.get("lead_source") || null,
-    service_category: formData.get("service_category") || null,
-    estimated_revenue: estimatedRevenue,
-  });
+  // Read once, then reused for both the leads row and its first submission —
+  // so the two can never disagree about what was entered. Every name here has
+  // a rendered <input name="..."> in CreateLeadModal; nothing new is read from
+  // formData by the submission write (CLAUDE.md § Form/Action Field Parity).
+  const phone = optionalField(formData.get("phone"));
+  const company = optionalField(formData.get("company"));
+  const website = optionalField(formData.get("website"));
+  const leadSource = optionalField(formData.get("lead_source"));
+  const serviceCategory = optionalField(formData.get("service_category"));
+
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .insert({
+      organization_id: orgId,
+      client_name: clientName,
+      email,
+      phone,
+      company,
+      website,
+      lead_source: leadSource,
+      service_category: serviceCategory,
+      estimated_revenue: estimatedRevenue,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
   }
 
+  // Every lead carries at least one submission from day one, whatever created
+  // it — otherwise the profile sheet's enquiry history would be empty for
+  // manually-created leads and read as "nothing was ever received" rather than
+  // "this one was typed in". message is null: this form has no message field,
+  // and inventing one would be a fake record of something nobody said.
+  await recordLeadSubmission(supabase, {
+    leadId: lead.id,
+    organizationId: orgId,
+    clientName,
+    email,
+    phone,
+    company,
+    message: null,
+    serviceCategory,
+    leadSource,
+  });
+
   revalidatePath("/", "layout");
   return null;
+}
+
+// formData.get returns FormDataEntryValue | null; an untouched text input
+// yields "" rather than null, and both must store as NULL.
+function optionalField(value: FormDataEntryValue | null): string | null {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || null;
 }
 
 const VALID_OUTCOMES = new Set(["WON", "LOST", "ABANDONED"]);
