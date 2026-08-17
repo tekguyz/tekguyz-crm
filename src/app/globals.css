@@ -183,7 +183,7 @@
        4.23:1 against --canvas-soft dark — marginal. This is 5.99:1 on canvas,
        6.54:1 ink-on-it as a button. */
     --accent: oklch(0.70 0.155 263.2);
-    /* Dark accent is light (L 0.62), so its foreground flips to near-black.
+    /* Dark accent is light (L 0.70), so its foreground flips to near-black.
        Near-white on it would fail contrast. */
     --accent-fg: oklch(0.16 0.004 260);
 

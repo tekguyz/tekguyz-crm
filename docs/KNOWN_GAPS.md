@@ -6,13 +6,22 @@ CLAUDE.md compression passes.
 
 ## How to maintain this file
 
-- Anything intentionally deferred gets a bullet here, so it is never silently
-  assumed complete in a later session.
+**This section is the single copy of the policy.** CLAUDE.md used to restate it
+in two places; both are now one-line pointers here. Keep it that way.
+
+- Anything intentionally deferred gets a bullet here — a limitation, a missing
+  enforcement, or a scoped-out edge case accepted on purpose rather than
+  forgotten — so it is never silently assumed complete in a later session. That
+  includes a deliberate v1 non-goal of a shipped initiative: CLAUDE.md § 3
+  records status only, never scope that was left out.
 - Open items are ⬜, one to two sentences, with a date and a pointer to the full
   story in `docs/ADDENDA_LOG.md`.
 - The moment an item is fully resolved, move its line to
   `docs/ADDENDA_LOG.md` § "Known Gaps — Resolved Items Archive" in that same
-  session. Do not leave resolved items here "to clean up later".
+  session. Do not leave resolved items here "to clean up later" — deferred
+  cleanup is exactly what let this register regrow to the point that CLAUDE.md
+  needed two separate compression passes. Relocation is part of closing the
+  gap, not a follow-up task.
 - A ✅ shown beside a ⬜ means partially resolved with real open scope — the ✅
   half is context for why the ⬜ half is scoped as it is.
 - An item with no date is stale. Re-triage it before relying on it.
@@ -24,6 +33,7 @@ CLAUDE.md compression passes.
 ## Open items
 
 - **CSV Import/Export Wizard (Prompts 9–10).** ✅ Import: fully built and live-verified — but re-verified end to end on **2026-08-15**, not 2026-07-26. The chunk write was structurally incapable of inserting a row from the day `unique_tenant_client_email_ci` landed until the `import_leads_chunk` RPC replaced it; treat the earlier "live-verified" date as superseded, not as a second confirmation. ⬜ Export: deliberately deferred as its own follow-up — shares no machinery with import. Full history: `docs/ADDENDA_LOG.md` § Prompt 9 addendum, § Prompt 10 addendum, § Production Gaps Sweep addendum, § CSV import chunk-write RPC.
+- **Task/Calendar v1 shipped with four deliberate non-goals.** ⬜ Open by design (2026-07-28, relocated here from CLAUDE.md § 3 on 2026-08-16) — no task edit or delete, no calendar view, and unarchiving a lead does **not** reopen the tasks that were auto-closed when it was archived. (The fourth, no `assigned_to`, is tracked by its own bullet below, which names the same missing ownership concept.) Full history: `docs/ADDENDA_LOG.md` § Task/Calendar addendum — Prompts 1 & 2, § Prompt 4, § Prompt 5.
 - **Signup-confirmation path, post `/auth/confirm` PKCE fix.** ⬜ Consciously deferred — the fix should carry over by construction, but is not live-email-verified due to Supabase's auth rate limit. Full history: `docs/ADDENDA_LOG.md` § Signup-confirmation live-email re-check attempt.
 - **No account-level (user-scoped) settings surface exists.** ✅ Mostly fixed 2026-07-27 — `AccountPanel` on `/settings` covers password change, display name, and notification preferences. ⬜ Still open by deliberate scope: email change, account deletion (needs its own decision about an OWNER's leads first), and an org switcher (no persisted "active org" concept exists yet). Full history: `docs/ADDENDA_LOG.md` § Account Panel: Password, Display Name, Notification Preferences addendum.
 - **Team management is view-only beyond invites.** ⬜ Flagged, not fixed (2026-07-25) — no role change or member removal. Becomes urgent at the first real MEMBER invite. (The `leads` role-enforcement gap this bullet used to pair with closed on 2026-08-14 — see the Resolved Items Archive; this one is still open.) Full history: `docs/ADDENDA_LOG.md` § Settings & Configuration Inventory.
