@@ -23,7 +23,9 @@ const TONES: Record<BadgeTone, string> = {
   teal: "bg-pill-teal-bg text-pill-teal-fg",
   green: "bg-pill-green-bg text-pill-green-fg",
   sky: "bg-pill-sky-bg text-pill-sky-fg",
-  cold: "bg-canvas-soft text-cold",
+  // --cold-fg, not --cold: --cold is tuned for the dashed border role and fails
+  // AA as 11px text (2.72:1 light / 2.35:1 dark).
+  cold: "bg-canvas-soft text-cold-fg",
 };
 
 export function Badge({

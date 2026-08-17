@@ -49,10 +49,13 @@ export function LeadCard({
               )}
             </div>
             {/* The overdue badge stays on the neutral tone, which is the exact
-                token pair the v1 treatment used. Badge's own `cold` tone puts
-                --cold on --canvas-soft, measured at 2.72:1 light / 2.35:1 dark
-                — below WCAG AA for an 11px label, so it would have made a
-                business signal harder to read. Logged in KNOWN_GAPS. */}
+                token pair the v1 treatment used. It was originally forced here
+                because Badge's `cold` tone failed WCAG AA — that failure is
+                fixed as of 2026-08-17 (`--cold-fg`, 4.58:1 light / 4.84:1 dark,
+                see docs/ADDENDA_LOG.md), so `tone="cold"` is now a legitimate
+                option. Adopting it is a live design change to a business signal
+                and is left as its own decision, not a side effect of the token
+                fix. */}
             <Badge
               tone={overdue ? "neutral" : (STATUS_TONE[lead.status] ?? "sky")}
               className="shrink-0 rounded-full px-2"

@@ -24,7 +24,8 @@ the derivation and the contrast audit.
 | `--ink-muted` (secondary text) | `oklch(0.52 0.006 260)` | `oklch(0.66 0.008 260)` | Metadata, timestamps, labels |
 | `--hairline` (1px borders) | `oklch(0.90 0.003 260)` | `oklch(0.28 0.005 260)` | Every structural border |
 | `--accent` — **sampled from the brand mark, final** | `oklch(0.53 0.181 263.2)` | `oklch(0.70 0.155 263.2)` | Primary CTAs, active nav, focus rings, links only — never decorative |
-| `--cold` (SLA breach tone) | `oklch(0.68 0.004 260)` | `oklch(0.42 0.006 260)` | Going Cold dashed border/badge — same behavior, recalibrated hue |
+| `--cold` (SLA breach tone) | `oklch(0.68 0.004 260)` | `oklch(0.42 0.006 260)` | Going Cold dashed `Card`/`TableRow` border **only** — a border, never text. Do not retune it to fix text contrast |
+| `--cold-fg` (SLA breach text) | `oklch(0.55 0.004 260)` | `oklch(0.59 0.006 260)` | `Badge`'s `cold` tone label. Same hue/chroma as `--cold`, lightness moved to clear AA: 4.58:1 light / 4.84:1 dark on `--canvas-soft` (added 2026-08-17) |
 
 Hue `260` (cool neutral) replaces the old `60` (warm) across the board — this is
 the single biggest lever in reading as "Twenty" rather than "Notion." Decorative
@@ -195,9 +196,27 @@ render, and the HTML that arrives already carries `w-14`. Default when unset is
 expanded: a first-time user should see labels, not an unexplained column of
 icons. Helpers live in `src/lib/shell/sidebar-cookie.ts`.
 
-The width change is a plain CSS `transition-[width]`, so the global
-`prefers-reduced-motion` block in `globals.css` clamps it. Never animate the
-collapse with anything that block cannot reach.
+**The collapse animates `translate`, never `width`, and the rail is overlaid
+rather than in flow** (revised 2026-08-17). The original `transition-[width]` on
+a `shrink-0` flex sibling relaid out the whole content area on every frame,
+which measured as dropped frames on the Pipeline board. The `<aside>` is now
+`position: absolute` inside the shell's `relative` root row, and two
+counter-translated layers reproduce a width animation on the compositor: an
+outer 240px `overflow-hidden` frame translating `0 → -184px`, and an inner
+column translating `0 → +184px`, so the content never moves while the frame's
+right edge sweeps 240px → 56px. A separate `aria-hidden` in-flow spacer carries
+the content column's leading offset and is **deliberately not transitioned** —
+its width flips once, in the same commit as the toggle.
+
+This is global, never conditional on the route. A transition that behaves
+differently depending on which page the user is standing on is a worse defect
+than the jank it would avoid.
+
+Both layers are still plain CSS transitions, so the global
+`prefers-reduced-motion` block in `globals.css` clamps them. Never animate the
+collapse with anything that block cannot reach, and never move it back onto a
+layout property. Full measurements: `docs/ADDENDA_LOG.md` § 2026-08-17 —
+sidebar collapse: a transform-based overlaid rail.
 
 **Colour alone is never the active-nav signal.** Every `NavItem` layout also
 paints a solid `--accent` marker bar — down the leading edge for `row`/`rail`,
@@ -218,10 +237,13 @@ is a fixed **bottom tab bar**: Today / Pipeline / Contacts / More. "More" opens
 a bottom `Sheet` holding the secondary items — Import, Settings, the theme
 choices, Help, sign out — plus the workspace name and the signed-in email.
 
-- **Never both.** `hidden md:flex` on the sidebar and `md:hidden` on the tab bar
+- **Never both.** `hidden md:block` on the sidebar (and the same on its in-flow
+  spacer, so neither occupies space below `md`) and `md:hidden` on the tab bar
   make them mutually exclusive at every width. `display: none` removes a subtree
   from the accessibility tree and the tab order, so a phone has exactly one
-  navigation landmark and one set of focusable nav links.
+  navigation landmark and one set of focusable nav links. Verified at 375px on
+  2026-08-17: the sidebar's `<nav>` is inside the hidden subtree and only the
+  tab bar's landmark is live.
 - This is CSS, not a JS media query, deliberately. A viewport check cannot run
   on the server, so a JS-gated sidebar would render on a phone's first paint and
   unmount a frame later — the exact flash the collapse cookie exists to avoid.

@@ -37,7 +37,13 @@ export function AppShell({
     // sidebar collapse state and the command palette.
     <HelpProvider>
       <ShellProvider initialSidebar={sidebar}>
-        <div className="flex h-dvh bg-canvas-soft text-ink-main">
+        {/* `relative` is the positioning context for the sidebar. The rail is
+            overlaid (position:absolute) rather than an in-flow flex sibling, so
+            its collapse animation is a compositor-only `translate` that never
+            relays out the content area; Sidebar renders its own non-animated
+            in-flow spacer here to keep the content column clear of it. See
+            Sidebar.tsx for the two-layer mechanism. */}
+        <div className="relative flex h-dvh bg-canvas-soft text-ink-main">
           <Sidebar orgName={orgName} />
           {/* Before <main> in the DOM even though it is painted at the bottom
               of the screen: navigation should come before content in the tab

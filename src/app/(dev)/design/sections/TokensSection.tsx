@@ -14,6 +14,7 @@ const SURFACES = [
   { name: "accent", className: "bg-accent" },
   { name: "danger", className: "bg-danger" },
   { name: "cold", className: "bg-cold" },
+  { name: "cold-fg", className: "bg-cold-fg" },
 ];
 
 const PILLS = [

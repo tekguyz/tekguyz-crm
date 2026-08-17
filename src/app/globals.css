@@ -27,6 +27,7 @@
   --color-danger: var(--danger);
   --color-danger-fg: var(--danger-fg);
   --color-cold: var(--cold);
+  --color-cold-fg: var(--cold-fg);
 
   --color-pill-purple-bg: var(--pill-purple-bg);
   --color-pill-purple-fg: var(--pill-purple-fg);
@@ -130,7 +131,17 @@
     --danger: oklch(0.52 0.19 25);
     --danger-fg: oklch(0.99 0 0);
 
+    /* --cold is the dashed Going Cold border on Card / TableRow, and at L 0.68
+       it is tuned for that job — it measures 2.72:1 on --canvas-soft, which a
+       border does not need to clear but 11px label text does. --cold-fg is the
+       same pairing as --accent-fg / --danger-fg: one value cannot be both the
+       surface signal and AA-readable text. Same hue 260 and same chroma 0.004,
+       lightness lowered to the first step that clears 4.5:1 — 4.58:1 on
+       --canvas-soft (4.85:1 on --canvas-pure), so it stays a desaturated cool
+       grey rather than collapsing into --ink-muted. Never retune --cold itself
+       to fix text contrast; the border role depends on its current value. */
     --cold: oklch(0.68 0.004 260);
+    --cold-fg: oklch(0.55 0.004 260);
 
     /* Decorative pills: same six hues as v1, chroma x0.78 (a ~22% cut).
        Lightness is untouched in every pair, so existing fg/bg contrast is
@@ -190,7 +201,12 @@
     --danger: oklch(0.65 0.18 25);
     --danger-fg: oklch(0.16 0.004 25);
 
+    /* Dark --cold (L 0.42) is the dashed border value and measures 2.35:1 on
+       --canvas-soft. --cold-fg lightens instead of darkens here, hue and chroma
+       locked: 4.84:1 on --canvas-soft, 4.57:1 on --canvas-pure, so it clears AA
+       on both dark surfaces while staying dimmer than --ink-muted (L 0.66). */
     --cold: oklch(0.42 0.006 260);
+    --cold-fg: oklch(0.59 0.006 260);
 
     --pill-purple-bg: oklch(0.3 0.062 300);
     --pill-purple-fg: oklch(0.86 0.047 300);

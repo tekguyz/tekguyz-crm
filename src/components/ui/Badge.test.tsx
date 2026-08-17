@@ -28,9 +28,14 @@ describe("Badge", () => {
     }
   });
 
-  it("uses the cold token for the overdue tone", () => {
+  it("uses the AA-readable cold foreground token for the overdue tone", () => {
     render(<Badge tone="cold">Overdue</Badge>);
-    expect(screen.getByText("Overdue")).toHaveClass("text-cold");
+    // --cold itself is the dashed border value and fails AA as label text.
+    expect(screen.getByText("Overdue")).toHaveClass(
+      "bg-canvas-soft",
+      "text-cold-fg",
+    );
+    expect(screen.getByText("Overdue")).not.toHaveClass("text-cold");
   });
 
   it("renders no dot by default", () => {

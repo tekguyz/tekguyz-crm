@@ -786,15 +786,52 @@ Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fe
 
 ---
 
+## `--cold-fg`: making `Badge`'s cold tone AA-readable (2026-08-17)
+
+Closes the 2026-08-15 gap that left `Badge`'s `cold` tone shipped-but-unused. The tone was `bg-canvas-soft text-cold`, and `--cold` is tuned for a *border*, not for 11px label text.
+
+**Measured, not eyeballed.** A throwaway Node script (OKLCH → OKLab cube → linear sRGB → WCAG relative luminance → ratio; deleted after use, per the test-residue rule) was sanity-checked against this repo's already-published figures before any new number was trusted. It reproduces the two `--cold`-on-`--canvas-soft` numbers **exactly** (2.72:1 light, 2.35:1 dark) and `--accent` light to within 1% (5.16 computed vs 5.22 published). It does **not** reproduce the two published *dark* `--accent` figures (7.34 computed vs 5.99 published; 5.40 vs 4.23 for the rejected placeholder) — no gamut clipping is involved, both are comfortably in sRGB, so one of the two methods is wrong for high-chroma dark pairs. Irrelevant to this change, since `--cold-fg` is near-achromatic (C 0.004–0.006) and that is precisely the case the script reproduces exactly — but worth flagging before anyone reuses those dark accent numbers.
+
+| | before (`--cold`) | after (`--cold-fg`) |
+|---|---|---|
+| Light on `--canvas-soft` | 2.72:1 ❌ | **4.58:1** ✅ |
+| Dark on `--canvas-soft` | 2.35:1 ❌ | **4.84:1** ✅ |
+
+Values: `oklch(0.55 0.004 260)` light, `oklch(0.59 0.006 260)` dark — hue and chroma locked to `--cold`, only lightness moved, to the first step clearing 4.5:1. Light darkens (0.68 → 0.55), dark lightens (0.42 → 0.59). Both stay clear of `--ink-muted` (L 0.52 / 0.66), so the tone still reads as the desaturated half of the Going Cold SLA signal rather than collapsing into plain muted text. The dark value also clears AA on `--canvas-pure` (4.57:1), so it survives a caller that overrides the background; the light value likewise (4.85:1 on white).
+
+**`--cold` itself is unchanged, deliberately.** It has a second, non-text role as the dashed `Card`/`TableRow` Going Cold border, where a 4.5:1 text floor does not apply. Retuning it to fix text contrast would have quietly changed the border. This is the same split, for the same reason, as `--accent-fg` / `--danger-fg`: one value cannot be both the surface signal and AA-readable text across two themes.
+
+**Files changed (5).** `src/app/globals.css` (`--color-cold-fg` in `@theme inline`, plus the token in both theme blocks with the rationale comment), `src/components/ui/Badge.tsx`, `src/components/ui/Badge.test.tsx` (the cold-tone test now asserts `text-cold-fg` **and** `not.toHaveClass("text-cold")`, so a revert fails loudly), `docs/DESIGN.md` (token table row, and `--cold`'s Use column narrowed to "border only"), `docs/KNOWN_GAPS.md` (bullet relocated to the Resolved Items Archive above). No new `text-*` type role, so `src/lib/utils/cn.ts` needs no change — `text-cold-fg` is a colour, which tailwind-merge already classifies correctly. `npx vitest run src/components/ui/Badge.test.tsx`: 6 passed. No migration, no database write, no test residue.
+
+---
+
+## 2026-08-17 — a regression test for the focus-ring floor
+
+Closes the 2026-08-16 gap "Nothing tests that a focus ring actually paints." The shell close-out had removed shadcn's `outline-none` from `DropdownMenuItem` — it deletes this app's global `:focus-visible` rule for every menu row — but nothing asserted the outcome. The class arrived from the live registry once and CLAUDE.md's own primitive-source recipe tells the next person to go back to that same registry, so the regression had a standing invitation and would have passed `tsc`, `lint`, `build` and every existing test.
+
+**The assertion is class-level, and the file says so out loud.** `src/components/ui/dropdown-menu.test.tsx` renders each row inside an open `DropdownMenu` and asserts the resolved `className` contains none of `outline-none`, `outline-0`, `focus:outline-none`, `focus-visible:outline-none`. Five tests: `DropdownMenuItem` default, `DropdownMenuItem variant="danger"` (a different path through `cn`, so asserted separately rather than assumed), `DropdownMenuRadioItem`, a caller passing its own `className` (the same regression through a different door), and a `role`-based sweep over `menuitem`/`menuitemcheckbox`/`menuitemradio`/`dropdown-menu-sub-trigger` so a row type added later is covered without anyone remembering to add a case.
+
+**Why not a paint test.** jsdom's `getComputedStyle` does not apply stylesheet rules, and `vitest.config.mts` sets `css: false`, so the stylesheet is never loaded — an outline read returns the same empty value for the correct and the broken component and would prove nothing. **No browser-based runner is installed in this repo** (no Playwright, no `@vitest/browser` in `package.json`), and none was added for this: installing a second test runner is a bigger decision than this gap. What one would add is written into the test file — focus a row with a real keyboard event, then assert a non-`none` computed `outline-width`/`outline-color`, proving the ring genuinely paints rather than that nothing forbids it. That remains open as a capability, not as this gap.
+
+**`DropdownMenuContent` is deliberately not asserted against.** CLAUDE.md's rule is scoped: overlay *content* boxes may keep `outline-none`; *rows* may not. Content still carries it, correctly.
+
+**Proven to fail before being trusted.** `outline-none` was temporarily re-added to `DropdownMenuItem`'s `cn` call and `npx vitest run src/components/ui/dropdown-menu.test.tsx` reported **4 failed | 1 passed** — the default item, the danger item, the caller-className case and the role sweep all caught it, with the message "would delete the global :focus-visible ring for this row". (The `DropdownMenuRadioItem` test correctly stayed green: `RadioItem` does not share that `cn` call, which is the argument for asserting each row type separately.) `dropdown-menu.tsx` was then reverted — `git diff` on it is empty — and the suite is back to **5 passed**.
+
+---
+
 ## Known Gaps — Resolved Items Archive
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **The sidebar collapse animates `width` on a flex sibling, and it janks on the Pipeline board.** ✅ Fixed 2026-08-17 — the rail is now absolutely positioned and animates `translate`, with a non-transitioned in-flow spacer holding the content column's leading offset, so no layout runs during the transition. Re-measured like-for-like on `/pipeline` in one session: old implementation dropped frames on every collapse (max 33.4ms and 33.2ms across two runs), new implementation held 60fps with zero frames over 20ms (max 17.1ms and 16.9ms). Applied globally, never per route. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — sidebar collapse: a transform-based overlaid rail.
+- **Nothing tests that a focus ring actually paints.** ✅ Closed 2026-08-17 — `src/components/ui/dropdown-menu.test.tsx` (5 tests) asserts that no interactive dropdown row carries `outline-none`, `outline-0`, `focus:outline-none` or `focus-visible:outline-none`, covering `DropdownMenuItem` (both variants), `DropdownMenuRadioItem`, a caller-supplied `className`, and a role-based sweep that catches row types added later. Proven to fail before being trusted: re-adding `outline-none` to `DropdownMenuItem` fails 4 of the 5. A real *paint* assertion remains out of reach — no browser-based runner is installed — and that limitation is written into the test file itself rather than papered over. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — a regression test for the focus-ring floor.
+- **`OptionRow` signals its selected row with background colour only.** ✅ Fixed 2026-08-17 — the selected row now also paints a leading `--accent` marker bar using `NavItem`'s exact `MARKERS.row` geometry, with `relative` unconditional so the pseudo-element always has its positioning context; `bg-canvas-soft` stays as reinforcement. An outline was ruled out rather than overlooked — the row is deliberately non-focusable, so the global `:focus-visible` rule can never reach it. Covered by a new `src/components/ui/OptionRow.test.tsx` (5 tests). Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — `OptionRow`: a leading marker bar, not a tint alone.
 - **Webhook ingestion upserts by email, overwriting the earlier enquiry.** ✅ Fixed 2026-08-17 — `ingestWebhookLead` no longer writes `client_name`/`phone`/`company`/`website`/`physical_address`/`service_category`/`lead_source` on a resubmission; those are first-known values on `leads`, and each enquiry gets its own immutable `lead_submissions` row. Live-verified through the real webhook route: three enquiries at one address, one `leadId`, identity unchanged, three submission rows, Resurrection Engine still firing. Full history: `docs/ADDENDA_LOG.md` § 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
 - **`leads` has no `message` column — the visitor's own words are not first-class data.** ✅ Fixed 2026-08-17, and deliberately **not** by adding that column — `lead_submissions.message` is the home, so the enquiry text is a real column with a UI (`EnquiryHistory` in the profile sheet) and the Spam Shield scores it directly instead of re-parsing `activity_logs.content` JSON. Avoids the `EditLeadModal` field-parity plumbing a `leads.message` column would have dragged in. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
 - **10 pre-existing shield-archived leads are still hidden.** ✅ Closed 2026-08-16 as **moot, not fixed** — the backfill was finally attempted and the rows no longer exist: the real `TEKGUYZ` org (`95c1bc71-2645-4e35-a9f6-078993f1c586`, resolved live via Supabase MCP) holds 1 lead and 0 archived, and the whole project has zero archived leads across both orgs; `510c28db`, `7311d3e2` and `4c049981` all return no row. The "10" was a 2026-08-11 point-in-time figure, since removed by the test-data cleanup discipline. No `UPDATE` was run. Full history: `docs/ADDENDA_LOG.md` § Spam Shield routing fix, § 2026-08-16 — Wave decisions.
 - **The global `:focus-visible` outline never paints in `--accent`.** ✅ Closed 2026-08-16 by the shell close-out — **mostly withdrawn as mis-measured, and the one real part fixed.** The app-wide claim does not reproduce: measured with a real Tab and one element per read, every focusable shell control already resolves to `outline: 2px solid var(--accent); outline-offset: 2px`, confirmed visually in both themes and on the 56px rail. The original currentColor readings came from two artifacts — `transition-colors` transitions `outline-color`, so a same-task read returns the start value, and `getComputedStyle` lags one element behind in a focus loop. What *was* real: `DropdownMenuItem` carried shadcn's `outline-none`, deleting the rule for all five identity-menu rows; that class is now removed from the primitive. Full history: `docs/ADDENDA_LOG.md` § Shell redesign close-out.
 - **Mobile AppShell/Sidebar has no responsive collapse.** ✅ Fixed 2026-08-16 by the shell redesign — below `md` the sidebar is not displayed in either collapse state and navigation is a bottom tab bar (Today / Pipeline / Contacts / More) with a "More" sheet for secondary items; a manual, cookie-persisted desktop collapse to a 56px icon rail was added in the same pass. Deferred since 2026-07-25 on the stated trigger "before Focus List becomes the primary mobile view"; that trigger fired. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
+- **`Badge`'s `cold` tone fails WCAG AA and is therefore unused.** ✅ Fixed 2026-08-17 by adding a `--cold-fg` token and repointing the tone at it — **4.58:1 light / 4.84:1 dark**, up from 2.72:1 / 2.35:1, with `--cold` itself untouched in its dashed-border role. Full history: `docs/ADDENDA_LOG.md` § `--cold-fg`: making `Badge`'s cold tone AA-readable.
 - **`CommandResultItem.tsx` is a raw `<button>` outside a primitive.** ✅ Fixed 2026-08-16 by the shell redesign — it became a thin mapper over a new `ui/OptionRow.tsx` (`div role="option"`), and `CommandBar` became a real combobox/listbox with `aria-activedescendant`. Button was correctly *not* the answer: the rows must not be focusable at all. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
 - **Password reset flow.** ✅ Fixed 2026-07-25 — `/forgot-password` + `/reset-password`, live-verified end to end with a real email. Full history: `docs/ADDENDA_LOG.md` § Password Reset Flow addendum.
 - **`leads.next_action_at` had no edit UI (P0).** ✅ Fixed 2026-07-25, live-verified (an overdue lead correctly moved out of SLA Critical after editing). Full history: `docs/ADDENDA_LOG.md` § P0 Fixes & Password Visibility addendum.
@@ -2577,3 +2614,116 @@ deliberately **not** edited after being applied. Re-run confirms
 once under `unused_index` — expected and not actionable: the index is minutes old
 against an empty table, so it has never been scanned. Same disposition as the
 other `unused_index` entries already triaged in `docs/KNOWN_GAPS.md`.
+
+---
+
+## 2026-08-17 — `OptionRow`: a leading marker bar, not a tint alone
+
+Closes the Known Gap logged on 2026-08-16 during the shell close-out's
+focus-ring walk. `src/components/ui/OptionRow.tsx` signalled its selected row
+with `selected && "bg-canvas-soft"` and nothing else — a `canvas-soft` tint on
+`canvas-pure`, the same near-invisible pair the close-out had just fixed on
+`DropdownMenuItem`, and a straight violation of the design system's "colour is
+never the only signal" rule.
+
+**Why an outline was the wrong fix.** The row is a `div role="option"` that is
+deliberately not focusable: `CommandBar` is a real combobox, so the input keeps
+DOM focus throughout and names the highlighted row with `aria-activedescendant`.
+The global `:focus-visible` rule can therefore never match this element — no
+amount of outline CSS reaches it, and adding `tabIndex` to make it reachable
+would put eight extra tab stops between the query field and everything after it,
+undoing the reason the row is a `div` in the first place.
+
+**The fix.** The selected row now paints a solid `--accent` marker bar down its
+leading edge, copied verbatim from `NavItem`'s `MARKERS.row` — same token, same
+geometry (`before:top-1/2 before:left-0 before:h-4 before:w-0.5
+before:-translate-y-1/2 before:rounded-full before:bg-accent`), same idiom. That
+is the point: a second, differently-shaped "this is the one" marker would be a
+second definition that could drift. `relative` is unconditional rather than part
+of the `selected` branch, so the positioning context the pseudo-element anchors
+to cannot be lost by a later restructure. `bg-canvas-soft` stays as reinforcement
+— the gap said the tint could not be the signal *alone*, not that it had to go.
+
+Padding needed no change: the row already used `px-3 py-2`, the same `px-3`
+NavItem's row layout uses with the identical bar, so a `w-0.5` bar at `left-0`
+clears the text the same way it does in the sidebar.
+
+Consumers checked, none changed: `CommandResultItem` and the `/design`
+`ShellPartsSection` sample both render `OptionRow` with no `className` at all, so
+nothing can fight `relative` or the pseudo-element. `CommandBar` only mentions
+`OptionRow` in a comment.
+
+Tests: `src/components/ui/OptionRow.test.tsx` (new, 5 tests) — modelled on
+`NavItem.test.tsx`'s marker assertion. It covers the option role and its
+non-focusability, `aria-selected` in both states, the marker classes present only
+when selected, `relative` present in **both** states, and the tint surviving
+alongside the bar. `beforeAll` stubs `Element.prototype.scrollIntoView`, which
+jsdom does not implement and which the selected row's effect calls.
+
+## 2026-08-17 — sidebar collapse: a transform-based overlaid rail
+
+Closes the Known Gaps item logged at the shell close-out on 2026-08-16, which
+reported the jank and deliberately stopped there because the fix was a design
+decision rather than a tweak.
+
+**The problem.** `Sidebar` animated `transition-[width]` on an `<aside>` that was
+a `shrink-0` flex sibling of the content column. Width is a layout property, so
+every frame of the 200ms transition relaid out the entire content area — cheap
+on Today, expensive on the Pipeline board, which reflows its columns and cards.
+
+**The fix.** Two counter-translated layers reproduce a width animation entirely
+on the compositor:
+
+- an outer 240px frame, `overflow-hidden`, translating `0 → -184px`
+- an inner column carrying the real sidebar content, translating `0 → +184px`
+
+The inner layer's net screen position therefore never moves; only the outer
+frame's right edge sweeps from 240px to 56px. Both layers animate `translate`,
+so nothing outside the sidebar is measured, laid out or painted mid-transition.
+The `<aside>` is `position:absolute` against a new `relative` on the shell's root
+flex row, and a separate `aria-hidden` in-flow spacer — **not** transitioned —
+carries the content column's leading offset, flipping its width once in the same
+commit as the toggle instead of on every frame.
+
+Applied globally, never conditionally per route: a route-conditional transition
+would have made the shell behave differently depending on where the user was
+standing, which is a worse bug than the one being fixed.
+
+**Measured, like-for-like, in one session on `/pipeline`.** Method: `rAF` deltas
+sampled across a fixed 400ms window starting at the click, with the
+reduced-motion clamp overridden per-element (this machine reports
+`prefers-reduced-motion: reduce`). Collapse is the expensive direction and is the
+one reported. Idle baseline first, to prove the pane was compositing:
+
+| Run | Max frame delta | Frames > 20ms |
+|---|---|---|
+| Idle baseline (no click) | 16.8ms | 0 |
+| **Before** — old `width` transition, run 1 | **33.4ms** | 2 |
+| **Before** — old `width` transition, run 2 | **33.2ms** | 1 |
+| **After** — new `translate` rail, run 1 | **17.1ms** | 0 |
+| **After** — new `translate` rail, run 2 | **16.9ms** | 0 |
+
+The "before" numbers were produced by temporarily restoring the old
+`Sidebar.tsx`/`AppShell.tsx` from git in the same browser session, not quoted
+from the 2026-08-16 report — the older figures (sustained 33ms falling to 50ms)
+were taken under a different machine load and are not comparable frame-for-frame.
+The direction and the cause reproduce exactly; only the severity varies with load.
+
+**Two traps worth recording.** The transition is on the `translate` property, not
+`transform` — Tailwind's `-translate-x-*` compiles to `translate`, so listening
+for `transitionstart`/`transitionend` on `transform` yields nothing and a
+measurement built on those events silently returns zero frames. A fixed-window
+`rAF` sample avoids the whole question. Second, the reduced-motion clamp lives in
+`@layer base`; an injected unlayered `!important` override does **not** beat it,
+because for important declarations the cascade-layer order is reversed. Setting
+`transition-duration` inline via `style.setProperty(..., 'important')` is what
+actually works.
+
+**Verified beyond the numbers.** Expanded and collapsed both render correctly in
+dark mode (screenshots taken); keyboard focus still reaches the nav links and
+`document.activeElement` confirms it; the spacer is `hidden md:block` like the
+`<aside>`, so below `md` both collapse to zero width; at 375px the sidebar's
+`<nav>` is inside a `display:none` subtree and only the mobile tab bar's
+navigation landmark is live, preserving the one-landmark-on-mobile rule; and
+`document.documentElement.scrollWidth` never exceeds `innerWidth` in either
+state, so the overlaid rail introduces no horizontal overflow.
