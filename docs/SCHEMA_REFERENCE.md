@@ -572,4 +572,48 @@ REVOKE ALL ON FUNCTION public.import_leads_chunk(UUID, JSONB) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.import_leads_chunk(UUID, JSONB) TO authenticated;
 ```
 
-**Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` was added to this file, in scope for the work that just shipped; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.
+**`lead_submissions` addendum (2026-08-17, `supabase/migrations/20260817120000_lead_submissions.sql` + `20260817140000_lead_submissions_org_index.sql`, both applied by the human per the standing DDL rule):** the immutable log of every inbound enquiry, one row per enquiry, hanging off `leads` by `lead_id` with `ON DELETE CASCADE`. It exists because `ingestWebhookLead` used to overwrite a lead's identity columns in place on every resubmission; `leads` now stays exactly one row per `(organization_id, lower(email))` contact and everything a given enquiry actually said lives here. It is also the home of `message`, which `leads` has never had. **Append-only, enforced by omission:** only SELECT and INSERT are granted, and only SELECT and INSERT policies exist — RLS denies by default, so the absence of an UPDATE/DELETE policy *is* the enforcement, same stance as `activity_logs`. RLS shape mirrors `leads`/`tasks`: plain `organization_id IN (SELECT private.current_org_ids())`, with the INSERT policy carrying `WITH CHECK` only (there is no `USING` half to pair on, because there is no UPDATE policy). No role-based `EXISTS` check — a submission is strictly less privileged than the lead it hangs off, and `leads` INSERT keeps full MEMBER parity by design.
+
+```sql
+CREATE TABLE public.lead_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    -- Denormalized snapshots of what THIS enquiry said: deliberately not FKs
+    -- and not generated, so they never change when the leads row changes.
+    client_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT DEFAULT NULL,
+    company TEXT DEFAULT NULL,
+    message TEXT DEFAULT NULL,
+    service_category TEXT DEFAULT NULL,
+    lead_source TEXT DEFAULT NULL,
+    -- NULL is honest: only the webhook path has a raw body. createLead, CSV
+    -- import and the demo seed synthesize a submission from their own inputs.
+    raw_payload JSONB DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.lead_submissions ENABLE ROW LEVEL SECURITY;
+
+-- No UPDATE/DELETE grant at all — immutable by design.
+GRANT SELECT, INSERT ON public.lead_submissions TO authenticated;
+
+CREATE POLICY "Members read tenant submissions" ON public.lead_submissions
+    FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
+
+CREATE POLICY "Members create tenant submissions" ON public.lead_submissions
+    FOR INSERT WITH CHECK (organization_id IN (SELECT private.current_org_ids()));
+
+-- Matches the read the profile sheet issues: one lead's submissions, newest first.
+CREATE INDEX idx_submissions_chronological ON public.lead_submissions(lead_id, created_at DESC);
+
+-- Second migration: covers the organization_id FK the SELECT policy evaluates
+-- on every read. Caught by get_advisors(performance) right after the first
+-- migration was applied; every other tenant table already had this shape.
+CREATE INDEX idx_submissions_tenant ON public.lead_submissions(organization_id, created_at DESC);
+```
+
+Every lead-origin path (webhook, `createLead`, CSV import, demo seed) writes a submission row through `src/lib/submissions/record.ts`. Full build narrative, including the live webhook verification and the identity-overwrite bug that prompted it: `docs/ADDENDA_LOG.md` § 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
+
+**Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` and `lead_submissions` were added to this file, each in scope for the work that shipped alongside it; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.

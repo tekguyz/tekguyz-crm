@@ -59,8 +59,14 @@ function braceBlock(css, headerRe) {
 
 function declarations(block) {
   const out = new Map();
-  for (const m of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-    out.set(m[1], m[2].replace(/\/\*[\s\S]*?\*\//g, "").trim());
+  /* Strip comments BEFORE matching, not after. A prose comment that names a
+     token ("--cold-fg is the same pairing as --danger-fg: one value cannot
+     be both...") otherwise matches as a declaration and, being later in the
+     file, overwrites the real one — reported on 2026-08-17 as a --danger-fg
+     mismatch whose "value" was a paragraph of English. */
+  const clean = block.replace(/\/\*[\s\S]*?\*\//g, " ");
+  for (const m of clean.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+    out.set(m[1], m[2].trim());
   }
   return out;
 }
