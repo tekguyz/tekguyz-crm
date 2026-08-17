@@ -790,6 +790,7 @@ Closes the two gaps the primitive audit opened the same day. Prompts 2a/2b/2c fe
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **10 pre-existing shield-archived leads are still hidden.** ✅ Closed 2026-08-16 as **moot, not fixed** — the backfill was finally attempted and the rows no longer exist: the real `TEKGUYZ` org (`95c1bc71-2645-4e35-a9f6-078993f1c586`, resolved live via Supabase MCP) holds 1 lead and 0 archived, and the whole project has zero archived leads across both orgs; `510c28db`, `7311d3e2` and `4c049981` all return no row. The "10" was a 2026-08-11 point-in-time figure, since removed by the test-data cleanup discipline. No `UPDATE` was run. Full history: `docs/ADDENDA_LOG.md` § Spam Shield routing fix, § 2026-08-16 — Wave decisions.
 - **The global `:focus-visible` outline never paints in `--accent`.** ✅ Closed 2026-08-16 by the shell close-out — **mostly withdrawn as mis-measured, and the one real part fixed.** The app-wide claim does not reproduce: measured with a real Tab and one element per read, every focusable shell control already resolves to `outline: 2px solid var(--accent); outline-offset: 2px`, confirmed visually in both themes and on the 56px rail. The original currentColor readings came from two artifacts — `transition-colors` transitions `outline-color`, so a same-task read returns the start value, and `getComputedStyle` lags one element behind in a focus loop. What *was* real: `DropdownMenuItem` carried shadcn's `outline-none`, deleting the rule for all five identity-menu rows; that class is now removed from the primitive. Full history: `docs/ADDENDA_LOG.md` § Shell redesign close-out.
 - **Mobile AppShell/Sidebar has no responsive collapse.** ✅ Fixed 2026-08-16 by the shell redesign — below `md` the sidebar is not displayed in either collapse state and navigation is a bottom tab bar (Today / Pipeline / Contacts / More) with a "More" sheet for secondary items; a manual, cookie-persisted desktop collapse to a 56px icon rail was added in the same pass. Deferred since 2026-07-25 on the stated trigger "before Focus List becomes the primary mobile view"; that trigger fired. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
 - **`CommandResultItem.tsx` is a raw `<button>` outside a primitive.** ✅ Fixed 2026-08-16 by the shell redesign — it became a thin mapper over a new `ui/OptionRow.tsx` (`div role="option"`), and `CommandBar` became a real combobox/listbox with `aria-activedescendant`. Button was correctly *not* the answer: the rows must not be focusable at all. Full history: `docs/ADDENDA_LOG.md` § Application shell redesign.
@@ -2368,3 +2369,72 @@ Two sessions produced this seam: the restructure and the DESIGN.md drift check
 landed the same day in isolation, and neither saw the other. Nothing under
 `src/` was modified — the middleware and `copy.ts` were read only, to confirm the
 restored rules name paths that are real today.
+
+---
+
+## 2026-08-16 — Wave decisions
+
+Four decisions taken in planning chat and recorded here so they survive a
+`/clear`. **None of them is built by this entry** — each is its own later
+prompt. This entry is the decision record only.
+
+**1. Webhook overwrite fix direction — a `lead_submissions` table, not an
+in-place mutation of `leads`.** The open gap (§ Spam Shield routing fix, "Also
+reported, not fixed" item 2) is that `ingestWebhookLead` looks a lead up by
+`organization_id + email` and overwrites `client_name`/`company`/`website`/
+`physical_address`/`service_category`/`lead_source` with each new enquiry, so
+`510c28db` was progressively rewritten from "Alex Rivera / Rivera Stone Co" into
+"Diagnostic Probe / TEKGUYZ Diagnostics". The decided fix is a new immutable
+`lead_submissions` table, one row per inbound enquiry, carrying the per-enquiry
+fields — `message`, `service_category`, `lead_source`, and the raw payload.
+`leads` stays exactly one row per `(organization_id, lower(email))` contact.
+Rationale, in the order it decided the shape:
+- It preserves `unique_tenant_client_email_ci` rather than working around it.
+- It avoids duplicate `leads` rows, which "append a new lead per enquiry" would
+  have created and which every pipeline/contacts query would then have to
+  de-duplicate.
+- It gives the missing `message` field a home without adding a column to `leads`
+  (the separate open gap: "`leads` has no `message` column"), and without the
+  `EditLeadModal` field-parity plumbing that a `leads.message` column drags in
+  (see § Server Action field-parity audit).
+- It gives the Spam Shield an auditable, per-enquiry input instead of a lead row
+  that has already been overwritten by the time anyone reviews the verdict.
+The Resurrection Engine is unaffected — reactivating an archived contact stays a
+`leads` write; only the enquiry content moves.
+
+**2. `getCurrentOrg()` multi-membership resolution must be made deterministic.**
+`organization_members` can legitimately hold more than one row for one user, and
+the current resolution has never been verified against that case — it carries an
+implicit single-row assumption. Decision: make it deterministic by ordering on
+`organization_members.created_at ASC` (earliest membership wins) **and** handle
+`count > 1` loudly rather than silently taking whichever row Postgres returned
+first. Silent selection here is the same failure shape as the `archived`
+overload: correct-looking output, no error, wrong tenant. Its own prompt.
+
+**3. The org switcher stays deferred.** This Wave fixes resolution determinism
+only, not the switcher UI and not a persisted "active org" concept. The existing
+Known Gaps bullet ("No org switcher — the slot is reserved, the switcher is not
+built") is unchanged and still names the migration that a real switcher needs.
+
+**4. Sidebar collapse jank — fix direction is a transform-based overlaid rail,
+applied globally.** The measured 30fps→20fps collapse on `/pipeline`
+(§ Shell redesign close-out) comes from animating `width` on a `shrink-0` flex
+sibling, which relays out the whole content area every frame. Decision: replace
+the width-animated push layout with an overlaid rail animated by `transform`,
+and apply it on every route rather than conditionally disabling the transition
+on the board route — one layout behaviour is easier to reason about than a
+route-conditional one, and a route-conditional exception would silently rot the
+first time a second heavy route appears. Its own prompt.
+
+**Backfill of the 10 shield-archived leads: attempted, and the rows no longer
+exist.** This entry's session also went to run the long-deferred unarchive
+(Known Gaps: "10 pre-existing shield-archived leads are still hidden"). Resolved
+the real org via Supabase MCP — `TEKGUYZ` = `95c1bc71-2645-4e35-a9f6-078993f1c586`
+— and found **1 lead in that org, 0 archived**, and **zero archived leads in the
+whole project across both orgs**. `510c28db`, `7311d3e2` and `4c049981` all
+return no row. The 10 were derived from a 2026-08-11 point-in-time audit and
+have since been removed, almost certainly by the test-data cleanup discipline
+that the same period introduced. Per the standing "if the live count is not
+exactly 10, stop" instruction, **no `UPDATE` was run and no script was written**.
+The gap is closed as moot, not as fixed — relocated to § Known Gaps — Resolved
+Items Archive.
