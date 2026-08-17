@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md and docs/KNOWN_GAPS.md against the real repo state, repair whichever is stale, then print a paste-ready handoff block for the user's Claude.ai planning Project. Use when the user asks for a handoff, a status sync, "where are we", or says they are about to plan/spec/write a prompt in Claude.ai.
+description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md and docs/DESIGN.md's token tables against the real repo state, repair whichever is stale, then print a paste-ready handoff block for the user's Claude.ai planning Project. Use when the user asks for a handoff, a status sync, "where are we", or says they are about to plan/spec/write a prompt in Claude.ai.
 ---
 
 # Handoff to the Claude.ai planning Project
@@ -25,6 +25,10 @@ two emergency compressions specifically from letting status content accumulate
 in one place instead of staying split by responsibility — see CLAUDE.md's own
 compression history in `docs/ADDENDA_LOG.md`. Synthesizing a handoff from three
 sources is the cost of avoiding that regression; it is not a shortcut to fix.
+
+`docs/DESIGN.md` is not a status file and is not part of that split — but it
+does hold a *copy* of values that live for real in `src/app/globals.css`, so it
+can go stale in a way no status audit would catch. Check 9 in job 1 covers it.
 
 Two jobs, in this order. **Never skip job 1.** A handoff generated from a stale
 doc looks just as authoritative as an accurate one, and the planning Project
@@ -111,6 +115,40 @@ Check, in this order:
    MCP tool-access rule, only read-only tools (`list_tables`, `get_advisors`,
    `execute_sql` SELECT-only) may be used to verify this — never `apply_migration`.
 
+9. **`docs/DESIGN.md` token drift against `src/app/globals.css` — every run,
+   no exceptions.** CLAUDE.md names `globals.css` as the single source of truth
+   for every token value and warns that "a doc copy can only drift."
+   `docs/DESIGN.md` carries exactly such a copy, in three tables, and until this
+   check existed nothing ever compared the two — DESIGN.md was named in the
+   attach-list below but never opened. Run:
+
+   ```bash
+   node .claude/skills/handoff/check-design-drift.mjs
+   ```
+
+   It parses DESIGN.md's three value tables — § Color Tokens (OKLCH) plus
+   § Additions beyond the original v2 draft, § Typography, § Border Radius Scale
+   — and compares each stated value against the matching custom property in
+   `globals.css` (`:root, .light` and `.dark` for colours, `@theme inline` for
+   type and radius). It compares numerically, so `oklch(1.00 0.000 0)` and
+   `oklch(1 0 0)` are equal and trailing zeros are never a finding. Exit `0` is
+   clean, `1` is drift with one line per mismatch, `2` means the check could not
+   read a table and **is not a pass** — fix the script before continuing.
+
+   **Handling a finding.** This check is drift *detection*, not repair-by-guess.
+   Neither file is automatically right: `globals.css` is the source of truth for
+   what the app actually paints, but a mismatch can equally mean someone edited
+   CSS without updating the spec, or that DESIGN.md records a decision the CSS
+   never received. Read both, decide which matches the intended decision, fix
+   that one, and **list every mismatch under `### Open now` in the handoff block
+   below even if you repaired it in this session** — with what drifted and which
+   way it was resolved. Never let the check pass silently into the block.
+
+   Keep it to stated values. Do **not** widen this into contrast checking,
+   accessibility auditing, or reviewing components against the spec — that is a
+   design QA pass, it is not cheap, and it does not belong in a handoff. No
+   browser, no dev server, no database.
+
 Then repair whichever doc is stale, using **that doc's own established
 maintenance convention** — do not invent a new format:
 
@@ -124,8 +162,15 @@ maintenance convention** — do not invent a new format:
   deferred (⬜, one to two sentences, dated, pointing at the fuller story in
   ADDENDA_LOG.md); relocate anything now fully resolved to ADDENDA_LOG.md's
   archive section per its own rule.
+- **`docs/DESIGN.md`**: only when check 9 says its stated value is the wrong
+  one. Edit the table cell in place to the value `globals.css` actually carries
+  — a token table is a mirror of the CSS, not a dated historical record, so it
+  gets corrected rather than annotated with a "superseded" clause. If instead
+  the CSS is what drifted, DESIGN.md is untouched and the fix lands in
+  `src/app/globals.css`, which makes it a **code** change, not a doc-audit
+  change: keep it out of the doc-audit commit below.
 
-If all three were already accurate, say so plainly and change nothing.
+If all were already accurate, say so plainly and change nothing.
 
 **If any doc changed, commit it — the doc files touched, nothing else in the
 tree.** Message: what was corrected and why (e.g. "KNOWN_GAPS.md: relocate the
@@ -165,6 +210,7 @@ Structure:
 
 ### Open now
 - <what is genuinely open, pulled from CLAUDE.md § 3 and docs/KNOWN_GAPS.md — measured only, not copied verbatim if a claim there is now stale>
+- <every check-9 token-drift mismatch, if any: which token, which file was wrong, how it was resolved — one line each. Omit the line entirely when the check exits 0.>
 
 ### Needs the user, not more code
 - <anything awaiting visual sign-off, a copy/product decision, a real device, or explicitly flagged in KNOWN_GAPS.md as "the owner's call">
