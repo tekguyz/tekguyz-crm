@@ -2410,6 +2410,8 @@ back; the rest of the shell spec stays in DESIGN.md and was not touched.
 four" docs. Reading `.claude/skills/handoff/SKILL.md` shows nine checks across
 four docs *plus* a scripted `check-design-drift.mjs` comparing `docs/DESIGN.md`'s
 three value tables against `globals.css` on every run. The line now describes
+**(State as of 2026-08-16 only — there are now ten checks and two scripts;
+`check-doc-figures.mjs` was added 2026-08-18, see § 2026-08-18 — handoff check 10.)**
 what it audits instead of counting.
 
 Two sessions produced this seam: the restructure and the DESIGN.md drift check
@@ -2911,3 +2913,53 @@ Verified: `tsc --noEmit`, `eslint`, `next build`, `vitest` 100/100 (was 92/92).
 **Not** exercised against real data: no user in the live database holds more than
 one membership, so the `count > 1` branch is code-inspected only. That residue is
 why the `getCurrentOrg()` bullet stays half-open rather than closing outright.
+
+## 2026-08-18 — handoff check 10: assertion drift
+
+Commit `6a78c68`. Adds `.claude/skills/handoff/check-doc-figures.mjs` and
+check 10 to the skill, and lists `vault_get_org_credential` in
+`docs/SCHEMA_REFERENCE.md`'s `SECURITY DEFINER` inventory.
+
+**The hole it closes.** Checks 1–8 are all **change-driven** — each starts from
+a commit, from what the session touched, or from an entry about to be cited.
+None started from *a figure a doc asserts*. So a number measured correctly once
+could rot with no commit, no session touch, and no doc-vs-doc contradiction to
+trip any earlier check.
+
+Demonstrated, not theorised: `docs/KNOWN_GAPS.md` carried "92 tests, 15 suites"
+from the moment `94de14b` made it 100/17 on the same date, and it survived two
+further sessions **including a full handoff audit that ran `vitest`, saw
+`100/17` on screen, and never compared the two numbers.** It was caught by an
+outside reader of the pasted handoff block. Fixed separately in `8bb5f28`.
+
+**Why a script and not a rule.** Check 9 already settled this: a prose
+instruction is skippable under context pressure, a script that exits non-zero
+is not. Check 10 is the same shape for countable claims — the
+`**N tests, M suites**` mark against a real `vitest --reporter=json` run; every
+`SECURITY DEFINER` function in `supabase/migrations/` against the inventory
+table that calls itself *running*; and the newest migration being named in
+`docs/SCHEMA_REFERENCE.md` at all. Repo-only, no network, exit `0/1/2` with `2`
+explicitly not a pass.
+
+**It found a real gap on its first run.** `vault_get_org_credential` has been
+live since Prompt 13a and is named in CLAUDE.md § Multi-Tenant Security Model,
+but was never in that inventory table — weeks of drift no other check could
+see. Its row records the honest disposition: no in-body authorization check **by
+design**, because `EXECUTE` is held by `service_role` alone, so no other caller
+can reach it to need one.
+
+**Two bugs found while testing it, both fixed before commit.** `execFileSync`
+throws `EINVAL` on `npx` under Windows without `shell: true` — it is a `.cmd`
+shim. And matching an inventory row immediately after the leading pipe
+false-positived on `private.current_org_ids`, which *is* listed, schema-qualified
+rather than bare. A first run that reports a finding is not evidence the finding
+is real; both were script bugs, not doc drift.
+
+**What check 10 still cannot see, discovered by this very audit.** It compares
+*countable* claims. It does not read prose. Adding it made two prose
+descriptions stale within the hour — CLAUDE.md's Reference Index and the
+2026-08-16 restructure-follow-up entry both described the skill as nine checks
+plus *one* script. Check 10 exited `0` while both were wrong. Repaired here; the
+lesson is recorded in the check itself: **if you measure any figure during an
+audit, grep the docs for it before reporting it.** The script covers the three
+countable claims that exist today, and is a floor, not a ceiling.
