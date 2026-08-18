@@ -823,6 +823,7 @@ Closes the 2026-08-16 gap "Nothing tests that a focus ring actually paints." The
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **Nothing reconciles an invite whose membership was granted outside `accept_organization_invite`.** ✅ Fixed 2026-08-17 by `supabase/migrations/20260817150000_close_invite_on_member_insert.sql` — an `AFTER INSERT` trigger on `organization_members` now closes any `PENDING` invite matching on `(organization_id, lower(email))`, whatever wrote the membership row, so a hand-run Studio `INSERT` or a service-role script can no longer strand an invite on `unique_pending_invite_per_org_email`. Deliberately still no expiry sweep — invites nobody ever accepts are a different problem and the UI already surfaces them as expired. Live-verified by reproducing the 2026-07-25 out-of-band insert with a disposable service-role script. Full history: `docs/ADDENDA_LOG.md` § Accepted invites stuck at PENDING — Settings → Team, § 2026-08-17 — Closing a stranded PENDING invite on membership insert.
 - **The sidebar collapse animates `width` on a flex sibling, and it janks on the Pipeline board.** ✅ Fixed 2026-08-17 — the rail is now absolutely positioned and animates `translate`, with a non-transitioned in-flow spacer holding the content column's leading offset, so no layout runs during the transition. Re-measured like-for-like on `/pipeline` in one session: old implementation dropped frames on every collapse (max 33.4ms and 33.2ms across two runs), new implementation held 60fps with zero frames over 20ms (max 17.1ms and 16.9ms). Applied globally, never per route. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — sidebar collapse: a transform-based overlaid rail.
 - **Nothing tests that a focus ring actually paints.** ✅ Closed 2026-08-17 — `src/components/ui/dropdown-menu.test.tsx` (5 tests) asserts that no interactive dropdown row carries `outline-none`, `outline-0`, `focus:outline-none` or `focus-visible:outline-none`, covering `DropdownMenuItem` (both variants), `DropdownMenuRadioItem`, a caller-supplied `className`, and a role-based sweep that catches row types added later. Proven to fail before being trusted: re-adding `outline-none` to `DropdownMenuItem` fails 4 of the 5. A real *paint* assertion remains out of reach — no browser-based runner is installed — and that limitation is written into the test file itself rather than papered over. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — a regression test for the focus-ring floor.
 - **`OptionRow` signals its selected row with background colour only.** ✅ Fixed 2026-08-17 — the selected row now also paints a leading `--accent` marker bar using `NavItem`'s exact `MARKERS.row` geometry, with `relative` unconditional so the pseudo-element always has its positioning context; `bg-canvas-soft` stays as reinforcement. An outline was ruled out rather than overlooked — the row is deliberately non-focusable, so the global `:focus-visible` rule can never reach it. Covered by a new `src/components/ui/OptionRow.test.tsx` (5 tests). Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — `OptionRow`: a leading marker bar, not a tint alone.
@@ -2727,3 +2728,101 @@ dark mode (screenshots taken); keyboard focus still reaches the nav links and
 navigation landmark is live, preserving the one-landmark-on-mobile rule; and
 `document.documentElement.scrollWidth` never exceeds `innerWidth` in either
 state, so the overlaid rail introduces no horizontal overflow.
+
+## 2026-08-17 — Closing a stranded PENDING invite on membership insert
+
+Closes the last open half of § Accepted invites stuck at PENDING — Settings →
+Team (2026-08-16). That session repaired the two known stranded rows and made
+expired invites visible in the UI, but explicitly fenced out every migration,
+RLS policy and RPC — so nothing in the schema prevented or detected a
+recurrence. This is the schema half.
+
+**The failure being fixed.** `public.accept_organization_invite` is the only
+*sanctioned* writer of `public.organization_members`, but it is not the only
+*possible* one. On 2026-07-25 a hand-run `INSERT` created a membership without
+ever moving the invite off `PENDING`. That row then occupied the partial unique
+index `unique_pending_invite_per_org_email` and permanently blocked re-inviting
+that address — a dead row holding a lock on a real workflow, with nothing
+surfacing why.
+
+**One migration, nothing else.**
+`supabase/migrations/20260817150000_close_invite_on_member_insert.sql` adds
+`public.close_invite_on_member_insert() RETURNS trigger` (`SECURITY DEFINER`,
+`SET search_path = public`) and
+`trigger_close_invite_on_member_insert AFTER INSERT ON public.organization_members
+FOR EACH ROW`. No table, no policy, no index, no grant change; the RPC body and
+the unique index are byte-for-byte untouched. Full SQL and the three matching
+decisions (case-insensitive match against a case-sensitive index, `PENDING`-only,
+no expiry filter) are in `docs/SCHEMA_REFERENCE.md` § Invite-close trigger
+addendum — not repeated here.
+
+**Why a trigger and not a sweep.** A scheduled expiry job answers a different
+question — invites nobody ever accepts — and the UI already surfaces those. The
+failure here is specifically "the membership exists but the invite never
+closed," which is knowable the instant the membership row is written. A cron was
+deliberately out of scope, and still is.
+
+**Pre-migration reconciliation, per the standing rule.** SELECT-only queries
+against the live project before a line was written. Two findings changed the
+design. `organization_members` has no email column, so the address has to come
+from `auth.users` — and `auth.users.email` is nullable for phone-only
+identities, hence the explicit null guard. And
+`unique_pending_invite_per_org_email` turned out to be case-**sensitive**
+(`(organization_id, email)`), not `lower(email)` as `leads`'
+`unique_tenant_client_email_ci` is; matching case-insensitively in the trigger is
+therefore strictly broader than the index, which is what clears a case-mismatched
+stranded row. No drift otherwise: the live `accept_organization_invite` body
+matched `20260707021926_organization_invites.sql` exactly.
+
+**Dry-run before hand-off.** A `pg_temp` replica — three temp tables, a temp
+copy of the function, a temp trigger, and a temp copy of the partial unique
+index — exercised all six behaviours in one session-local statement. It confirmed
+the one real assumption in the file: `REVOKE EXECUTE … FROM PUBLIC` does **not**
+stop the trigger from firing, because Postgres checks `EXECUTE` on a trigger
+function at `CREATE TRIGGER` time, not at fire time
+(`has_function_privilege(...) = false` while the trigger still fired). That
+revoke is what keeps the two `*_security_definer_function_executable` advisors
+from gaining an entry.
+
+**Live verification, with a real pre-migration baseline.** A disposable
+service-role script (scratchpad, deleted after the run per § Test-Data Cleanup)
+built throwaway orgs and auth users — never TEKGUYZ or TEKGUYZ Demo — and
+asserted 15 checks:
+
+- an out-of-band service-role `INSERT` into `organization_members`, never
+  through the RPC, against a `PENDING` invite whose stored address differs in
+  case — the 2026-07-25 scenario reproduced exactly — closes that invite;
+- a same-email `PENDING` invite in a *different* org survives untouched;
+- `accept_organization_invite`'s own path still returns the org id, creates
+  exactly one membership row and leaves exactly one `ACCEPTED` invite — no
+  duplicate, no constraint error, despite the trigger and the RPC's own `UPDATE`
+  both firing;
+- a membership insert over a `REVOKED` invite, and one with no invite at all,
+  both succeed and change nothing;
+- teardown leaves zero fixture rows, re-queried rather than assumed.
+
+**The baseline is the part that makes this meaningful.** The identical script run
+*before* the migration failed check 1b — the out-of-band insert left the invite
+`PENDING` — and check 3d as its knock-on. Everything else passed both times. A
+suite that only ever passes proves nothing about whether the database is
+enforcing anything; this one was watched to fail first.
+
+**Gates.** `npx eslint` clean, `npx tsc --noEmit` clean, `npx vitest run` 100/100,
+`npx next build` pass, `npm run test:rls` 15/15 (a genuine regression check here,
+not a formality — that suite creates orgs through
+`create_organization_with_owner`, which now fires the new trigger).
+`get_advisors` security: 12 findings before, the identical 12 after —
+`close_invite_on_member_insert` does not appear, which is the revoke working.
+Performance: 13 → 12, an unrelated `unused_index` on `idx_submissions_tenant`
+clearing because the index finally got used. No new finding of either kind.
+Post-apply `pg_trigger`/`pg_proc` re-query confirmed the trigger enabled
+(`tgenabled = 'O'`), `prosecdef = true`, `proconfig = {search_path=public}`.
+
+**Files changed (4).** The migration above;
+`docs/SCHEMA_REFERENCE.md` (new addendum, plus a tenth row on the
+`SECURITY DEFINER` self-check inventory — this one is `n/a` rather than ✅ or ❌,
+since a trigger function takes no argument to forge and is not reachable via
+`/rest/v1/rpc/`); `docs/KNOWN_GAPS.md` (bullet removed); this file (Resolved
+Items Archive line plus this section). No `src/` change of any kind —
+`src/lib/invites/actions.ts` and `src/lib/invites/queries.ts` were deliberately
+not touched. No test residue.

@@ -516,7 +516,7 @@ Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enfo
 
 **CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
 
-**This is the ninth `SECURITY DEFINER` function, and it self-checks.** Running inventory of which of the nine re-assert authorization inside the body rather than trusting their arguments:
+**This is the ninth `SECURITY DEFINER` function, and it self-checks.** Running inventory of which of them re-assert authorization inside the body rather than trusting their arguments (a tenth was added on 2026-08-17 — see the last row and the invite-close addendum at the end of this file):
 
 | Function | Self-check inside the body |
 | --- | --- |
@@ -529,6 +529,7 @@ Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enfo
 | `vault_set_org_credential` | ✅ internal OWNER/ADMIN role check |
 | `vault_clear_org_credential` | ✅ internal OWNER/ADMIN role check |
 | `import_leads_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id` |
+| `close_invite_on_member_insert` (2026-08-17) | n/a — a **trigger** function, not a callable RPC. It takes no arguments to forge, reads only `NEW`, and `EXECUTE` is revoked from `PUBLIC`, so it is unreachable via `/rest/v1/rpc/`. Its tenant scoping is `NEW.organization_id`, which the row being inserted already fixes. |
 
 `import_leads_chunk`'s check is **membership, not role** — `leads` INSERT keeps full MEMBER parity by design, so any member of the org may import. `search_path` is pinned to `''` (verified live: `proconfig = {search_path=""}`), `EXECUTE` is revoked from `PUBLIC`/`anon` and granted to `authenticated` only (verified live: `proacl` is `postgres=X | service_role=X | authenticated=X`, with no `anon` entry and no `=X/` PUBLIC grant). Because `SECURITY DEFINER` bypasses RLS, that internal membership check — not the `"Members create tenant leads"` policy — is the tenant boundary on this one path. Proven live: a signed-in member of a different org calling it with TEKGUYZ Demo's `organization_id` gets `IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.` and writes zero rows.
 
@@ -615,5 +616,49 @@ CREATE INDEX idx_submissions_tenant ON public.lead_submissions(organization_id, 
 ```
 
 Every lead-origin path (webhook, `createLead`, CSV import, demo seed) writes a submission row through `src/lib/submissions/record.ts`. Full build narrative, including the live webhook verification and the identity-overwrite bug that prompted it: `docs/ADDENDA_LOG.md` § 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
+
+**Invite-close trigger addendum (2026-08-17, `supabase/migrations/20260817150000_close_invite_on_member_insert.sql`, applied by the human per the standing DDL rule — not via MCP; re-verified live the same day via `pg_trigger`/`pg_proc`: trigger present and enabled (`tgenabled = 'O'`), function `SECURITY DEFINER` with `proconfig = {search_path=public}`, and `has_function_privilege('public', …, 'EXECUTE') = false`):** an `AFTER INSERT` trigger on `public.organization_members` that closes any `PENDING` `organization_invites` row matching on `(organization_id, lower(email))`. Adds nothing else — no table, no policy, no index, no grant change. `public.accept_organization_invite` is byte-for-byte unchanged, and so is `unique_pending_invite_per_org_email`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.close_invite_on_member_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_email text;
+BEGIN
+    -- organization_members has no email column; auth.users is the only source.
+    SELECT u.email INTO v_email FROM auth.users u WHERE u.id = new.user_id;
+    IF v_email IS NULL THEN
+        RETURN NULL;                        -- phone-only identity: nothing to match
+    END IF;
+
+    UPDATE public.organization_invites i
+       SET status = 'ACCEPTED'
+     WHERE i.organization_id = new.organization_id
+       AND lower(i.email) = lower(v_email)
+       AND i.status = 'PENDING';
+
+    RETURN NULL;                            -- AFTER trigger: return value ignored
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.close_invite_on_member_insert() FROM PUBLIC;
+
+CREATE OR REPLACE TRIGGER trigger_close_invite_on_member_insert
+    AFTER INSERT ON public.organization_members
+    FOR EACH ROW
+    EXECUTE FUNCTION public.close_invite_on_member_insert();
+```
+
+**Why `SECURITY DEFINER` here, when `enforce_lead_role_restrictions` is deliberately `SECURITY INVOKER`.** The two triggers want opposite things. That one gates a caller who is already authenticated, so running as the invoker is the point. This one exists precisely for writers that are *not* going through the RPC — a Studio session, a service-role script, a future code path that forgets. `organization_invites`' UPDATE policy requires an OWNER/ADMIN membership row, so a `SECURITY INVOKER` version would silently no-op for exactly the callers it is meant to catch, which is the same invisible-failure class the trigger exists to prevent. `search_path` is pinned to `public`, matching `accept_organization_invite` / `create_organization_with_owner` / `get_org_webhook_secret`; every reference in the body is schema-qualified regardless.
+
+**Three deliberate matching decisions.** (1) `lower()` on both sides, even though `unique_pending_invite_per_org_email` is itself case-**sensitive** (`(organization_id, email) WHERE status = 'PENDING'`, confirmed live). Matching case-insensitively is strictly *broader* than that index, which is what is wanted — it also clears a case-mismatched stranded row, the one the index would otherwise keep blocking forever. Same reasoning as `unique_tenant_client_email_ci` on `leads`. (2) `status = 'PENDING'` only — an `ACCEPTED` or `REVOKED` row is never rewritten. (3) **No expiry filter**: an expired-but-still-`PENDING` row is precisely what occupies the partial unique index, so it must close too. Expired invites nobody accepts are a different problem, already surfaced in the UI, and deliberately not addressed by any cron or sweep.
+
+**The overlap with `accept_organization_invite` is intended, not redundant.** That RPC takes `FOR UPDATE` on the invite row *before* it inserts the membership, so this trigger's `UPDATE` runs in the same transaction against a lock the transaction already holds — no deadlock. The RPC's own subsequent `UPDATE … SET status = 'ACCEPTED'` then re-sets the value the trigger just wrote. Idempotent by construction; do not "fix" it by deleting either half.
+
+Live-verified the same day with a disposable service-role script (deleted afterwards per CLAUDE.md § Test-Data Cleanup), not by reading the schema: 15 checks, all passing, over throwaway orgs and auth users that never touched TEKGUYZ or TEKGUYZ Demo. It reproduces the 2026-07-25 scenario for real — an out-of-band service-role `INSERT` into `organization_members`, never through the RPC, against a `PENDING` invite whose stored address differs in case. The identical script run **before** the migration failed exactly that check, which is what makes the pass meaningful. `npm run test:rls` stayed 15/15. `get_advisors` security was 12 findings before and the same 12 after — `close_invite_on_member_insert` does not appear, because `EXECUTE` is revoked from `PUBLIC`; performance went 13 → 12 (an unrelated `unused_index` on `idx_submissions_tenant` cleared). Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-17 — Closing a stranded PENDING invite on membership insert.
 
 **Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` and `lead_submissions` were added to this file, each in scope for the work that shipped alongside it; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.
