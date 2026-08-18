@@ -16,7 +16,7 @@ is deliberately split three ways, per this repo's own documented discipline
 | What STATUS.md would hold elsewhere | Lives here in |
 |---|---|
 | Current initiative status, what shipped | `CLAUDE.md` § 3 "Post-Launch Feature Work" |
-| Dated build narrative, the "why" behind decisions | `docs/ADDENDA_LOG.md` |
+| Dated build narrative, the "why" behind decisions | `docs/addenda/*.md`, indexed by `docs/ADDENDA_LOG.md` |
 | Deliberately deferred / open work | `docs/KNOWN_GAPS.md` |
 | Live DB schema, RLS, RPCs | `docs/SCHEMA_REFERENCE.md` (rarely stale — it's edited alongside migrations, not after the fact) |
 
@@ -247,9 +247,16 @@ maintenance convention** — do not invent a new format:
 - **CLAUDE.md § 3**: update an initiative's one-line disposition, or add a new
   initiative entry, following the existing `**Name (N prompts).** ✅/⬜
   <status>.` pattern. Full narrative never goes here — see the next bullet.
-- **`docs/ADDENDA_LOG.md`**: append a new dated `## <Title> (YYYY-MM-DD)`
-  section for anything shipped that has no narrative yet. Match the file's
-  existing heading and prose style.
+- **`docs/addenda/<month>.md`**: append a new dated `## <Title> (YYYY-MM-DD)`
+  section for anything shipped that has no narrative yet, to the month file that
+  matches its date (`docs/addenda/2026-08.md` and so on). Match the existing
+  heading and prose style. **Then add its row to the index table in
+  `docs/ADDENDA_LOG.md`** — that index is what makes every
+  ``docs/ADDENDA_LOG.md § <Section Title>`` pointer in the repo resolve, and a
+  section missing from it is unreachable by every cross-reference. The log was
+  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file); reading it
+  whole is no longer the way to consult it — read the index, then the one file
+  you need.
 - **`docs/KNOWN_GAPS.md`**: add a bullet for anything newly and deliberately
   deferred (⬜, one to two sentences, dated, pointing at the fuller story in
   ADDENDA_LOG.md); relocate anything now fully resolved to ADDENDA_LOG.md's
@@ -309,8 +316,8 @@ Structure:
 - <anything awaiting visual sign-off, a copy/product decision, a real device, or explicitly flagged in KNOWN_GAPS.md as "the owner's call">
 
 ### Attach to this Project
-CLAUDE.md · docs/SCHEMA_REFERENCE.md · docs/ADDENDA_LOG.md ·
-docs/KNOWN_GAPS.md · docs/DESIGN.md
+CLAUDE.md · docs/KNOWN_GAPS.md · docs/DESIGN.md · docs/SCHEMA_REFERENCE.md
+(not docs/ADDENDA_LOG.md — history, not state; paste single sections on demand)
 ```
 
 Rules for the block:
