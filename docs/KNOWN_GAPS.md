@@ -29,6 +29,32 @@ in two places; both are now one-line pointers here. Keep it that way.
   complete pre-2026-07-26 text of this register — lives in
   `docs/ADDENDA_LOG.md` § "Known Gaps — Full Historical Record", plus whichever
   addendum each individual bullet names.
+- An item that was considered and **rejected outright** is not deferred work and
+  does not belong under Open items. It goes in the subsection directly below,
+  which overrides any older history that still reads as open.
+
+### Permanently rejected — never re-list
+
+A third disposition, distinct from both of the above. An **Open item** is work
+deferred on purpose. A **Resolved** item is work that got done and moved to
+`docs/ADDENDA_LOG.md` § "Known Gaps — Resolved Items Archive". An item here is
+neither: it was considered and **rejected**, permanently. It is not deferred,
+not partial, and not waiting on a trigger.
+
+Dated mentions in `docs/ADDENDA_LOG.md` are left exactly as they are — they are
+a correct record of what was true on their own date, and they are not the bug.
+This list is what overrides them going forward. **When history reads as open and
+this list says rejected, this list wins.**
+
+- **Leaked Password Protection** — rejected 2026-07-22, paid Supabase tier only,
+  this project stays on free tier indefinitely. Never list as open work or a
+  "needs user" action in any handoff, regardless of what `docs/ADDENDA_LOG.md`
+  history says. Its advisor lint (`auth_leaked_password_protection`, WARN) will
+  keep firing on every live `get_advisors` run — that is expected, and it is not
+  a finding. Its Open-items bullet was deleted on 2026-08-15; this entry replaces
+  it so the deletion cannot be undone by a later reader of the history. Full
+  history: `docs/ADDENDA_LOG.md` § Known Gaps — Full Historical Record
+  (2026-07-22 triage) and the 2026-08-15 hygiene pass.
 
 ## Open items
 
