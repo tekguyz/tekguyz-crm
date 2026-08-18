@@ -528,6 +528,7 @@ Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enfo
 | `get_org_webhook_secret` | ✅ re-checks the caller's OWNER/ADMIN role for the specific `p_org_id` |
 | `vault_set_org_credential` | ✅ internal OWNER/ADMIN role check |
 | `vault_clear_org_credential` | ✅ internal OWNER/ADMIN role check |
+| `vault_get_org_credential` | ❌ none in the body **by design** — it is gated at the GRANT level instead: `EXECUTE` is revoked from `PUBLIC`/`anon`/`authenticated` and held by `service_role` only, so the caller cannot reach it to need a check. Verified live: the `authenticated` role’s own attempt fails with “permission denied.” Added to this table 2026-08-18 — it had been live and documented in CLAUDE.md § Multi-Tenant Security Model since Prompt 13a but was never listed here. |
 | `import_leads_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id` |
 | `close_invite_on_member_insert` (2026-08-17) | n/a — a **trigger** function, not a callable RPC. It takes no arguments to forge, reads only `NEW`, and `EXECUTE` is revoked from `PUBLIC`, so it is unreachable via `/rest/v1/rpc/`. Its tenant scoping is `NEW.organization_id`, which the row being inserted already fixes. |
 

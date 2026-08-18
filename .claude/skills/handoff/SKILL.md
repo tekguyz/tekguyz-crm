@@ -149,6 +149,59 @@ Check, in this order:
    design QA pass, it is not cheap, and it does not belong in a handoff. No
    browser, no dev server, no database.
 
+10. **Assertion drift — figures the docs state, against the same figures
+    measured now. Every run, no exceptions.** Checks 1–8 are all
+    **change-driven**: each starts from a commit, from what this session
+    touched, or from a doc entry you are about to cite. That leaves a hole a
+    doc can rot in quietly — a figure measured correctly once, never revisited,
+    with no commit and no contradiction to trip any earlier check.
+
+    That hole is not hypothetical. `docs/KNOWN_GAPS.md` carried "92 tests, 15
+    suites" for two sessions after `94de14b` made it 100/17 — **through a full
+    handoff audit that ran `vitest`, saw `100/17` on screen, and never compared
+    the two numbers.** It was caught by an outside reader of the handoff block,
+    not by this skill. Check 9 already proves the remedy: a script, run every
+    time, that cannot be reasoned past under context pressure. Run:
+
+    ```bash
+    node .claude/skills/handoff/check-doc-figures.mjs
+    ```
+
+    It checks three things, all repo-only — no browser, no dev server, no
+    database, same fence as check 9:
+
+    - the **`**N tests, M suites**`** mark in `docs/KNOWN_GAPS.md` against a real
+      `vitest run --reporter=json` (per-file counts, not estimated — a grep for
+      `it(` undercounts and will invent a phantom discrepancy);
+    - every `SECURITY DEFINER` function defined in `supabase/migrations/`
+      against the inventory table in `docs/SCHEMA_REFERENCE.md`, which calls
+      itself a *running* inventory, so an omission is a real gap. This found
+      `vault_get_org_credential` — live since Prompt 13a, named in CLAUDE.md
+      § Multi-Tenant Security Model, and absent from that table for weeks;
+    - that the newest file in `supabase/migrations/` is named somewhere in
+      `docs/SCHEMA_REFERENCE.md`, since CLAUDE.md requires the two be edited
+      together.
+
+    Exit `0` clean, `1` drift with one line per finding, `2` means it could not
+    read or run something and **is not a pass** — fix the script before
+    continuing, exactly as with check 9.
+
+    **Handling a finding.** For a count, the measurement wins and the doc gets
+    corrected — a stated figure is a mirror, not a dated historical record, so
+    it is edited in place with no "superseded" clause. Refresh the *whole*
+    claim, not just the digits: carry the previous mark into the bullet's
+    history chain so the trail stays readable. **List every finding under
+    `### Open now` in the handoff block even when you repaired it this
+    session**, same rule as check 9.
+
+    **This check is not a substitute for thinking.** It covers the three
+    countable claims that exist today. If you measure any *other* figure during
+    an audit — an advisor count, a bullet count, a file count, a coverage
+    percentage — grep the docs for it before you report it. The failure this
+    check exists to close was not a missing script; it was having the number in
+    hand and not looking.
+
+
 Then repair whichever doc is stale, using **that doc's own established
 maintenance convention** — do not invent a new format:
 
@@ -211,6 +264,7 @@ Structure:
 ### Open now
 - <what is genuinely open, pulled from CLAUDE.md § 3 and docs/KNOWN_GAPS.md — measured only, not copied verbatim if a claim there is now stale>
 - <every check-9 token-drift mismatch, if any: which token, which file was wrong, how it was resolved — one line each. Omit the line entirely when the check exits 0.>
+- <every check-10 assertion-drift finding, if any: which figure, which doc stated it, what it actually measures now — one line each. Omit entirely when that check exits 0.>
 
 ### Needs the user, not more code
 - <anything awaiting visual sign-off, a copy/product decision, a real device, or explicitly flagged in KNOWN_GAPS.md as "the owner's call">
