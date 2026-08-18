@@ -823,6 +823,8 @@ Closes the 2026-08-16 gap "Nothing tests that a focus ring actually paints." The
 
 Living, append-only index — unlike the frozen historical record above, this section keeps growing. Each entry is a Known Gaps item that was fully resolved (✅, no remaining open scope) and relocated out of `CLAUDE.md`'s Known Gaps section on 2026-07-30 to keep that section to open items only. Same one-line format each item had in `CLAUDE.md` — no added narrative here; the full build/verification detail for each still lives in the addendum its own pointer names. Per `CLAUDE.md`'s Session & Verification Discipline, any future Known Gaps item that flips from ⬜ to ✅ gets appended here in the same session it closes, rather than left inline to accumulate.
 
+- **`src/app/opengraph-image.tsx` reads Inter from `node_modules` at request time.** ✅ Fixed 2026-08-17 by `6a9b204` — both `.woff` files vendored into `public/fonts/`, which is always deployed, and `@fontsource/inter` moved to `devDependencies` where the bundle README always said it belonged. `/opengraph-image` renders byte-identically (same SHA256), so nothing visual changed; what changed is that a pruned or relocated `node_modules` can no longer throw on the first production OG request. Re-verified against the live tree during the 2026-08-18 handoff audit. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — OG route: Inter vendored out of `node_modules`.
+- **The restricted lead controls are still rendered to a MEMBER.** ✅ Fixed 2026-08-17 by `94de14b` — `ArchiveControls` and `OutcomeFields` now hide entirely for a MEMBER via `canEditLeadLifecycle()` in the new `src/lib/organizations/roles.ts`, so the rule is no longer discoverable only by clicking Archive and reading an error toast. `trigger_enforce_lead_role_restrictions` is untouched and remains the actual boundary — this is presentation only. The hidden path deliberately re-sends the current `outcome`/`actual_revenue`/`closed_at` values rather than omitting the inputs, because `updateLead` writes all three on every save and omitting them would post `null` and trip the trigger. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — Deterministic org resolution, and hiding lifecycle controls from a MEMBER.
 - **Nothing reconciles an invite whose membership was granted outside `accept_organization_invite`.** ✅ Fixed 2026-08-17 by `supabase/migrations/20260817150000_close_invite_on_member_insert.sql` — an `AFTER INSERT` trigger on `organization_members` now closes any `PENDING` invite matching on `(organization_id, lower(email))`, whatever wrote the membership row, so a hand-run Studio `INSERT` or a service-role script can no longer strand an invite on `unique_pending_invite_per_org_email`. Deliberately still no expiry sweep — invites nobody ever accepts are a different problem and the UI already surfaces them as expired. Live-verified by reproducing the 2026-07-25 out-of-band insert with a disposable service-role script. Full history: `docs/ADDENDA_LOG.md` § Accepted invites stuck at PENDING — Settings → Team, § 2026-08-17 — Closing a stranded PENDING invite on membership insert.
 - **The sidebar collapse animates `width` on a flex sibling, and it janks on the Pipeline board.** ✅ Fixed 2026-08-17 — the rail is now absolutely positioned and animates `translate`, with a non-transitioned in-flow spacer holding the content column's leading offset, so no layout runs during the transition. Re-measured like-for-like on `/pipeline` in one session: old implementation dropped frames on every collapse (max 33.4ms and 33.2ms across two runs), new implementation held 60fps with zero frames over 20ms (max 17.1ms and 16.9ms). Applied globally, never per route. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — sidebar collapse: a transform-based overlaid rail.
 - **Nothing tests that a focus ring actually paints.** ✅ Closed 2026-08-17 — `src/components/ui/dropdown-menu.test.tsx` (5 tests) asserts that no interactive dropdown row carries `outline-none`, `outline-0`, `focus:outline-none` or `focus-visible:outline-none`, covering `DropdownMenuItem` (both variants), `DropdownMenuRadioItem`, a caller-supplied `className`, and a role-based sweep that catches row types added later. Proven to fail before being trusted: re-adding `outline-none` to `DropdownMenuItem` fails 4 of the 5. A real *paint* assertion remains out of reach — no browser-based runner is installed — and that limitation is written into the test file itself rather than papered over. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — a regression test for the focus-ring floor.
@@ -1237,6 +1239,9 @@ record of what arrived, and this is what changed.
   time, so a devDependency would build green and throw on the first OG request
   in production. Same silent-failure class as the rest of this initiative.
   Logged as an open gap; the durable fix is vendoring the two `.woff` files.
+  **(State as of 2026-08-15 only — superseded by § 2026-08-17 — OG route: Inter vendored out of `node_modules`.
+  The vendoring shipped; `@fontsource/inter` is now a devDependency, which is
+  what the bundle README said all along.)**
 
 - **OG tagline replaced.** The bundle's placeholder ("Sales pipeline, one org
   at a time.") is now "Every lead, one pipeline." — chosen to restate the
@@ -1408,6 +1413,8 @@ dropped to `20`, giving **41px** — now tighter than the icon gap, so the type
 block groups. Route re-fetched with no cookie: `200 image/png`, both renders
 1200x630. The Inter-from-`node_modules` font load was deliberately left alone;
 it is its own tracked gap and has nothing to do with spacing.
+**(State as of 2026-08-15 only — superseded by § 2026-08-17 — OG route: Inter vendored out of `node_modules`. That gap was closed on
+2026-08-17; the two `.woff` files now live in `public/fonts/`.)**
 
 **3–4. `docs/KNOWN_GAPS.md` hygiene.** The `theme_color` bullet was deleted
 (implemented, not merely decided). The "Manual, human-only checklist: enable
@@ -2826,3 +2833,81 @@ since a trigger function takes no argument to forge and is not reachable via
 Items Archive line plus this section). No `src/` change of any kind —
 `src/lib/invites/actions.ts` and `src/lib/invites/queries.ts` were deliberately
 not touched. No test residue.
+
+## 2026-08-17 — OG route: Inter vendored out of `node_modules`
+
+Closes the Known Gaps bullet opened 2026-08-14 (§ Brand application pass), which
+had been restated twice more without being fixed. Commit `6a9b204`.
+
+`src/app/opengraph-image.tsx` read the two Inter `.woff` files out of
+`node_modules/@fontsource/inter` with `fs.readFileSync` **at request time**,
+which quietly turned a build-time package into a runtime dependency. The failure
+mode is the one this repo keeps meeting: the route builds green, the deploy
+succeeds, and the first production OG request throws — on a path no test
+exercises and no human visits. Same class as the `isPublicMetadataRoute`
+omission that shipped the OG card broken to Slack.
+
+**The fix is vendoring, not reordering `package.json`.** Both `.woff` files now
+live in `public/fonts/`, which is always deployed, and the route reads them from
+there. `@fontsource/inter` moved from `dependencies` to `devDependencies` — which
+is what the bundle's own README said in the first place, and was only wrong while
+the route depended on it at runtime. `scripts/brand/build_brand.py` still reads
+the same files out of `node_modules` to outline the wordmark, which is fine: that
+is a build-time script, and `docs/DESIGN.md` already documents the package as a
+`-D` install.
+
+Verified: `/opengraph-image` is **byte-identical** before and after (same
+SHA256), both renders 1200x630. `tsc`, `lint`, `build` and a clean `npm install`
+all pass. Re-verified during the 2026-08-18 handoff audit against the live tree —
+the route reads `public/fonts/`, `@fontsource/inter` is in `devDependencies`, and
+both `.woff` files are present at 30.6K each.
+
+## 2026-08-17 — Deterministic org resolution, and hiding lifecycle controls from a MEMBER
+
+Two Known Gaps bullets in one commit, `94de14b` — both opened earlier and both
+fenced out of the prompt that created them.
+
+**1. `getCurrentOrg()` picked an arbitrary organization.** It ran
+`.limit(1).maybeSingle()` with **no `ORDER BY`**, so for a user holding more than
+one `organization_members` row, which org they landed in was undefined —
+Postgres is free to return any row, and it can differ between sessions. It now
+orders by `created_at ASC` (oldest membership wins, stable), takes an exact
+`count`, and `console.warn`s when the count exceeds 1 rather than silently
+dropping the other memberships. It **warns, never throws**: an unreachable extra
+org is a visibility problem, not a reason to break the user's session.
+
+Deliberately still deferred: an org switcher and a persisted "active org". Both
+need a migration, not a menu — see `docs/KNOWN_GAPS.md`, which keeps that bullet
+open and unchanged.
+
+**2. `ArchiveControls` and `OutcomeFields` rendered to every role.** The
+database has rejected a MEMBER writing `archived` / `outcome` / `actual_revenue`
+/ `closed_at` since 2026-08-14, and the Server Actions turn that into readable
+copy — but the controls were still shown, so a MEMBER's only way to learn the
+rule was to click Archive and get an error toast. Both now hide entirely for a
+MEMBER, via `canEditLeadLifecycle()` in the new `src/lib/organizations/roles.ts`.
+
+**`trigger_enforce_lead_role_restrictions` is untouched and remains the actual
+boundary.** `roles.ts` says so in its own header comment, and it matters: this
+is presentation only. A hidden control was never the enforcement, and nothing
+here is load-bearing for security.
+
+**The role reaches `EditLeadModal` through a new `RoleProvider`, not a prop
+chain.** The modal is mounted from four unrelated card components; threading one
+static per-request value through eight files to reach one consumer is exactly
+the restructuring CLAUDE.md's File Size rule warns about — it hides a form's own
+field set across siblings.
+
+**Form/Action Field Parity was the real trap here.** `updateLead` writes
+`outcome`, `actual_revenue` and `closed_at` from `FormData` on **every** save,
+so simply omitting the inputs for a MEMBER would have posted `null` for all
+three — and on an already-closed lead the trigger would then have rejected the
+whole save, blocking edits a MEMBER is explicitly allowed to make. The hidden
+path therefore **re-sends the current values**, which the trigger's
+`IS DISTINCT FROM` fast path passes untouched. A test asserts it. This is the
+same silent-NULL-on-save class as the 2026-07-27 and 2026-07-30 incidents.
+
+Verified: `tsc --noEmit`, `eslint`, `next build`, `vitest` 100/100 (was 92/92).
+**Not** exercised against real data: no user in the live database holds more than
+one membership, so the `count > 1` branch is code-inspected only. That residue is
+why the `getCurrentOrg()` bullet stays half-open rather than closing outright.
