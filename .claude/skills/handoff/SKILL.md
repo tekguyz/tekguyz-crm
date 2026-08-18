@@ -202,7 +202,71 @@ Check, in this order:
     hand and not looking.
 
 
-11. **Exclusion pass — the permanently-rejected list. Every run, and before
+11. **Reference integrity — every `§` pointer still resolves. Every run, no
+    exceptions.** This repo navigates entirely by section pointer, and nothing
+    renders one into a link. A pointer that no longer resolves therefore fails
+    in the worst possible way: silently, looking exactly as authoritative as one
+    that works, until a reader goes looking and finds nothing. Run:
+
+    ```bash
+    node .claude/skills/handoff/check-section-pointers.mjs
+    ```
+
+    Three deterministic checks, repo-only — no browser, no dev server, no
+    database, same fence as checks 9 and 10:
+
+    - every `§ <Title>` citation across CLAUDE.md, the three docs, the addenda
+      and this skill resolves to a real heading or index title;
+    - every row in `docs/ADDENDA_LOG.md`'s index points at a section that is
+      actually in the file it names;
+    - every `##` section in `docs/addenda/*.md` has an index row.
+
+    That third direction is the one that decays with normal use, and it is the
+    one the repair convention above can create: append an addendum to a month
+    file, forget the index row, and the section is unreachable by every
+    cross-reference in the repo while checks 1–10 all stay green. The 2026-08-18
+    split verified 55 pointers by hand once; this keeps them verified.
+
+    Exit `0` clean, `1` findings, `2` could not read something and **is not a
+    pass** — fix the script before continuing, exactly as with checks 9 and 10.
+
+    **Handling a finding.** A dangling pointer is repaired by finding the real
+    title, not by deleting the citation. An unindexed section gets its index
+    row. List each finding under `### Open now`, same rule as checks 9 and 10.
+
+12. **Live test residue. Every run, no exceptions — and this is the one check
+    in the audit that touches the network.** CLAUDE.md § Test-Data Cleanup is a
+    permanent rule that has been broken twice anyway: sixteen test leads in the
+    real TEKGUYZ org over three weeks, then two MEMBER memberships and two
+    ACCEPTED invites found sitting in `TEKGUYZ Demo` on 2026-08-18. Neither was
+    a knowledge failure — the rule was written, correct and read. Nothing looked.
+    Run:
+
+    ```bash
+    npm run check:residue
+    ```
+
+    It needs `.env`, which is why it goes through the npm script. **SELECT
+    only.** It never writes and deliberately cannot: CLAUDE.md requires removal
+    to be a human-run `DELETE` or a disposable service-role script, never an
+    agent write against a `public` table. So a finding prints the scoped
+    `SELECT` and `DELETE` for the user to run, and stops there. **Hand those to
+    the user; do not run them.**
+
+    It checks the demo org against what `scripts/seed/lib/demo-org.ts` actually
+    creates — one OWNER membership, zero invites, so anything else is residue by
+    construction and `npm run seed:demo` will never clear it — and every org for
+    leads on a throwaway email domain, which is the shape the sixteen leads had.
+    `archived` is deliberately not a filter: archiving is not removal, and that
+    is precisely how the last batch stayed hidden.
+
+    Exit `0` clean, `1` residue found, `2` could not check and **is not a pass**.
+
+    **Handling a finding.** Residue found by an audit is not this session's
+    residue to quietly absorb — list it under `### Needs the user, not more
+    code` with the removal SQL, because only the user can run it.
+
+13. **Exclusion pass — the permanently-rejected list. Every run, and before
     any drafting.** Read `docs/KNOWN_GAPS.md` § "Permanently rejected — never
     re-list". Everything named there is **struck from this audit's output**: it
     may not appear under `### Open now`, may not appear under `### Needs the
@@ -230,7 +294,7 @@ Check, in this order:
     `docs/ADDENDA_LOG.md` says of Leaked Password Protection: "This is the one
     item in this whole file that needs a human dashboard action, not a code
     fix." That sentence matches the section's own name almost verbatim, and
-    nothing in checks 1–10 can catch it — nothing is stale. The history is
+    nothing in checks 1–12 can catch it — nothing is stale. The history is
     correct, `docs/KNOWN_GAPS.md` is already clean, and the advisor warning is
     genuinely live. The only defence is an explicit exclusion list, applied
     before drafting.
@@ -254,7 +318,7 @@ maintenance convention** — do not invent a new format:
   `docs/ADDENDA_LOG.md`** — that index is what makes every
   ``docs/ADDENDA_LOG.md § <Section Title>`` pointer in the repo resolve, and a
   section missing from it is unreachable by every cross-reference. The log was
-  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file); reading it
+  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file; 69 now); reading it
   whole is no longer the way to consult it — read the index, then the one file
   you need.
 - **`docs/KNOWN_GAPS.md`**: add a bullet for anything newly and deliberately
@@ -311,9 +375,11 @@ Structure:
 - <what is genuinely open, pulled from CLAUDE.md § 3 and docs/KNOWN_GAPS.md — measured only, not copied verbatim if a claim there is now stale>
 - <every check-9 token-drift mismatch, if any: which token, which file was wrong, how it was resolved — one line each. Omit the line entirely when the check exits 0.>
 - <every check-10 assertion-drift finding, if any: which figure, which doc stated it, what it actually measures now — one line each. Omit entirely when that check exits 0.>
+- <every check-11 reference-integrity finding, if any: which pointer or section, and how it was repaired — one line each. Omit entirely when that check exits 0.>
 
 ### Needs the user, not more code
 - <anything awaiting visual sign-off, a copy/product decision, a real device, or explicitly flagged in KNOWN_GAPS.md as "the owner's call">
+- <every check-12 residue finding, if any, with the scoped DELETE to run — the user runs it, not you. Omit entirely when that check exits 0.>
 
 ### Attach to this Project
 CLAUDE.md · docs/KNOWN_GAPS.md · docs/DESIGN.md · docs/SCHEMA_REFERENCE.md

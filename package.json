@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "vitest run --config vitest.rls.config.mts",
+    "check:docs": "node .claude/skills/handoff/check-design-drift.mjs && node .claude/skills/handoff/check-doc-figures.mjs && node .claude/skills/handoff/check-section-pointers.mjs",
+    "check:residue": "node --env-file=.env .claude/skills/handoff/check-test-residue.mjs",
     "seed:demo": "tsx --env-file=.env scripts/seed/create-demo-org.ts",
     "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts"
   },
