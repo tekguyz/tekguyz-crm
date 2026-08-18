@@ -26,7 +26,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 |---|---|---|
 | Build-era addenda (Prompts 11–15b) and the closed 15-phase roadmap | [`docs/addenda/prompts-1-15.md`](addenda/prompts-1-15.md) | 8 |
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
-| Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 33 |
+| Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 34 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---
@@ -108,3 +108,4 @@ repo matches a title in this column.
 | 2026-08-18 — handoff check 10: assertion drift | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-18 — handoff checks 11 and 12: reference integrity, live test residue | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-18 — what a baseline proved, and the skill it stopped | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
+| 2026-08-18 — Demo-org test residue removed, and the check that confirmed it | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
