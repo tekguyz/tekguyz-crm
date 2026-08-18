@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/Button";
+import { canEditLeadLifecycle } from "@/lib/organizations/roles";
 import type { Lead } from "@/lib/leads/queries";
 
 // The archive/unarchive lifecycle control. Separated cleanly because it lives
@@ -26,7 +27,12 @@ import type { Lead } from "@/lib/leads/queries";
 // Handlers are verbatim from the pre-split EditLeadModal, including the catch
 // blocks added in the Task/Calendar hardening pass — this split moved them,
 // it did not touch their logic.
-export function ArchiveControls({ lead }: { lead: Lead }) {
+//
+// Renders nothing at all for a MEMBER. leads.archived is OWNER/ADMIN-only at
+// the database trigger, which is and stays the real boundary — this only stops
+// offering a MEMBER a button whose only possible outcome is an error toast.
+// Hidden rather than disabled: a disabled control still reads as "yours, later".
+export function ArchiveControls({ lead, role }: { lead: Lead; role: string }) {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [unarchiving, setUnarchiving] = useState(false);
@@ -82,6 +88,10 @@ export function ArchiveControls({ lead }: { lead: Lead }) {
     } finally {
       setUnarchiving(false);
     }
+  }
+
+  if (!canEditLeadLifecycle(role)) {
+    return null;
   }
 
   if (lead.archived) {

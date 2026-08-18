@@ -11,6 +11,7 @@ import { AddressSocialFields } from "@/components/leads/edit-modal/AddressSocial
 import { PipelineFields } from "@/components/leads/edit-modal/PipelineFields";
 import { OutcomeFields } from "@/components/leads/edit-modal/OutcomeFields";
 import { ArchiveControls } from "@/components/leads/edit-modal/ArchiveControls";
+import { useOrgRole } from "@/components/shell/RoleContext";
 
 const initialState: LeadFormState = null;
 
@@ -24,6 +25,11 @@ const initialState: LeadFormState = null;
 // FormData by updateLead, so they need no props beyond `lead` — the only
 // controlled input (next_action_at) is owned inside PipelineFields, since
 // nothing outside that group reads it.
+//
+// The one exception is `role`, read from RoleContext here rather than in the
+// two groups that need it, so this shell stays the single place that says who
+// composes what. OutcomeFields and ArchiveControls hide themselves from a
+// MEMBER; the database trigger, not this, is what actually enforces it.
 export function EditLeadModal({
   lead,
   open,
@@ -33,6 +39,7 @@ export function EditLeadModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const role = useOrgRole();
   const updateLeadWithId = updateLead.bind(null, lead.id);
   const [state, formAction, isPending] = useActionState(updateLeadWithId, initialState);
   const wasPending = useRef(false);
@@ -70,14 +77,14 @@ export function EditLeadModal({
         <IdentityFields lead={lead} />
         <AddressSocialFields lead={lead} />
         <PipelineFields lead={lead} />
-        <OutcomeFields lead={lead} />
+        <OutcomeFields lead={lead} role={role} />
 
         <Button type="submit" variant="primary" disabled={isPending} className="w-full">
           {isPending ? "Saving…" : "Save changes"}
         </Button>
       </form>
 
-      <ArchiveControls lead={lead} />
+      <ArchiveControls lead={lead} role={role} />
 
       <ProfileSheet lead={lead} open={profileOpen} onClose={() => setProfileOpen(false)} />
     </Modal>

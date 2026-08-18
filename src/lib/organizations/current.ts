@@ -11,15 +11,37 @@ export async function getCurrentOrg() {
     redirect("/login");
   }
 
-  const { data: membership } = await supabase
+  // organization_members can legitimately hold several rows for one user, so
+  // "the" membership has to be a defined choice rather than whatever Postgres
+  // returned first. Oldest-first: the org a user joined first is the one they
+  // land in, stable across sessions and across any later membership. There is
+  // deliberately no persisted "active org" and no switcher yet — that needs its
+  // own migration; this only makes today's arbitrary pick deterministic.
+  const { data: memberships, count } = await supabase
     .from("organization_members")
-    .select("organization_id, role, notify_new_lead, notify_weekly_report")
+    .select("organization_id, role, notify_new_lead, notify_weekly_report", {
+      count: "exact",
+    })
     .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const membership = memberships?.[0];
 
   if (!membership) {
     redirect("/onboarding");
+  }
+
+  // Logged, never thrown. Multi-org membership is expected and must keep
+  // working; what must not happen is it being invisible, because until an org
+  // switcher exists the user has no way to reach their other orgs and no
+  // signal that they exist.
+  if ((count ?? 0) > 1) {
+    console.warn(
+      `[getCurrentOrg] user ${user.id} has ${count} organization memberships; ` +
+        `resolved to the oldest (${membership.organization_id}). ` +
+        `The other orgs are unreachable until an org switcher exists.`,
+    );
   }
 
   const { data: org } = await supabase
