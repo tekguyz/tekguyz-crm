@@ -290,6 +290,16 @@ GRANT EXECUTE ON FUNCTION public.accept_organization_invite(UUID) TO authenticat
 REVOKE EXECUTE ON FUNCTION public.get_organization_members(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_organization_members(UUID) TO authenticated;
 
+-- Added 2026-08-18 (migration 20260818130000_team_management_rpcs.sql).
+REVOKE EXECUTE ON FUNCTION public.change_member_role(UUID, UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.change_member_role(UUID, UUID, TEXT) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.remove_organization_member(UUID, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.remove_organization_member(UUID, UUID) TO authenticated;
+
+-- private.caller_role_in_org(UUID) receives NO grant at all — it is called only
+-- from inside the two SECURITY DEFINER functions above, which run as their owner.
+
 REVOKE EXECUTE ON FUNCTION public.get_org_webhook_secret(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_org_webhook_secret(UUID) TO authenticated;
 
@@ -330,10 +340,19 @@ CREATE POLICY "Owners and admins update their organization" ON public.organizati
 CREATE POLICY "Members read own membership rows" ON public.organization_members
     FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
 
--- NOTE: organization_members has no authenticated INSERT policy. Membership
--- rows are only ever written by the SECURITY DEFINER functions above
--- (create_organization_with_owner, accept_organization_invite), which bypass
--- RLS by design — there is no direct client-side insert path.
+-- NOTE: organization_members has no authenticated INSERT policy, and as of
+-- 2026-08-18 still no UPDATE or DELETE policy either. Membership rows are only
+-- ever written by SECURITY DEFINER functions — create_organization_with_owner
+-- and accept_organization_invite (INSERT), change_member_role (UPDATE) and
+-- remove_organization_member (DELETE) — which bypass RLS by design. There is no
+-- direct client-side write path of any kind.
+--
+-- That is enforced BELOW RLS as well, and it is the stronger half: `authenticated`
+-- is granted only SELECT and INSERT on this table (Section 11), so it has no
+-- UPDATE or DELETE privilege for a policy to permit in the first place. Adding a
+-- policy would therefore not open a client write path without also widening the
+-- grant — do neither. Both new RPCs re-resolve the caller's own role for the
+-- org id they are passed; see Section 14.
 
 CREATE POLICY "Members read tenant leads" ON public.leads
     FOR SELECT USING (organization_id IN (SELECT private.current_org_ids()));
@@ -566,6 +585,55 @@ Two deliberate differences from `enforce_lead_role_restrictions` above, both loa
 
 Proven by `src/lib/leads/leads-assignment.rls.test.ts` (`npm run test:rls`), which builds two disposable orgs because cross-tenant needs a real second tenant, and observes the rejection for OWNER, MEMBER, INSERT, UPDATE and service-role. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — `leads.assigned_to`: per-lead ownership.
 
+**Team management RPCs (2026-08-18, `supabase/migrations/20260818130000_team_management_rpcs.sql`, applied by the human per the standing DDL rule — not via MCP).** Two `SECURITY DEFINER` functions that give `organization_members` its first UPDATE and DELETE paths. **No RLS policy was added to that table and none should be** — see the note in Section 12: `authenticated` has no UPDATE/DELETE grant, so the RPC-only shape is enforced below RLS.
+
+Both re-resolve the **caller's own** role for the specific `p_org_id` argument, inside the body, through a helper that has no client grant:
+
+```sql
+CREATE OR REPLACE FUNCTION private.caller_role_in_org(p_org_id UUID)
+RETURNS TEXT
+LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = public
+AS $$
+    SELECT m.role
+    FROM public.organization_members m
+    WHERE m.organization_id = p_org_id
+      AND m.user_id = auth.uid();
+$$;
+```
+
+Returns NULL when the caller is not a member, so "not in that org" and "a MEMBER of that org" stay distinguishable and a non-member can never be treated as authorised by an accidental NULL comparison. In `private`, not `public`: it is not an API surface.
+
+**Both functions lock before counting.** The last-OWNER rule is a count-then-act invariant, so without a lock two concurrent demotions could each see two OWNERs, each conclude it is safe, and together leave the org with zero — permanently un-administerable, since only an OWNER can grant OWNER.
+
+```sql
+PERFORM 1 FROM public.organization_members
+ WHERE organization_id = p_org_id FOR UPDATE;
+```
+
+An aggregate cannot carry `FOR UPDATE`, hence lock-then-count. Both functions lock the same rows in the same order, so they cannot deadlock against each other.
+
+`public.change_member_role(p_org_id UUID, p_target_user_id UUID, p_new_role TEXT) RETURNS void` rejects, in order: no `auth.uid()` · `p_new_role` not one of the three · caller not OWNER/ADMIN of this org · target not a member of this org · an ADMIN acting on an OWNER · an ADMIN granting OWNER · demoting the last OWNER (self included — the rule is about the org, not about who is asking). A no-op (role unchanged) returns early so it cannot trip the last-OWNER rule.
+
+`public.remove_organization_member(p_org_id UUID, p_target_user_id UUID) RETURNS void` authorises a caller who is OWNER/ADMIN **or is the target themselves** — that second clause is what makes "Leave organization" reachable for a MEMBER, who can manage nobody. The ADMIN-cannot-manage-an-OWNER check is skipped for self-removal (an ADMIN removing themselves is not acting on an owner); the last-OWNER rule is not. It then releases the leaver's assignments and deletes the row, in one transaction:
+
+```sql
+UPDATE public.leads
+   SET assigned_to = NULL
+ WHERE organization_id = p_org_id
+   AND assigned_to = p_target_user_id;
+
+DELETE FROM public.organization_members
+ WHERE organization_id = p_org_id
+   AND user_id = p_target_user_id;
+```
+
+There is no FK from `leads.assigned_to` to `organization_members` — it references `auth.users`, whose `ON DELETE SET NULL` fires only when the auth user itself is deleted — so nothing does this automatically. The `UPDATE` touches one column; `updated_at` moves because `trigger_update_leads_timestamp` fires, which is the table's own behaviour. It passes `trigger_enforce_lead_assignee_membership` on the `assigned_to IS NULL` early return and `trigger_enforce_lead_role_restrictions` on its unchanged-columns fast path.
+
+Error sentinels, translated for the user by `src/lib/organizations/team-errors.ts`: `TEAM_NOT_AUTHORIZED`, `TEAM_ADMIN_CANNOT_MANAGE_OWNER`, `TEAM_ADMIN_CANNOT_GRANT_OWNER` (all `42501`), `TEAM_LAST_OWNER`, `TEAM_MEMBER_NOT_FOUND`, `TEAM_INVALID_ROLE` (all `23514`). Authorisation failures use `42501`, invariant failures `23514`, and the two are kept distinct on purpose.
+
+Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`npm run test:rls`, excluded from `npm test`), which builds two disposable orgs and five throwaway users and asserts each rejection's own sentinel rather than only its SQLSTATE — a plain RLS denial and a CHECK constraint reuse both codes. Three tests prove the allowed side, so the gates are specific rather than blanket. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — Team management: role change and member removal.
+
 **CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
 
 **This is the ninth `SECURITY DEFINER` function, and it self-checks.** Running inventory of which of them re-assert authorization inside the body rather than trusting their arguments (a tenth was added on 2026-08-17 — see the last row and the invite-close addendum at the end of this file):
@@ -583,6 +651,10 @@ Proven by `src/lib/leads/leads-assignment.rls.test.ts` (`npm run test:rls`), whi
 | `vault_get_org_credential` | ❌ none in the body **by design** — it is gated at the GRANT level instead: `EXECUTE` is revoked from `PUBLIC`/`anon`/`authenticated` and held by `service_role` only, so the caller cannot reach it to need a check. Verified live: the `authenticated` role’s own attempt fails with “permission denied.” Added to this table 2026-08-18 — it had been live and documented in CLAUDE.md § Multi-Tenant Security Model since Prompt 13a but was never listed here. |
 | `import_leads_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id` |
 | `close_invite_on_member_insert` (2026-08-17) | n/a — a **trigger** function, not a callable RPC. It takes no arguments to forge, reads only `NEW`, and `EXECUTE` is revoked from `PUBLIC`, so it is unreachable via `/rest/v1/rpc/`. Its tenant scoping is `NEW.organization_id`, which the row being inserted already fixes. |
+| `enforce_lead_assignee_membership` (2026-08-18) | n/a — a **trigger** function, and `SECURITY INVOKER` rather than DEFINER, so it is in this table only for completeness. Takes no arguments; scoped by `NEW.organization_id`. |
+| `private.caller_role_in_org` (2026-08-18) | n/a — reads `auth.uid()` for the `p_org_id` it is given and returns a role or NULL; it makes no decision. **No grant to any client role at all**, and it lives in `private`, so it is reachable only from the two functions below, which run as their owner. |
+| `change_member_role` (2026-08-18) | ✅ raises on NULL `auth.uid()`; re-resolves the caller's own role for `p_org_id` and requires OWNER/ADMIN; then enforces ADMIN-cannot-manage-an-OWNER, ADMIN-cannot-grant-OWNER, and the last-OWNER invariant. Locks the org's membership rows before counting owners, so the invariant is not a race. |
+| `remove_organization_member` (2026-08-18) | ✅ raises on NULL `auth.uid()`; requires the caller to be OWNER/ADMIN **or** to be the target (self-removal is the one MEMBER-permitted write); then ADMIN-cannot-remove-an-OWNER and the last-OWNER invariant. Same lock-before-count. Releases the leaver's `leads.assigned_to` in the same transaction as the delete. |
 
 `import_leads_chunk`'s check is **membership, not role** — `leads` INSERT keeps full MEMBER parity by design, so any member of the org may import. `search_path` is pinned to `''` (verified live: `proconfig = {search_path=""}`), `EXECUTE` is revoked from `PUBLIC`/`anon` and granted to `authenticated` only (verified live: `proacl` is `postgres=X | service_role=X | authenticated=X`, with no `anon` entry and no `=X/` PUBLIC grant). Because `SECURITY DEFINER` bypasses RLS, that internal membership check — not the `"Members create tenant leads"` policy — is the tenant boundary on this one path. Proven live: a signed-in member of a different org calling it with TEKGUYZ Demo's `organization_id` gets `IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.` and writes zero rows.
 

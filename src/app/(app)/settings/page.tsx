@@ -7,7 +7,7 @@ import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { AccountPanel } from "@/components/settings/AccountPanel";
 
 export default async function SettingsPage() {
-  const { orgId, orgName, orgTimezone, currencyFormat, role, userEmail, displayName, notifyNewLead, notifyWeeklyReport } =
+  const { orgId, orgName, orgTimezone, currencyFormat, role, userId, userEmail, displayName, notifyNewLead, notifyWeeklyReport } =
     await getCurrentOrg();
   const canManageOrg = role === "OWNER" || role === "ADMIN";
 
@@ -28,7 +28,12 @@ export default async function SettingsPage() {
         webhookUrl={webhookUrl}
         canEdit={canManageOrg}
       />
-      <TeamPanel orgId={orgId} canManage={canManageOrg} />
+      <TeamPanel
+        orgId={orgId}
+        canManage={canManageOrg}
+        currentUserId={userId}
+        currentUserRole={role}
+      />
       <ApiKeysPanel canEdit={canManageOrg} />
       <AccountPanel
         userEmail={userEmail}

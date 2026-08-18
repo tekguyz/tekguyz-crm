@@ -2,15 +2,23 @@ import { getTeamMembers, getOpenInvites } from "@/lib/invites/queries";
 import { InviteMemberForm } from "@/components/settings/InviteMemberForm";
 import { CopyInviteLinkButton } from "@/components/settings/CopyInviteLinkButton";
 import { RevokeInviteButton } from "@/components/settings/RevokeInviteButton";
+import { MemberRow } from "@/components/settings/MemberRow";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 
 export async function TeamPanel({
   orgId,
   canManage,
+  currentUserId,
+  currentUserRole,
 }: {
   orgId: string;
   canManage: boolean;
+  // Both resolved by getCurrentOrg() in the settings page. MemberRow needs them
+  // to mark your own row and to offer "Leave" instead of "Remove" on it — the
+  // database is still what decides whether either is permitted.
+  currentUserId: string;
+  currentUserRole: string;
 }) {
   const [members, { pending, expired }] = await Promise.all([
     getTeamMembers(orgId),
@@ -23,13 +31,12 @@ export async function TeamPanel({
 
       <div className="mb-6 space-y-2">
         {members.map((member) => (
-          <div
+          <MemberRow
             key={member.user_id}
-            className="text-body-md flex items-center justify-between"
-          >
-            <span className="text-ink-main">{member.email}</span>
-            <span className="text-label text-ink-muted">{member.role}</span>
-          </div>
+            member={member}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
         ))}
       </div>
 
