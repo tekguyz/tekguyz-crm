@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
-import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
 
 export type OrgSettingsFormState = { error?: string } | null;
 
@@ -63,7 +62,7 @@ export async function updateOrgSettings(
   return null;
 }
 
-export type RotateWebhookSecretResult = { webhookUrl?: string; error?: string };
+export type RotateWebhookSecretResult = { signingSecret?: string; error?: string };
 
 // "Owners and admins update their organization" (the organizations RLS UPDATE
 // policy, with its paired WITH CHECK) already covers webhook_secret — it's a
@@ -72,6 +71,12 @@ export type RotateWebhookSecretResult = { webhookUrl?: string; error?: string };
 // vault_set_org_credential's pattern, a role-denied RLS UPDATE doesn't raise
 // an exception, it just matches zero rows silently — so the role check below
 // is the real enforcement boundary here, not just a fast-fail optimization.
+//
+// Rotation is unchanged in mechanism and unchanged for the user (2026-08-18):
+// same column, same role gate, same immediate cutover. What rotates is now the
+// HMAC SIGNING KEY rather than a bearer value in the URL, so the endpoint URL
+// itself no longer changes — it is keyed on organization_id, which is stable.
+// Integrations update the secret they sign with; they do not re-point the URL.
 export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> {
   const { orgId, role } = await getCurrentOrg();
 
@@ -99,6 +104,5 @@ export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> 
 
   revalidatePath("/", "layout");
 
-  const appUrl = trimTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
-  return { webhookUrl: `${appUrl}/api/v1/triage/${newSecret}` };
+  return { signingSecret: newSecret };
 }

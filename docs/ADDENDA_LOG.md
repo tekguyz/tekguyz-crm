@@ -26,7 +26,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 |---|---|---|
 | Build-era addenda (Prompts 11–15b) and the closed 15-phase roadmap | [`docs/addenda/prompts-1-15.md`](addenda/prompts-1-15.md) | 8 |
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
-| Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 34 |
+| Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 35 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---
@@ -112,3 +112,4 @@ repo matches a title in this column.
 | 2026-08-18 — `leads.assigned_to`: per-lead ownership | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-18 — Team management: role change and member removal | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-18 — Security Advisor: all 14 lints triaged, none actionable | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
+| 2026-08-18 — HMAC request signing replaces the URL-path webhook secret | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |

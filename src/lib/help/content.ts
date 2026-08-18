@@ -25,11 +25,13 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "webhook-setup",
     title: "Setting up the inbound lead webhook",
-    keywords: ["webhook", "inbound", "zapier", "url", "secret", "rotate", "integration", "form"],
+    keywords: ["webhook", "inbound", "zapier", "url", "secret", "rotate", "integration", "form", "signature", "hmac"],
     body: [
-      "Your webhook URL lives on the Settings page, under Organization. Owners and admins only — it isn't fetched at all for members.",
-      "POST inbound leads to that URL from Zapier, a form provider, or anything else. The URL is tenant-scoped and authenticates the request by itself: the secret is embedded in the URL, so treat the whole thing as a credential and don't paste it anywhere public.",
-      "If it leaks, use \"Rotate webhook secret\" on the same panel. It asks you to confirm first, because rotating takes effect immediately — every integration still POSTing to the old URL starts failing the moment you confirm, and keeps failing until you update it with the new URL. Copy the new URL and update your integrations right away.",
+      "Your webhook endpoint and signing secret live on the Settings page, under Organization. Owners and admins only — the secret isn't fetched at all for members.",
+      "The endpoint URL identifies your organization but grants no access on its own, so it's safe to paste into a config file or a ticket. Every POST to it must also carry an X-TekGuyz-Signature header: the hex-encoded HMAC-SHA256 of the exact request body, keyed by your signing secret. A request without a valid signature is rejected with a 401 and nothing is saved.",
+      "The signing secret is the credential — treat it like a password. It is never sent with a request, so it never appears in a URL or a server log; it only ever keys the signature.",
+      "This needs somewhere that can run code, so a browser-side form cannot call the endpoint directly — it would have to ship the secret to every visitor. Post your form to your own backend, and have that backend sign and forward.",
+      "If the secret leaks, use \"Rotate signing secret\" on the same panel. It asks you to confirm first, because rotating takes effect immediately — every integration still signing with the old secret starts failing the moment you confirm, and keeps failing until you update it. The endpoint URL does not change when you rotate.",
     ].join("\n\n"),
   },
   {

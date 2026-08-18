@@ -50,9 +50,9 @@ export function OverlaysSection() {
         </span>
         <div className="flex items-center gap-2">
           <code className="text-body-sm flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1">
-            https://example.com/api/v1/triage/not-a-real-secret
+            https://example.com/api/v1/triage/00000000-0000-4000-8000-000000000000
           </code>
-          <CopyButton text="https://example.com/api/v1/triage/not-a-real-secret" />
+          <CopyButton text="https://example.com/api/v1/triage/00000000-0000-4000-8000-000000000000" />
         </div>
       </div>
 

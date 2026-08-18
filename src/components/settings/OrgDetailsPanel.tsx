@@ -38,16 +38,21 @@ export function OrgDetailsPanel({
   orgTimezone,
   currencyFormat,
   webhookUrl,
+  signingSecret,
   canEdit,
 }: {
   orgName: string;
   orgTimezone: string;
   currencyFormat: string;
   webhookUrl: string | null;
+  signingSecret: string | null;
   canEdit: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(updateOrgSettings, initialState);
-  const [currentWebhookUrl, setCurrentWebhookUrl] = useState(webhookUrl);
+  // Only the secret is stateful. The endpoint URL is keyed on organization_id
+  // and does not change when the signing key rotates — that is the point of
+  // the split, and showing it as rotatable would teach the wrong model.
+  const [currentSigningSecret, setCurrentSigningSecret] = useState(signingSecret);
   const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
   const [rotating, setRotating] = useState(false);
 
@@ -62,8 +67,8 @@ export function OrgDetailsPanel({
         toast.error(result.error);
         return;
       }
-      setCurrentWebhookUrl(result.webhookUrl ?? null);
-      toast.success("Webhook secret rotated — the old URL no longer works.");
+      setCurrentSigningSecret(result.signingSecret ?? null);
+      toast.success("Signing secret rotated — signatures made with the old secret are now rejected.");
       setRotateDialogOpen(false);
     } finally {
       setRotating(false);
@@ -123,42 +128,66 @@ export function OrgDetailsPanel({
         </dl>
       )}
 
-      {canEdit && currentWebhookUrl && (
+      {canEdit && webhookUrl && (
         <div className="mt-4 border-t border-hairline pt-4">
           {/* Not a <label>: it names a read-only <code> block, not a form
               control, so it never had an htmlFor to point at. */}
           <div className="text-label mb-1 flex items-center gap-1.5 text-ink-muted">
-            Webhook URL
+            Inbound lead webhook
             <HelpTooltip
               topicId="webhook-setup"
-              blurb="POST inbound leads here from Zapier or a form provider. The secret is part of the URL, so treat the whole thing as a credential."
+              blurb="POST inbound leads here from Zapier or your site's backend. The URL is public; the signing secret below is the credential."
             />
           </div>
+          <p className="text-caption mb-3 text-ink-muted">
+            POST inbound leads to this endpoint. Every request must carry an{" "}
+            <code className="text-ink-main">X-TekGuyz-Signature</code> header holding the
+            hex-encoded HMAC-SHA256 of the exact request body, keyed by the signing secret
+            below. Requests without a valid signature are rejected — the URL alone grants
+            nothing.
+          </p>
+
+          <div className="text-label mb-1 text-ink-muted">Endpoint URL</div>
           <p className="text-caption mb-2 text-ink-muted">
-            Send inbound leads here (e.g. from Zapier) as a POST request — this URL is
-            tenant-scoped and authenticates the request on its own. Only owners and admins can
-            view this.
+            Not a credential. Safe to paste into a ticket or a config file.
           </p>
           <div className="flex items-center gap-2">
             <code className="text-caption flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-ink-main">
-              {currentWebhookUrl}
+              {webhookUrl}
             </code>
-            <CopyButton text={currentWebhookUrl} />
+            <CopyButton text={webhookUrl} />
           </div>
+
+          {currentSigningSecret && (
+            <>
+              <div className="text-label mt-3 mb-1 text-ink-muted">Signing secret</div>
+              <p className="text-caption mb-2 text-ink-muted">
+                Treat this like a password. It is never sent with a request — it only keys the
+                signature. Owners and admins only.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="text-caption flex-1 truncate rounded-xs border border-hairline bg-canvas-soft px-2 py-1 text-ink-main">
+                  {currentSigningSecret}
+                </code>
+                <CopyButton text={currentSigningSecret} />
+              </div>
+            </>
+          )}
 
           <AlertDialog open={rotateDialogOpen} onOpenChange={setRotateDialogOpen}>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="secondary" className="mt-2">
-                Rotate webhook secret
+              <Button type="button" variant="secondary" className="mt-3">
+                Rotate signing secret
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Rotate webhook secret?</AlertDialogTitle>
+                <AlertDialogTitle>Rotate signing secret?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This immediately invalidates the current webhook URL. Any integration still
-                  POSTing to the old URL — Zapier, a form provider, anything — will start
-                  failing the moment you confirm, until it&apos;s updated with the new URL.
+                  This takes effect immediately. The endpoint URL stays the same, but any
+                  integration still signing with the old secret — Zapier, your site&apos;s
+                  contact form, anything — starts getting rejected the moment you confirm,
+                  until it&apos;s updated with the new secret.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
