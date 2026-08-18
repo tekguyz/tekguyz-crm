@@ -318,7 +318,7 @@ maintenance convention** — do not invent a new format:
   `docs/ADDENDA_LOG.md`** — that index is what makes every
   ``docs/ADDENDA_LOG.md § <Section Title>`` pointer in the repo resolve, and a
   section missing from it is unreachable by every cross-reference. The log was
-  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file; 69 now); reading it
+  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file; 70 now); reading it
   whole is no longer the way to consult it — read the index, then the one file
   you need.
 - **`docs/KNOWN_GAPS.md`**: add a bullet for anything newly and deliberately

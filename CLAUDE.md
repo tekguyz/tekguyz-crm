@@ -120,6 +120,8 @@ what has been verified. "Verified" means the thing was actually run — dev serv
 test, or browser — not that it compiled. If a unit includes a migration, apply it
 to the real Supabase project and confirm it before continuing.
 
+**Adding a column to `LEAD_COLUMNS` is never an additive change — the migration must land before the code does.** That one string in `src/lib/leads/queries.ts` backs six query functions there, is re-exported as `CONTACT_COLUMNS`, and is imported by `src/lib/webhooks/ingest-lead.ts` — eight read sites from one edit. PostgREST **errors** on a selected column the database does not have (`42703`) rather than ignoring it, so code naming a not-yet-applied column takes down every lead surface at once — dashboard, pipeline, contacts, agenda, profile sheet, command palette — **and silently breaks inbound webhook lead capture**, which is external, unattended, and the most expensive one to notice late. It fails total, not partial, so there is no degraded mode to ship in. Apply the DDL first, then deploy; a lead-column commit and its migration are one unit and must not be separated by a deploy. Found on 2026-08-18 by three independent baseline agents, all of which hit the live `42703` before shipping. Full history: `docs/ADDENDA_LOG.md` § 2026-08-18 — what a baseline proved, and the skill it stopped.
+
 **No App Router icon-convention file may exist under `src/app/`.** `favicon.ico`,
 `icon.*` and `apple-icon.*` there all take precedence over `public/` and over
 `metadata.icons`. With one present the app serves it, the build passes, and the
