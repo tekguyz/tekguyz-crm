@@ -4,7 +4,11 @@
 // Inter, not a substitute. A static PNG would bake in whatever font the
 // generating machine happened to have — this cannot drift.
 //
-// Requires: npm i @fontsource/inter
+// The two Inter .woff files are vendored into public/fonts/ and read from
+// there. They used to be read out of node_modules/@fontsource/inter at request
+// time, which made a build-time package a runtime dependency: if the deploy
+// target prunes or relocates node_modules the route still builds green and
+// throws on the first production OG request. public/ is always deployed.
 import { ImageResponse } from "next/og";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,7 +28,7 @@ function loadInter(weight: "Bold" | "Medium") {
   return fs.readFileSync(
     path.join(
       process.cwd(),
-      `node_modules/@fontsource/inter/files/inter-latin-${
+      `public/fonts/inter-latin-${
         weight === "Bold" ? "700" : "500"
       }-normal.woff`,
     ),
