@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
-import { isLeadRoleDenied, LEAD_ROLE_DENIED_MESSAGE } from "@/lib/leads/role-errors";
+import {
+  isLeadAssigneeNotMember,
+  isLeadRoleDenied,
+  LEAD_ASSIGNEE_NOT_MEMBER_MESSAGE,
+  LEAD_ROLE_DENIED_MESSAGE,
+} from "@/lib/leads/role-errors";
 import { recordLeadSubmission } from "@/lib/submissions/record";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
@@ -163,6 +168,14 @@ export async function updateLead(
       closed_at: closedAt,
       is_starred: formData.get("is_starred") === "on",
       next_action_at: nextActionAtRaw,
+      // Rendered by AssignmentField as <select name="assigned_to">, whose
+      // "Unassigned" option carries value="" — optionalField turns that back
+      // into NULL (Form/Action Field Parity: the select is always present, so
+      // this is never a silent NULL of a value the user could not see).
+      // Full role parity: deliberately no OWNER/ADMIN gate here or on the
+      // field. The database still checks the assignee is a member of this
+      // lead's org — see the error branch below.
+      assigned_to: optionalField(formData.get("assigned_to")),
     })
     .eq("id", leadId);
 
@@ -170,12 +183,23 @@ export async function updateLead(
   // raw Postgres string. This form always re-sends outcome/actual_revenue/
   // closed_at, so a MEMBER only lands here when one of them actually changed —
   // the trigger's IS DISTINCT FROM guard lets an unchanged re-send through.
+  //
+  // The assignee trigger is translated the same way, and for the same reason.
+  // It fires when a picked member was removed from the org between the modal
+  // opening and the save landing — rare, but the raw "LEAD_ASSIGNEE_NOT_MEMBER:"
+  // string is not something a user should ever read.
   if (error) {
-    return { error: isLeadRoleDenied(error) ? LEAD_ROLE_DENIED_MESSAGE : error.message };
+    return { error: translateLeadWriteError(error) };
   }
 
   revalidatePath("/", "layout");
   return null;
+}
+
+function translateLeadWriteError(error: { message: string }): string {
+  if (isLeadRoleDenied(error)) return LEAD_ROLE_DENIED_MESSAGE;
+  if (isLeadAssigneeNotMember(error)) return LEAD_ASSIGNEE_NOT_MEMBER_MESSAGE;
+  return error.message;
 }
 
 const VALID_STATUSES = new Set(["NEW", "DISCOVERY", "QUOTED", "ACTIVE"]);

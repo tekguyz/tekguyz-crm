@@ -111,6 +111,7 @@ sections named in the last column, and every open item is in
 | **Design System v2 "Structural Neutral"** (Prompt 1, then 2a/2b/2c, then a primitive audit and a pre-auth closing pass) | ✅ Complete — **every view in the app now consumes `src/components/ui/`**; raw-element grep down to three pre-documented exceptions | 2026-08-14 → 2026-08-16 | Design System v2 "Structural Neutral" — foundation layer, § Prompt 2a, § Prompt 2b, § Prompt 2c, § Primitive audit, § pre-auth surfaces |
 | **Application Shell Redesign** (1 prompt + close-out) | ✅ Complete — its six binding decisions live in `docs/DESIGN.md` § The Application Shell, not in a prompt | 2026-08-16 | Application shell redesign, § Shell redesign close-out |
 | **`lead_submissions` immutable enquiry log** (1 prompt) | ✅ Complete, applied and live-verified through the real webhook route — closes both the webhook-overwrite and no-`message`-column gaps | 2026-08-17 | 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log |
+| **Per-lead ownership — `leads.assigned_to`** (Prompt 1 of 2) | ✅ Complete, applied and live-verified (26/26 on `npm run test:rls`, including a service-role cross-tenant rejection). Ownership only — **visibility deliberately unchanged**, no RLS policy reads the column. Prompt 2 (member-removal cleanup) is still open in `docs/KNOWN_GAPS.md` | 2026-08-18 | 2026-08-18 — `leads.assigned_to`: per-lead ownership |
 
 ---
 

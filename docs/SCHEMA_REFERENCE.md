@@ -77,6 +77,13 @@ CREATE TABLE public.leads (
     ai_brief TEXT DEFAULT NULL,
     is_starred BOOLEAN NOT NULL DEFAULT FALSE,
     archived BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Added 2026-08-18 (migration 20260818120000_leads_assigned_to.sql). Per-lead
+    -- ownership, NULL when unassigned. ON DELETE SET NULL fires only on auth.users
+    -- deletion — organization_members removal is a different event no FK can see.
+    -- Constrained to a member of THIS lead's organization by
+    -- trigger_enforce_lead_assignee_membership (Section 14). It is ownership, not
+    -- visibility: no RLS policy reads it, and full tenant-wide SELECT is unchanged.
+    assigned_to UUID DEFAULT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT check_valid_status CHECK (status IN ('NEW', 'DISCOVERY', 'QUOTED', 'ACTIVE')),
@@ -387,6 +394,11 @@ CREATE INDEX idx_leads_tenant_status ON public.leads(organization_id, status);
 CREATE INDEX idx_leads_sla_deadline ON public.leads(organization_id, next_action_at) WHERE archived = FALSE;
 CREATE INDEX idx_leads_starred_nodes ON public.leads(organization_id) WHERE is_starred = TRUE;
 CREATE INDEX idx_leads_outcome_revenue ON public.leads(organization_id, outcome, closed_at);
+-- Added 2026-08-18. Backs both the assigned_to FK (an unindexed FK column makes
+-- ON DELETE SET NULL scan the whole table) and the "My leads" filter, which is
+-- always organization_id + assigned_to together. Partial for the same reason as
+-- idx_leads_starred_nodes: most leads are unassigned.
+CREATE INDEX idx_leads_tenant_assignee ON public.leads(organization_id, assigned_to) WHERE assigned_to IS NOT NULL;
 CREATE INDEX idx_org_webhook_secret ON public.organizations(webhook_secret);
 CREATE UNIQUE INDEX unique_pending_invite_per_org_email
     ON public.organization_invites(organization_id, email)
@@ -513,6 +525,46 @@ CREATE OR REPLACE TRIGGER trigger_enforce_lead_role_restrictions
 ```
 
 Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enforcement.rls.test.ts`, run with `npm run test:rls` (deliberately excluded from `npm test` — it creates and tears down real auth users). Full narrative: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
+
+**Lead assignment membership guard (2026-08-18, `supabase/migrations/20260818120000_leads_assigned_to.sql`, applied by the human per the standing DDL rule — not via MCP).** The second `leads` trigger, and the second rule RLS cannot express. It adds no policy: `assigned_to` rides inside the existing "Members write tenant leads" `USING`/`WITH CHECK` pair, which already scopes by `organization_id`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.enforce_lead_assignee_membership()
+RETURNS TRIGGER
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = ''
+AS $$
+BEGIN
+    IF new.assigned_to IS NULL THEN RETURN new; END IF;
+
+    IF tg_op = 'UPDATE'
+   AND new.assigned_to     IS NOT DISTINCT FROM old.assigned_to
+   AND new.organization_id IS NOT DISTINCT FROM old.organization_id THEN
+        RETURN new;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.organization_members m
+        WHERE m.organization_id = new.organization_id
+          AND m.user_id = new.assigned_to
+    ) THEN RETURN new; END IF;
+
+    RAISE EXCEPTION 'LEAD_ASSIGNEE_NOT_MEMBER: a lead can only be assigned to a member of the organization that owns it.'
+        USING ERRCODE = '23514';
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trigger_enforce_lead_assignee_membership
+    BEFORE INSERT OR UPDATE ON public.leads
+    FOR EACH ROW
+    EXECUTE FUNCTION public.enforce_lead_assignee_membership();
+```
+
+Two deliberate differences from `enforce_lead_role_restrictions` above, both load-bearing. **No `auth.uid() IS NULL` exemption:** that trigger asks "who is calling, and may they do this", which has no answer without an end-user identity; this one asks "is the assignee a member of this org", a fact about the row with the same answer for every caller — so service-role writes (the webhook Resurrection Engine, `import_leads_chunk`, the seed scripts) are checked too. **`ERRCODE 23514`, not `42501`:** a data-integrity violation rather than a permission one, which keeps the two sentinels distinguishable and maps to a 400 rather than a 403.
+
+`SECURITY INVOKER` is safe here for the reason it is safe there: `organization_members`' SELECT policy is `organization_id IN (SELECT private.current_org_ids())`, so a member can already read every member row of their own org. An RLS-restricted read can only return *fewer* rows, which makes the `EXISTS` fail and the write reject — fail-closed, never fail-open.
+
+Proven by `src/lib/leads/leads-assignment.rls.test.ts` (`npm run test:rls`), which builds two disposable orgs because cross-tenant needs a real second tenant, and observes the rejection for OWNER, MEMBER, INSERT, UPDATE and service-role. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — `leads.assigned_to`: per-lead ownership.
 
 **CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
 

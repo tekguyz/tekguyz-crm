@@ -21,10 +21,15 @@ export type Lead = {
   is_starred: boolean;
   ai_brief: string | null;
   archived: boolean;
+  // auth.users id of the org member who owns this lead, NULL when unassigned.
+  // The database constrains it to a member of this lead's own organization
+  // (trigger_enforce_lead_assignee_membership). It is NOT a visibility lever —
+  // every role still sees every lead in the tenant; this only says who owns it.
+  assigned_to: string | null;
 };
 
 export const LEAD_COLUMNS =
-  "id, client_name, company, email, phone, website, physical_address, social_google_business, social_facebook, social_instagram, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief, archived";
+  "id, client_name, company, email, phone, website, physical_address, social_google_business, social_facebook, social_instagram, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief, archived, assigned_to";
 
 export async function getSlaCriticalLeads(orgId: string): Promise<Lead[]> {
   const supabase = await createClient();
@@ -73,14 +78,22 @@ export async function getStarredLeads(orgId: string): Promise<Lead[]> {
   return data;
 }
 
-export async function getPipelineLeads(orgId: string): Promise<Lead[]> {
+// `assignedTo` is the "My Leads" filter, and it is a filter only — the tenant
+// scope above is still what decides who may read what. Passing undefined (the
+// default, and what every caller did before ownership existed) returns the
+// whole tenant's pipeline exactly as before.
+export async function getPipelineLeads(orgId: string, assignedTo?: string): Promise<Lead[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("leads")
     .select(LEAD_COLUMNS)
     .eq("organization_id", orgId)
     .eq("archived", false)
     .is("outcome", null);
+
+  if (assignedTo) query = query.eq("assigned_to", assignedTo);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data;
@@ -117,14 +130,25 @@ const CONTACT_COLUMNS = LEAD_COLUMNS;
 // toggles between the default "Active" view and the "Archived" filter added
 // alongside the in-app Unarchive action — always one or the other, never
 // both mixed together, so the view a user is looking at is unambiguous.
-export async function getAllContacts(orgId: string, archived = false): Promise<ContactLead[]> {
+//
+// `assignedTo` stacks on top of `archived` rather than replacing it — the two
+// answer different questions ("is this contact still live" vs "is it mine"),
+// so Active/Archived and All/Mine are two independent toggles in the UI.
+export async function getAllContacts(
+  orgId: string,
+  archived = false,
+  assignedTo?: string,
+): Promise<ContactLead[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("leads")
     .select(CONTACT_COLUMNS)
     .eq("organization_id", orgId)
-    .eq("archived", archived)
-    .order("client_name", { ascending: true });
+    .eq("archived", archived);
+
+  if (assignedTo) query = query.eq("assigned_to", assignedTo);
+
+  const { data, error } = await query.order("client_name", { ascending: true });
 
   if (error) throw error;
   return data;

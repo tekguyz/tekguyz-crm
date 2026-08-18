@@ -5,6 +5,7 @@ import { IconStar } from "@tabler/icons-react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils/cn";
 
@@ -75,6 +76,10 @@ export function KanbanCard({
           <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
           <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
         </div>
+        {/* Below the money/SLA row, and rendering nothing when unassigned, so
+            an unowned card is byte-for-byte the card that shipped before
+            ownership existed — no new empty row on a young board. */}
+        <AssigneeLabel assignedTo={lead.assigned_to} />
       </Card>
 
       <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />

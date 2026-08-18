@@ -9,6 +9,7 @@ import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
 import { IdentityFields } from "@/components/leads/edit-modal/IdentityFields";
 import { AddressSocialFields } from "@/components/leads/edit-modal/AddressSocialFields";
 import { PipelineFields } from "@/components/leads/edit-modal/PipelineFields";
+import { AssignmentField } from "@/components/leads/edit-modal/AssignmentField";
 import { OutcomeFields } from "@/components/leads/edit-modal/OutcomeFields";
 import { ArchiveControls } from "@/components/leads/edit-modal/ArchiveControls";
 import { useOrgRole } from "@/components/shell/RoleContext";
@@ -77,6 +78,9 @@ export function EditLeadModal({
         <IdentityFields lead={lead} />
         <AddressSocialFields lead={lead} />
         <PipelineFields lead={lead} />
+        {/* No `role` prop, unlike the two groups below it: assignment has full
+            MEMBER parity and is offered to every role. */}
+        <AssignmentField lead={lead} />
         <OutcomeFields lead={lead} role={role} />
 
         <Button type="submit" variant="primary" disabled={isPending} className="w-full">

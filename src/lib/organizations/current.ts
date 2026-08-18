@@ -51,6 +51,10 @@ export async function getCurrentOrg() {
     .single();
 
   return {
+    // The auth.users id, not the organization_members row id. This is what
+    // leads.assigned_to stores, so it is what the "My Leads" filter compares
+    // against — see getPipelineLeads/getAllContacts in lib/leads/queries.ts.
+    userId: user.id,
     userEmail: user.email ?? "",
     // Account-level, not org-level — lives in auth.users' own user_metadata
     // (updateDisplayName in lib/account/actions.ts), not a new column on any

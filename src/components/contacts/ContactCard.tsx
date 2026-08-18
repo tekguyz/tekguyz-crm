@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IconPhone, IconMessage, IconMail, IconMapPin } from "@tabler/icons-react";
 import type { ContactLead } from "@/lib/leads/queries";
 import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 
 // The click-to-action row stays as real <a> elements: tel:, sms:, mailto: and
@@ -38,6 +39,9 @@ export function ContactCard({ lead }: { lead: ContactLead }) {
           {lead.company && (
             <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
           )}
+          {/* Renders nothing when unassigned, so an unowned contact card is
+              unchanged from before ownership existed. */}
+          <AssigneeLabel assignedTo={lead.assigned_to} />
         </div>
 
         <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>

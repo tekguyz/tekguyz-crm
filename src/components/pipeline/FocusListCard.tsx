@@ -6,6 +6,7 @@ import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { PIPELINE_STATUSES, PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipeline";
 import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { cn } from "@/lib/utils/cn";
@@ -64,6 +65,11 @@ export function FocusListCard({
           <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
           <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
         </div>
+
+        {/* Same position as on KanbanCard — this is that card's mobile twin,
+            and ownership should not appear on one breakpoint only. Renders
+            nothing when unassigned. */}
+        <AssigneeLabel assignedTo={lead.assigned_to} />
 
         {/* Still name-less and still controlled: this select drives a Server
             Action argument directly, never a form post, so there is no
