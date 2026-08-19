@@ -20,8 +20,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
  * Lowercase on purpose: `Headers.get()` is case-insensitive, so this is the
- * canonical form for lookups. Callers send it as `X-TekGuyz-Signature`; the
- * documented spelling lives in docs/WEBHOOK_INTEGRATION.md.
+ * canonical form for lookups. Callers send it as `X-TekGuyz-Signature`. This
+ * constant is now the authoritative spelling — the separate protocol doc was
+ * removed on 2026-08-19 — so the caller in C:/Projects/tekguyz-site has to be
+ * changed with it if it ever changes here.
  */
 export const WEBHOOK_SIGNATURE_HEADER = "x-tekguyz-signature";
 

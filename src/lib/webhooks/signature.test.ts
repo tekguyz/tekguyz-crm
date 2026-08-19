@@ -21,8 +21,8 @@ describe("computeWebhookSignature", () => {
     // Independently confirmed with `openssl dgst -sha256 -hmac`, not copied
     // from this implementation's own output. Pinned so a refactor that swaps the algorithm, the key, or the encoding
     // fails here rather than in production. Regenerate only alongside a
-    // deliberate protocol change — and then docs/WEBHOOK_INTEGRATION.md and
-    // every live caller change with it.
+    // deliberate protocol change — and then every live caller changes with
+    // it, starting with C:/Projects/tekguyz-site.
     expect(computeWebhookSignature(BODY, SECRET)).toBe(
       "becdd5abcfff34c52f7a93573e363a672921ffe92d332e3375324fcc5076b8f7",
     );
