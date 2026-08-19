@@ -2,6 +2,7 @@ import {
   IconLayoutGrid,
   IconLayoutKanban,
   IconUsers,
+  IconChartBar,
   IconUpload,
   IconSettings,
 } from "@tabler/icons-react";
@@ -32,6 +33,11 @@ export const PRIMARY_NAV: ShellNavItem[] = [
 ];
 
 export const SECONDARY_NAV: ShellNavItem[] = [
+  // First in SECONDARY, ahead of Import: Reports is a place you go to read,
+  // Import is a job you do once, and Settings stays last where people expect
+  // it. The primary bar's three tabs are not reopened by this — Reports is
+  // something you check between weeks, not between calls.
+  { href: "/reports", label: "Reports", icon: IconChartBar },
   { href: "/import", label: "Import", icon: IconUpload },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];
