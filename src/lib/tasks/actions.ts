@@ -20,6 +20,13 @@ const taskSchema = z.object({
     .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid due date"),
 });
 
+// The edit form carries a description field that the create form does not, so
+// it gets its own schema rather than widening taskSchema — create and edit
+// post different field sets and must not silently share a shape.
+const editTaskSchema = taskSchema.extend({
+  description: z.string().trim(),
+});
+
 // Client-callable boundary — TasksSection is a client component, so it can't
 // import server-only code like createClient() directly. Same thin-wrapper
 // pattern as fetchActivityLogs.
@@ -149,6 +156,76 @@ export async function closeTasksForArchivedLead(
     );
     return 0;
   }
+}
+
+// Edits an existing task. Writes exactly the three columns the edit form
+// renders — title, description, due_at — and nothing else: `completed`,
+// `completed_at`, `dismissed`, `lead_id` and `organization_id` are never in
+// this update object, so an edit cannot move a task's lifecycle state.
+//
+// Field parity (CLAUDE.md): the form posting here renders `title`,
+// `description` and `due_at`, and those are the only three keys read below.
+// `updated_at` is the trigger's job, not this action's.
+export async function updateTask(
+  taskId: string,
+  _prevState: TaskFormState,
+  formData: FormData,
+): Promise<TaskFormState> {
+  const parsed = editTaskSchema.safeParse({
+    title: formData.get("title") ?? "",
+    description: formData.get("description") ?? "",
+    due_at: formData.get("due_at") ?? "",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  // .select().single() for the same reason toggleTaskComplete chains it: an
+  // RLS-denied bulk update affects zero rows and still returns error: null,
+  // which would report a saved edit that never happened.
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      title: parsed.data.title,
+      // An emptied textarea means "no description", which is NULL — the same
+      // shape the column has when a task is created without one.
+      description: parsed.data.description === "" ? null : parsed.data.description,
+      due_at: new Date(parsed.data.due_at).toISOString(),
+    })
+    .eq("id", taskId)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/", "layout");
+  return null;
+}
+
+// The non-destructive removal path — deliberately NOT a delete. `tasks` has no
+// DELETE grant for `authenticated` and no DELETE policy, both on purpose, so
+// this is a flag flip in exactly the shape `leads.archived` uses: the row
+// stays in the database and stays auditable, it just leaves every active
+// surface. Completion state is untouched, so dismissing never silently marks
+// something done.
+export async function dismissTask(taskId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ dismissed: true })
+    .eq("id", taskId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath("/", "layout");
 }
 
 export async function toggleTaskComplete(taskId: string, completed: boolean): Promise<void> {

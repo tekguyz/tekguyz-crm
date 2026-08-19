@@ -454,6 +454,7 @@ CREATE TABLE public.tasks (
     due_at TIMESTAMPTZ NOT NULL,
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at TIMESTAMPTZ DEFAULT NULL,
+    dismissed BOOLEAN NOT NULL DEFAULT FALSE,  -- added 2026-08-19, see addendum below
     created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -478,6 +479,8 @@ CREATE POLICY "Tenant members update their tasks" ON public.tasks
 -- role, including OWNER, can delete a task row from the app; only
 -- service-role can (used only for this session's own test-fixture cleanup).
 
+-- Predicate widened 2026-08-19 to (completed = FALSE AND dismissed = FALSE);
+-- the form below is the ORIGINAL and is no longer what is live.
 CREATE INDEX idx_tasks_org_due ON public.tasks(organization_id, due_at) WHERE completed = FALSE;
 CREATE INDEX idx_tasks_lead_id ON public.tasks(lead_id, completed);
 
@@ -488,6 +491,14 @@ CREATE TRIGGER trigger_update_tasks_timestamp
 
 GRANT SELECT, INSERT, UPDATE ON public.tasks TO authenticated;
 ```
+
+**`tasks.dismissed` addendum (2026-08-19, `supabase/migrations/20260819120000_tasks_dismissed.sql`, applied by the human per the standing DDL rule — not via MCP):** one column, `dismissed BOOLEAN NOT NULL DEFAULT FALSE`, plus a rebuild of `idx_tasks_org_due` so its predicate is `WHERE completed = FALSE AND dismissed = FALSE` (dropped and recreated rather than supplemented — two overlapping partial indexes on the same columns would both be maintained on every write for no read benefit).
+
+`dismissed` is to `tasks` what `archived` is to `leads`: it removes a row from every active surface without removing the row. **It is not a delete, and no DELETE grant or DELETE policy was added** — the note above still holds in full, and was re-confirmed live after this migration (`authenticated` holds only SELECT/INSERT/UPDATE; the only policies on the table are still the SELECT/INSERT/UPDATE trio).
+
+**No new RLS policy was required**, and that was read out of `pg_policies` before the migration was written rather than assumed: `tasks`' UPDATE policy is a plain paired `USING`/`WITH CHECK` on `organization_id` with **no column-level gate**, unlike `leads`, whose lifecycle columns are gated by a `BEFORE UPDATE` trigger. So any tenant member could already write this column the moment it existed.
+
+`dismissed` is **orthogonal to `completed`** — dismissing never writes `completed` or `completed_at`, and a completed task can still be dismissed. Both `getTasksForLead` and `getTasksDueForOrg` filter `dismissed = false` at the database, so a dismissed row is never shipped to the browser but stays fully queryable for audit. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-19 — Task editing and non-destructive dismiss.
 
 Reuses `private.current_org_ids()` and `public.sync_modified_timestamp()` as-is — no new helper function. Full build narrative (step-zero verification, the adversarial cross-tenant RLS test, the Tasks Due agenda query's defense-in-depth `leads!inner` filter, and the archive-side auto-close in Prompt 4) lives in `docs/ADDENDA_LOG.md` under the three "Task/Calendar addendum" sections.
 

@@ -1,17 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import {
-  createTask,
-  fetchTasksForLead,
-  toggleTaskComplete,
-  type TaskFormState,
-} from "@/lib/tasks/actions";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { createTask, fetchTasksForLead, type TaskFormState } from "@/lib/tasks/actions";
 import type { Task } from "@/lib/tasks/queries";
-import { formatDueAt } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { TaskRow } from "@/components/leads/profile/TaskRow";
 
 const initialState: TaskFormState = null;
 
@@ -30,7 +24,6 @@ export function TasksSection({ leadId }: { leadId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [, startTransition] = useTransition();
   const [dueLocal, setDueLocal] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
@@ -66,12 +59,10 @@ export function TasksSection({ leadId }: { leadId: string }) {
     wasPending.current = isPending;
   }, [isPending, state]);
 
-  function handleToggle(task: Task) {
-    startTransition(async () => {
-      await toggleTaskComplete(task.id, !task.completed);
-      setRefreshKey((k) => k + 1);
-    });
-  }
+  // Every per-task mutation (complete, edit, dismiss) lives in TaskRow and
+  // reports back through this one callback, so the list has a single refetch
+  // trigger rather than one per action.
+  const handleChanged = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const parsedDue = new Date(dueLocal);
   const dueIso = Number.isNaN(parsedDue.getTime()) ? "" : parsedDue.toISOString();
@@ -135,30 +126,12 @@ export function TasksSection({ leadId }: { leadId: string }) {
       {visible.length > 0 && (
         <ul className="flex flex-col gap-2">
           {visible.map((task) => (
-            <li key={task.id} className="flex items-start gap-2">
-              {/* No `name` and no enclosing form: this is a controlled toggle
-                  that calls toggleTaskComplete directly, not a form field, so
-                  there is no FormData name to preserve here. `label` is not
-                  used because the task title and its due date are their own
-                  two-line block beside the box; aria-label carries the
-                  accessible name instead, unchanged from the native version. */}
-              <Checkbox
-                checked={task.completed}
-                onCheckedChange={() => handleToggle(task)}
-                aria-label={task.completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-                className="mt-0.5"
-              />
-              <div className="min-w-0">
-                <p
-                  className={`text-body-md ${task.completed ? "text-ink-muted line-through" : "text-ink-main"}`}
-                >
-                  {task.title}
-                </p>
-                <p className="text-body-sm text-ink-muted">
-                  {formatDueAt(task.due_at, timeZone)}
-                </p>
-              </div>
-            </li>
+            <TaskRow
+              key={task.id}
+              task={task}
+              timeZone={timeZone}
+              onChanged={handleChanged}
+            />
           ))}
         </ul>
       )}

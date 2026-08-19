@@ -8,11 +8,12 @@ export type Task = {
   due_at: string;
   completed: boolean;
   completed_at: string | null;
+  dismissed: boolean;
   created_at: string;
 };
 
 const TASK_COLUMNS =
-  "id, lead_id, title, description, due_at, completed, completed_at, created_at";
+  "id, lead_id, title, description, due_at, completed, completed_at, dismissed, created_at";
 
 // Scoped by RLS alone (no explicit organization_id filter) — the caller only
 // has a lead id here, same shape as getActivityLogs/getLeadById. A leadId
@@ -21,12 +22,19 @@ const TASK_COLUMNS =
 // Sorted soonest-due first and NOT filtered by `completed`: the Open/Completed
 // split is a client-side view toggle in TasksSection, so both sets come back
 // in one round trip and switching tabs never refetches.
+//
+// `dismissed` IS filtered here, and at the database rather than in the client
+// toggle: dismissal is not a third view, it is removal from every active
+// surface. The row stays in the table and stays queryable for audit; it just
+// never reaches a rendering surface again. Orthogonal to `completed` — a
+// dismissed task is filtered out whether it was completed or not.
 export async function getTasksForLead(leadId: string): Promise<Task[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tasks")
     .select(TASK_COLUMNS)
     .eq("lead_id", leadId)
+    .eq("dismissed", false)
     .order("due_at", { ascending: true });
 
   if (error) throw error;
@@ -61,6 +69,7 @@ export async function getTasksDueForOrg(orgId: string): Promise<TaskDue[]> {
     .select("id, title, due_at, lead_id, leads!inner(client_name, archived)")
     .eq("organization_id", orgId)
     .eq("completed", false)
+    .eq("dismissed", false)
     .eq("leads.archived", false)
     .order("due_at", { ascending: true });
 

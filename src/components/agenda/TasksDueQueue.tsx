@@ -3,6 +3,7 @@ import { isOverdue, formatDueAt } from "@/lib/format";
 import type { TaskDue } from "@/lib/tasks/queries";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TaskDismissButton } from "@/components/agenda/TaskDismissButton";
 
 // Named to match its real siblings (SlaCriticalQueue / HighValueTrack /
 // StarredWorkspace), which use a <Concept><Container> shape with no "Section"
@@ -34,11 +35,14 @@ export function TasksDueQueue({
             const overdue = isOverdue(task.due_at);
 
             return (
-              <li key={task.id}>
+              // The dismiss control sits OUTSIDE the <Link>, so the row is a
+              // flex pair rather than a bare anchor: a <button> inside an <a>
+              // is invalid HTML.
+              <li key={task.id} className="flex items-center gap-1">
                 {/* Reuses the app-wide ?leadId= deep link that
                     ProfileSheetController (mounted in AppShell) already
                     listens for — no second sheet-opening mechanism. */}
-                <Link href={`/?leadId=${task.lead_id}`} className="block">
+                <Link href={`/?leadId=${task.lead_id}`} className="block min-w-0 flex-1">
                   {/* Card is Level 0, so v1's elevation-1 → elevation-2 hover
                       is replaced by a canvas-soft wash, same as the lead
                       cards. `cold` is deliberately NOT passed — see the note
@@ -63,6 +67,7 @@ export function TasksDueQueue({
                     </div>
                   </Card>
                 </Link>
+                <TaskDismissButton taskId={task.id} title={task.title} />
               </li>
             );
           })}
