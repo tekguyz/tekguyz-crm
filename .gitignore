@@ -8,3 +8,8 @@ tsconfig.tsbuildinfo
 __pycache__/
 *.pyc
 .claude/settings.json
+
+# Local MCP server config — machine-specific, and a place credentials can land
+.mcp.json
+# Supabase CLI link state (project ref), written by `supabase link`
+supabase/.temp/

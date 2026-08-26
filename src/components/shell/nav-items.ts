@@ -4,6 +4,7 @@ import {
   IconUsers,
   IconChartBar,
   IconUpload,
+  IconTargetArrow,
   IconSettings,
 } from "@tabler/icons-react";
 
@@ -39,6 +40,11 @@ export const SECONDARY_NAV: ShellNavItem[] = [
   // something you check between weeks, not between calls.
   { href: "/reports", label: "Reports", icon: IconChartBar },
   { href: "/import", label: "Import", icon: IconUpload },
+  // Cold outreach, deliberately separate from Import: that one writes leads,
+  // this one writes prospects, and the two files look nothing alike. Sits in
+  // SECONDARY like every other job-you-do-once destination; the mobile tab
+  // bar's four slots are not reopened by it.
+  { href: "/prospects/import", label: "Prospects", icon: IconTargetArrow },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];
 

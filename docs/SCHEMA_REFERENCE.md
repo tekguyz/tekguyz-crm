@@ -661,6 +661,7 @@ Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`n
 | `vault_clear_org_credential` | ✅ internal OWNER/ADMIN role check |
 | `vault_get_org_credential` | ❌ none in the body **by design** — it is gated at the GRANT level instead: `EXECUTE` is revoked from `PUBLIC`/`anon`/`authenticated` and held by `service_role` only, so the caller cannot reach it to need a check. Verified live: the `authenticated` role’s own attempt fails with “permission denied.” Added to this table 2026-08-18 — it had been live and documented in CLAUDE.md § Multi-Tenant Security Model since Prompt 13a but was never listed here. |
 | `import_leads_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id` |
+| `import_prospects_chunk` | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_organization_id`. Its `jsonb_to_recordset` column list has no `organization_id`, so a forged one on the payload is unreachable, not merely ignored |
 | `close_invite_on_member_insert` (2026-08-17) | n/a — a **trigger** function, not a callable RPC. It takes no arguments to forge, reads only `NEW`, and `EXECUTE` is revoked from `PUBLIC`, so it is unreachable via `/rest/v1/rpc/`. Its tenant scoping is `NEW.organization_id`, which the row being inserted already fixes. |
 | `enforce_lead_assignee_membership` (2026-08-18) | n/a — a **trigger** function, and `SECURITY INVOKER` rather than DEFINER, so it is in this table only for completeness. Takes no arguments; scoped by `NEW.organization_id`. |
 | `private.caller_role_in_org` (2026-08-18) | n/a — reads `auth.uid()` for the `p_org_id` it is given and returns a role or NULL; it makes no decision. **No grant to any client role at all**, and it lives in `private`, so it is reachable only from the two functions below, which run as their owner. |
@@ -798,3 +799,102 @@ CREATE OR REPLACE TRIGGER trigger_close_invite_on_member_insert
 Live-verified the same day with a disposable service-role script (deleted afterwards per CLAUDE.md § Test-Data Cleanup), not by reading the schema: 15 checks, all passing, over throwaway orgs and auth users that never touched TEKGUYZ or TEKGUYZ Demo. It reproduces the 2026-07-25 scenario for real — an out-of-band service-role `INSERT` into `organization_members`, never through the RPC, against a `PENDING` invite whose stored address differs in case. The identical script run **before** the migration failed exactly that check, which is what makes the pass meaningful. `npm run test:rls` stayed 15/15. `get_advisors` security was 12 findings before and the same 12 after — `close_invite_on_member_insert` does not appear, because `EXECUTE` is revoked from `PUBLIC`; performance went 13 → 12 (an unrelated `unused_index` on `idx_submissions_tenant` cleared). Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-17 — Closing a stranded PENDING invite on membership insert.
 
 **Note on drift not covered by this reconciliation:** the 2026-07-26 SQL block above and this note are not a complete picture of every table shipped since — `report_sends` (2026-07-22), the `audio-notes` storage bucket (2026-07-22), `vault_clear_org_credential` (2026-07-27), and the `organization_members` notification-preference columns (2026-07-27) are live in the database per their own migration files and addenda, but are not reflected here. Only `tasks` and `lead_submissions` were added to this file, each in scope for the work that shipped alongside it; treat any table not named in this file as **possibly present but undocumented here** — check `supabase/migrations/` directly rather than assuming this file is exhaustive.
+
+---
+
+## `prospects` addendum (2026-08-26)
+
+`supabase/migrations/20260826120000_prospects.sql`, applied and live-verified the
+same day. Adds one table, one trigger, three RLS policies, three indexes and one
+`SECURITY DEFINER` RPC. **Adds nothing to `leads`** — its DDL (25 columns), its
+three RLS policies, `unique_tenant_client_email_ci`, `enforce_lead_role_restrictions`,
+`enforce_lead_assignee_membership` and `import_leads_chunk` were all re-queried
+live after the migration and are unchanged.
+
+The cold-outreach staging table for Google Business Profile scrapes from the
+sibling `tekguyz-leadgen` repo. It exists because GBP exposes no email address
+and `leads.email` is `NOT NULL` and half of `unique_tenant_client_email_ci`, so
+this data cannot enter `leads`. A prospect is promoted into `leads` by hand once
+a call produces a real email — that path is Prompt 2 and does not exist yet.
+
+**Columns.** `id UUID PK`, `organization_id UUID NOT NULL FK -> organizations ON DELETE CASCADE`,
+`place_id TEXT NOT NULL` (Google's Place ID; the dedup key), then the scrape
+payload in the exact order the leadgen CSV writes it — `name TEXT NOT NULL`,
+`category`, `address`, `city`, `state`, `postal_code`, `phone`, `website_url`,
+`website_status`, `rating NUMERIC(2,1)`, `review_count INTEGER`,
+`google_maps_url`, `niche_searched`, `city_searched`, `run_id`,
+`scraped_at TIMESTAMPTZ`, all nullable. Then `phone_digits TEXT GENERATED ALWAYS … STORED`,
+`status TEXT NOT NULL DEFAULT 'NEW'`,
+`possible_duplicate_lead_id UUID NULL FK -> leads(id) ON DELETE SET NULL`,
+`archived BOOLEAN NOT NULL DEFAULT false`, `created_at`, `updated_at`.
+
+**Constraints.** `unique_tenant_place_id UNIQUE (organization_id, place_id)` — a
+plain column pair, unlike `leads`' expression index, and scoped by tenant so two
+organizations may hold the same business. `check_valid_prospect_status CHECK
+(status IN ('NEW','CALLED','CALLBACK','NOT_INTERESTED','CONVERTED'))`.
+
+**`phone_digits` is the normalization, written once here and once in the RPC.**
+`CASE WHEN length(regexp_replace(phone,'[^0-9]','','g')) >= 10 THEN "right"(regexp_replace(phone,'[^0-9]','','g'),10) ELSE NULL END`,
+stored. `NULL` means *not comparable*, not "no digits" — under ten digits is
+dropped, because a 7-digit local number would false-match every number ending in
+those seven. The identical expression appears on the `leads` side of the
+duplicate lookup inside `import_prospects_chunk`, because `leads` could not get a
+column in that unit; `src/lib/prospects/phone.ts` is the TypeScript twin. All
+three must agree, and the RLS suite asserts it behaviourally.
+
+**RLS.** Enabled. Mirrors `leads`/`tasks`/`lead_submissions` — plain
+`organization_id IN (SELECT private.current_org_ids())`, no role-based `EXISTS`
+check. `"Members read tenant prospects"` (SELECT, `USING`),
+`"Members create tenant prospects"` (INSERT, `WITH CHECK`),
+`"Members write tenant prospects"` (UPDATE, paired `USING` + `WITH CHECK`).
+**No DELETE policy and no DELETE grant to `authenticated`** — the app-wide
+no-hard-deletes rule, same stance as `activity_logs` and `lead_submissions`;
+`archived` is the removal lever. Grants: `SELECT, INSERT, UPDATE` to
+`authenticated` only (verified live).
+
+**Trigger.** `trigger_update_prospects_timestamp BEFORE UPDATE`, reusing
+`public.sync_modified_timestamp()` as-is. No new helper function.
+
+**Indexes.** `idx_prospects_tenant_status (organization_id, status) WHERE archived = false`,
+`idx_prospects_phone_digits (organization_id, phone_digits) WHERE phone_digits IS NOT NULL`,
+`idx_prospects_possible_duplicate (possible_duplicate_lead_id) WHERE possible_duplicate_lead_id IS NOT NULL`.
+Deliberately **no** index on `leads` for the duplicate lookup — see
+`docs/KNOWN_GAPS.md`.
+
+**`public.import_prospects_chunk(p_organization_id UUID, p_rows JSONB)**
+`RETURNS TABLE (prospect_id UUID, prospect_place_id TEXT, duplicate_lead_id UUID)`,
+`SECURITY DEFINER`, `search_path` pinned to `''` (verified live:
+`proconfig = {search_path=""}`), `EXECUTE` revoked from `PUBLIC`/`anon` and
+granted to `authenticated` only (verified live: `proacl` is
+`postgres=X | service_role=X | authenticated=X`, no `anon` entry).
+
+Its tenant boundary is the **internal membership re-check**, not the RLS policy —
+`SECURITY DEFINER` bypasses RLS, so `"Members create tenant prospects"` stops
+applying the moment it runs. Raises `PROSPECT_IMPORT_NOT_AUTHORIZED` with
+`42501` on a NULL `auth.uid()` and on a caller with no `organization_members` row
+for `p_organization_id`. The check is **membership, not role** — prospects INSERT
+keeps full MEMBER parity, matching `leads`.
+
+Two structural details worth not undoing. The `jsonb_to_recordset` column
+definition list **has no `organization_id`**, so a forged one on the row payload
+is unreachable rather than merely ignored — proven by a test. And the OUT columns
+are deliberately not named `id`/`place_id`: an OUT column sharing a name with a
+column referenced in `ON CONFLICT` makes that reference ambiguous and the
+function fails at runtime with `42702`, the same trap `import_leads_chunk`
+documents.
+
+`ON CONFLICT (organization_id, place_id) DO NOTHING`, never `DO UPDATE` — a
+re-import must not reset a prospect an operator has already marked `CALLED` or
+`NOT_INTERESTED`. `possible_duplicate_lead_id` is filled by a
+`LEFT JOIN LATERAL` against `leads`, scoped to `p_organization_id` (unscoped it
+would be a cross-tenant phone-number oracle), `ORDER BY l.created_at LIMIT 1`,
+`ON TRUE` so a non-match still imports.
+
+Live-verified before the file was handed over, against a temp-table replica
+(`pg_temp` function, `ON COMMIT DROP` temp tables, no `public`-schema object
+touched), and again after applying: 64/64 on `npm run test:rls` (43 pre-existing
+unchanged, 21 new), and a real import of both leadgen CSVs through the UI —
+91 + 31 inserted on the first run, 0 + 0 on the second with 91 + 31 reported as
+already present. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-26 — `prospects`:
+cold-outreach staging, its RLS and its CSV import.
+
