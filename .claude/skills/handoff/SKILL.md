@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md and docs/DESIGN.md's token tables against the real repo state, repair whichever is stale, then print a paste-ready handoff block for the user's Claude.ai planning Project. Use when the user asks for a handoff, a status sync, "where are we", or says they are about to plan/spec/write a prompt in Claude.ai.
+description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, repair whichever is stale, then print a paste-ready handoff block for the user's Claude.ai planning Project. Use when the user asks for a handoff, a status sync, "where are we", or says they are about to plan/spec/write a prompt in Claude.ai.
 ---
 
 # Handoff to the Claude.ai planning Project
@@ -126,6 +126,11 @@ Check, in this order:
    node .claude/skills/handoff/check-design-drift.mjs
    ```
 
+   Checks 9, 10 and 11 are all repo-only and are wired together as one npm
+   script — `npm run check:docs` runs the three in order and is the normal way
+   to invoke them. Run them individually only when one has already failed and
+   you are iterating on it.
+
    It parses DESIGN.md's three value tables — § Color Tokens (OKLCH) plus
    § Additions beyond the original v2 draft, § Typography, § Border Radius Scale
    — and compares each stated value against the matching custom property in
@@ -185,6 +190,13 @@ Check, in this order:
     Exit `0` clean, `1` drift with one line per finding, `2` means it could not
     read or run something and **is not a pass** — fix the script before
     continuing, exactly as with check 9.
+
+    **One known flake, and only one.** `CANNOT RUN vitest for the test-count
+    check — Command failed: npx vitest run …` on the *first* run of a session is
+    usually a cold-start timeout, not a broken script. Run `npm run check:docs`
+    a second time before treating it as real. If it fails twice, it is real —
+    reproduce it with `npx vitest run --reporter=json --silent` directly, which
+    prints the actual cause the script swallows to its first line.
 
     **Handling a finding.** For a count, the measurement wins and the doc gets
     corrected — a stated figure is a mirror, not a dated historical record, so
@@ -318,9 +330,10 @@ maintenance convention** — do not invent a new format:
   `docs/ADDENDA_LOG.md`** — that index is what makes every
   ``docs/ADDENDA_LOG.md § <Section Title>`` pointer in the repo resolve, and a
   section missing from it is unreachable by every cross-reference. The log was
-  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file; 70 now); reading it
-  whole is no longer the way to consult it — read the index, then the one file
-  you need.
+  split on 2026-08-18 (419 KB, 68 sections, ~103k tokens in one file; 77 sections
+  across the four month files as of 2026-08-25, with the index itself down to
+  ~12 KB); reading it whole is no longer the way to consult it — read the index,
+  then the one file you need.
 - **`docs/KNOWN_GAPS.md`**: add a bullet for anything newly and deliberately
   deferred (⬜, one to two sentences, dated, pointing at the fuller story in
   ADDENDA_LOG.md); relocate anything now fully resolved to ADDENDA_LOG.md's
@@ -382,14 +395,16 @@ Structure:
 - <every check-12 residue finding, if any, with the scoped DELETE to run — the user runs it, not you. Omit entirely when that check exits 0.>
 
 ### Attach to this Project
-CLAUDE.md · docs/KNOWN_GAPS.md · docs/DESIGN.md · docs/SCHEMA_REFERENCE.md
-(not docs/ADDENDA_LOG.md — history, not state; paste single sections on demand)
+Permanent: CLAUDE.md · docs/KNOWN_GAPS.md · docs/ADDENDA_LOG.md (the ~12 KB index)
+Per chat, only when that chat needs it: docs/SCHEMA_REFERENCE.md (schema/RLS/migration
+planning) · docs/DESIGN.md (visual-design argument)
+Never: docs/addenda/*.md — ~480 KB of dated narrative; name a section and it gets pasted
 ```
 
 Rules for the block:
 
 - **Nothing named in `docs/KNOWN_GAPS.md` § "Permanently rejected — never
-  re-list" appears anywhere in this block.** Check 11 already struck it; this
+  re-list" appears anywhere in this block.** Check 13 already struck it; this
   is the second gate, and it exists because both `### Open now` and `### Needs
   the user, not more code` are written from prose rather than from a script.
 - **Every claim measured.** If a figure was not verified this session, either
@@ -404,6 +419,11 @@ Rules for the block:
 - **No hedging and no filler.** "Design System v2 foundation shipped, 49 tests
   passing" or "Design System v2 foundation is uncommitted" — never "the design
   system is essentially done."
-- The attach-list above is this repo's current doc set. If a new permanent doc
-  is ever added (or one of these is retired), update the list here to match —
-  don't let it silently drift from what CLAUDE.md's own Reference Index says.
+- **The attach-list is a budget, not an inventory.** Project knowledge is loaded
+  into every conversation in the planning Project, so a file parked there is paid
+  for on every chat whether that chat needs it or not — the five-file set was
+  ~146 KB / ~36k tokens, which is why it was split on 2026-08-25 into a permanent
+  tier and a per-chat tier. Claude Code reads the repo directly and needs nothing
+  attached; only what the *planning* side needs belongs there. If a new permanent
+  doc is added or one is retired, place it in the right tier here and keep it
+  consistent with CLAUDE.md's own Reference Index.
