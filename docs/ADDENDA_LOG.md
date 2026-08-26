@@ -115,3 +115,4 @@ repo matches a title in this column.
 | 2026-08-18 — HMAC request signing replaces the URL-path webhook secret | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-19 — Task editing and non-destructive dismiss | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-19 — Reporting view: `/reports` | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
+| 2026-08-26 — handoff attach-list: a budget, not an inventory | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
