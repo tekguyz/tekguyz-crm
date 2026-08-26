@@ -25,3 +25,27 @@ if (!("ResizeObserver" in globalThis)) {
     disconnect() {}
   };
 }
+
+// jsdom implements <dialog> as an element but not its modal behaviour, so
+// showModal/close are simply missing. src/components/ui/Modal.tsx calls both in
+// an effect, which means ANY test that renders a Modal-based component throws
+// "dialog.showModal is not a function" before a single assertion runs — it
+// reads like a broken component rather than a missing platform API.
+//
+// The stub only has to move the `open` property, which is the one thing Modal's
+// own effect reads back (`if (open && !dialog.open)`). Everything the real
+// implementation adds — the top layer, the backdrop, focus trapping — is
+// browser behaviour that jsdom could not assert on anyway.
+if (typeof HTMLDialogElement !== "undefined") {
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.open = true;
+    };
+  }
+  if (!HTMLDialogElement.prototype.close) {
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      this.open = false;
+      this.dispatchEvent(new Event("close"));
+    };
+  }
+}

@@ -117,3 +117,4 @@ repo matches a title in this column.
 | 2026-08-19 — Reporting view: `/reports` | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-26 — handoff attach-list: a budget, not an inventory | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-26 — `prospects`: cold-outreach staging, its RLS and its CSV import | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
+| 2026-08-26 — Prospect promotion: the write path into `leads` | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |

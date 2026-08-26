@@ -10,7 +10,7 @@ import {
   LEAD_ASSIGNEE_NOT_MEMBER_MESSAGE,
   LEAD_ROLE_DENIED_MESSAGE,
 } from "@/lib/leads/role-errors";
-import { recordLeadSubmission } from "@/lib/submissions/record";
+import { insertLeadWithSubmission } from "@/lib/leads/create";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
 // split out on 2026-07-28 to bring this file back under the 200-line cap.
@@ -51,42 +51,30 @@ export async function createLead(
   const leadSource = optionalField(formData.get("lead_source"));
   const serviceCategory = optionalField(formData.get("service_category"));
 
-  const { data: lead, error } = await supabase
-    .from("leads")
-    .insert({
-      organization_id: orgId,
-      client_name: clientName,
-      email,
-      phone,
-      company,
-      website,
-      lead_source: leadSource,
-      service_category: serviceCategory,
-      estimated_revenue: estimatedRevenue,
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  // Every lead carries at least one submission from day one, whatever created
-  // it — otherwise the profile sheet's enquiry history would be empty for
-  // manually-created leads and read as "nothing was ever received" rather than
-  // "this one was typed in". message is null: this form has no message field,
-  // and inventing one would be a fake record of something nobody said.
-  await recordLeadSubmission(supabase, {
-    leadId: lead.id,
-    organizationId: orgId,
+  // The insert and its paired lead_submissions row both live in
+  // insertLeadWithSubmission (@/lib/leads/create.ts), split out on 2026-08-26
+  // so prospect promotion creates a lead through this exact code rather than a
+  // parallel write path of its own. Nothing about this form's behaviour
+  // changed: the same columns are written, the same submission is recorded,
+  // and the same LeadFormState comes back.
+  //
+  // message is null: this form has no message field, and inventing one would
+  // be a fake record of something nobody said.
+  const result = await insertLeadWithSubmission(supabase, orgId, {
     clientName,
     email,
     phone,
     company,
-    message: null,
-    serviceCategory,
+    website,
     leadSource,
+    serviceCategory,
+    estimatedRevenue,
+    message: null,
   });
+
+  if (!result.ok) {
+    return { error: result.error.message };
+  }
 
   revalidatePath("/", "layout");
   return null;

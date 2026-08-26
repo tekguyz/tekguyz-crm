@@ -44,7 +44,12 @@ export const SECONDARY_NAV: ShellNavItem[] = [
   // this one writes prospects, and the two files look nothing alike. Sits in
   // SECONDARY like every other job-you-do-once destination; the mobile tab
   // bar's four slots are not reopened by it.
-  { href: "/prospects/import", label: "Prospects", icon: IconTargetArrow },
+  //
+  // Points at the call list, not at /prospects/import — importing is a job you
+  // do once a week, working the list is the daily one. The importer is reached
+  // by a button on the list page. isNavItemActive is an EXACT match, so this
+  // entry correctly does NOT light up while you are on /prospects/import.
+  { href: "/prospects", label: "Prospects", icon: IconTargetArrow },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];
 

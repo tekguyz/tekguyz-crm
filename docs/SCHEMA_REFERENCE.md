@@ -898,3 +898,68 @@ unchanged, 21 new), and a real import of both leadgen CSVs through the UI —
 already present. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-26 — `prospects`:
 cold-outreach staging, its RLS and its CSV import.
 
+
+---
+
+## `prospects` promotion addendum (2026-08-26)
+
+`supabase/migrations/20260826130000_prospects_promotion.sql`, applied by hand
+through the Supabase SQL editor and live-verified the same day. **Additive
+only:** two nullable columns and one index, all on `public.prospects`.
+
+**Adds nothing to `leads`** — its DDL, its three RLS policies,
+`unique_tenant_client_email_ci`, `enforce_lead_role_restrictions`,
+`enforce_lead_assignee_membership` and `import_leads_chunk` were re-verified
+unchanged after the migration. Also unchanged: `prospects`' three RLS policies,
+its grants, its trigger, `check_valid_prospect_status`'s value list,
+`unique_tenant_place_id`, and `import_prospects_chunk`.
+
+**New columns.**
+`notes TEXT NULL` — free-text call notes, unconstrained on purpose; nothing
+queries on it. `promoted_lead_id UUID NULL REFERENCES public.leads(id) ON DELETE
+SET NULL` — the lead this prospect became.
+
+**`ON DELETE SET NULL`, never `CASCADE`.** Deleting a lead must not delete the
+prospect that produced it: the prospect is the record that this business was
+called at all. The row becomes promotable again instead, which is verified by a
+test.
+
+**New index.** `idx_prospects_promoted_lead (promoted_lead_id) WHERE
+promoted_lead_id IS NOT NULL`. Postgres does not index a referencing FK column
+automatically, so without it every `ON DELETE SET NULL` fired by a lead deletion
+sequentially scans the whole table. Partial, matching the shape of the sibling
+`idx_prospects_possible_duplicate`; the cascade's own predicate is
+`promoted_lead_id = <id>`, which implies not-null, so the planner can still use
+it.
+
+**No new RLS policy, and none should be added.** `prospects`' existing policies
+have no column-level gate — they are plain
+`organization_id IN (SELECT private.current_org_ids())` — so a new column is
+already covered by the UPDATE policy's paired `USING`/`WITH CHECK`. Same shape as
+`tasks.dismissed` in `20260819120000_tasks_dismissed.sql`. Grants are unchanged:
+`SELECT, INSERT, UPDATE` to `authenticated`, **still no DELETE grant and still no
+DELETE policy** — re-confirmed live after the migration by a test that attempts
+one.
+
+**`promoted_lead_id` is the only source of truth for "already promoted."**
+`status` carries a `'CONVERTED'` value, but status is a label an operator can set
+by hand from a dropdown and cannot carry the lead's identity. The application
+writes both in ONE statement, which is one transaction:
+
+```sql
+update public.prospects
+   set status = 'CONVERTED', promoted_lead_id = $1
+ where id = $2 and promoted_lead_id is null;
+```
+
+The `is null` predicate is what makes promoting twice impossible: a second
+promotion affects zero rows rather than overwriting the first one's lead id.
+Every read that asks whether a prospect can still be promoted must test
+`promoted_lead_id`, never the status string. The app's inline status editor also
+carries `.is("promoted_lead_id", null)` so a promoted prospect cannot be walked
+back off `CONVERTED` while still pointing at a real lead.
+
+Live-verified: 76/76 on `npm run test:rls` (64 pre-existing unchanged, 12 new in
+`src/lib/prospects/prospect-promotion.rls.test.ts`), plus a real promotion driven
+through the UI. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-26 — Prospect
+promotion: the write path into `leads`.
