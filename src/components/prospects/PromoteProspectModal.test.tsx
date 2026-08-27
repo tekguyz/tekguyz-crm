@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -117,16 +117,38 @@ describe("PromoteProspectModal — surviving a failed submit", () => {
     expect(screen.getByLabelText("Contact name")).toHaveValue("Dana Rivers");
   });
 
-  it("renders every field as controlled, so none can be reset behind React's back", () => {
+  // Replaces an assertion that could never fail. It filtered for a
+  // `defaultValue` ATTRIBUTE in the DOM, and React never emits one — it reads
+  // false for a controlled and an uncontrolled input alike, so the test passed
+  // against both. See CLAUDE.md § Form/Action Field Parity.
+  //
+  // form.reset() is the actual call React 19 makes after the action returns,
+  // so this reproduces the failure rather than standing in for it. Deliberately
+  // no rerender(): RTL's rerender forces a render that re-applies the
+  // controlled value, which the real app does not necessarily do, and that is
+  // exactly what hid a live <select> bug in the seven sibling forms.
+  it("keeps every typed and corrected value when the form is reset", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <PromoteProspectModal prospect={prospect} onClose={() => {}} />,
     );
 
-    // A React-controlled input carries no defaultValue attribute in the DOM.
-    // An uncontrolled one rendered from defaultValue does.
-    const withDefault = [...container.querySelectorAll("[name]")].filter((element) =>
-      element.hasAttribute("defaultValue"),
-    );
-    expect(withDefault).toEqual([]);
+    await user.type(screen.getByLabelText("Email"), "dana@example.invalid");
+    await user.clear(screen.getByLabelText("Contact name"));
+    await user.type(screen.getByLabelText("Contact name"), "Dana Rivers");
+    await user.type(screen.getByLabelText("Estimated revenue"), "2500");
+    await user.clear(screen.getByLabelText("Call notes"));
+    await user.type(screen.getByLabelText("Call notes"), "Ready to sign.");
+
+    container.querySelector("form")!.reset();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toHaveValue("dana@example.invalid");
+    });
+    expect(screen.getByLabelText("Contact name")).toHaveValue("Dana Rivers");
+    expect(screen.getByLabelText("Estimated revenue")).toHaveValue(2500);
+    expect(screen.getByLabelText("Call notes")).toHaveValue("Ready to sign.");
+    // The hidden field the action keys the whole write on must survive too.
+    expect(container.querySelector('input[name="prospect_id"]')).toHaveValue(prospect.id);
   });
 });
