@@ -50,6 +50,14 @@ export function TaskRow({
   const [state, formAction, isPending] = useActionState(saveTask, initialState);
   const [isEditing, setIsEditing] = useState(false);
   const [dueLocal, setDueLocal] = useState(() => toDatetimeLocalValue(task.due_at));
+  // CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after
+  // the action returns — including on failure — by calling form.reset() and
+  // re-rendering, which reverted an edited title and description to the task's
+  // stored values, so the form looked untouched and the correction was gone.
+  // due_at was already controlled and is deliberately untouched by that fix.
+  // See CLAUDE.md § Form/Action Field Parity.
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? "");
   const [, startTransition] = useTransition();
   const wasPending = useRef(false);
 
@@ -87,10 +95,17 @@ export function TaskRow({
             are exactly the three keys updateTask reads. */}
         <form action={formAction} className="flex flex-col gap-2 rounded-md border border-hairline p-2">
           {state?.error && <p className="text-body-sm text-danger">{state.error}</p>}
-          <Input name="title" defaultValue={task.title} aria-label="Task title" required />
+          <Input
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            aria-label="Task title"
+            required
+          />
           <Textarea
             name="description"
-            defaultValue={task.description ?? ""}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             aria-label="Task description"
             rows={2}
             placeholder="Description (optional)"
@@ -112,6 +127,10 @@ export function TaskRow({
               variant="ghost"
               size="sm"
               onClick={() => {
+                // Cancel discards the edit, so every field goes back to the
+                // task's stored values — not just the due date.
+                setTitle(task.title);
+                setDescription(task.description ?? "");
                 setDueLocal(toDatetimeLocalValue(task.due_at));
                 setIsEditing(false);
               }}

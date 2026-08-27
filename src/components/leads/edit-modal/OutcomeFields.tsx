@@ -1,3 +1,9 @@
+"use client";
+
+import { useRef, useState } from "react";
+
+import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
+
 import type { Lead } from "@/lib/leads/queries";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -23,7 +29,22 @@ import { canEditLeadLifecycle } from "@/lib/organizations/roles";
 // outcome is a real change, and the trigger then rejects the whole save,
 // blocking edits a MEMBER is allowed to make. Re-sending the unchanged values
 // passes the trigger's IS DISTINCT FROM guard untouched.
+//
+// CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after the
+// action returns, failure included, which reverted a just-chosen outcome and
+// its revenue figure. See CLAUDE.md § Form/Action Field Parity.
 export function OutcomeFields({ lead, role }: { lead: Lead; role: string }) {
+  const [outcome, setOutcome] = useState(lead.outcome ?? "");
+  const [actualRevenue, setActualRevenue] = useState(
+    lead.actual_revenue === null || lead.actual_revenue === undefined
+      ? ""
+      : String(lead.actual_revenue),
+  );
+  // This group owns a <select>, which React does not restore after the
+  // post-action form.reset() — see the hook for why.
+  const anchor = useRef<HTMLDivElement>(null);
+  useFormResetRestore(anchor);
+
   if (!canEditLeadLifecycle(role)) {
     return (
       <>
@@ -34,8 +55,13 @@ export function OutcomeFields({ lead, role }: { lead: Lead; role: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t border-hairline pt-3">
-      <Select label="Outcome" name="outcome" defaultValue={lead.outcome ?? ""}>
+    <div ref={anchor} className="flex flex-col gap-2 border-t border-hairline pt-3">
+      <Select
+        label="Outcome"
+        name="outcome"
+        value={outcome}
+        onChange={(event) => setOutcome(event.target.value)}
+      >
         <option value="">Not closed</option>
         <option value="WON">Won</option>
         <option value="LOST">Lost</option>
@@ -47,7 +73,8 @@ export function OutcomeFields({ lead, role }: { lead: Lead; role: string }) {
         type="number"
         min="0"
         step="0.01"
-        defaultValue={lead.actual_revenue ?? ""}
+        value={actualRevenue}
+        onChange={(event) => setActualRevenue(event.target.value)}
       />
     </div>
   );

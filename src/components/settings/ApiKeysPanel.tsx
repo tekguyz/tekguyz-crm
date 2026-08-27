@@ -38,12 +38,31 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
   const [clearDialogField, setClearDialogField] = useState<ManagedCredentialField | null>(null);
   const [clearing, setClearing] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  // CONTROLLED, not bare uncontrolled inputs. React 19 resets a
+  // <form action={...}> after the action returns — including on failure — by
+  // calling form.reset() and re-rendering. Losing a pasted API key is the most
+  // expensive instance of this bug in the app: the value is long, opaque, and
+  // usually not retypable from memory. Both fields start blank by design — a
+  // stored key is never shown back — so they are cleared explicitly on a
+  // successful save rather than left holding the secret in client state.
+  // See CLAUDE.md § Form/Action Field Parity.
+  const [geminiKey, setGeminiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
 
   // Refetches after every save attempt AND every successful clear, so a
   // masked "configured" label stays accurate without a full page reload.
   useEffect(() => {
     getCredentialStatus().then(setStatus);
   }, [state, refreshToken]);
+
+  // Only on a confirmed save. A failed one keeps both values so the operator
+  // corrects one field instead of re-fetching two keys from their provider.
+  useEffect(() => {
+    if (state?.success) {
+      setGeminiKey("");
+      setAnthropicKey("");
+    }
+  }, [state]);
 
   async function handleClearConfirm(e: MouseEvent<HTMLButtonElement>) {
     // Same "stay open through the async call" override as EditLeadModal's
@@ -103,6 +122,8 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
                 name="api_key_gemini"
                 type="password"
                 autoComplete="off"
+                value={geminiKey}
+                onChange={(event) => setGeminiKey(event.target.value)}
                 placeholder={status?.hasGeminiKey ? "Leave blank to keep current key" : "Not configured"}
               />
               {status?.hasGeminiKey && (
@@ -123,6 +144,8 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
                 name="api_key_anthropic"
                 type="password"
                 autoComplete="off"
+                value={anthropicKey}
+                onChange={(event) => setAnthropicKey(event.target.value)}
                 placeholder={status?.hasAnthropicKey ? "Leave blank to keep current key" : "Not configured"}
               />
               {status?.hasAnthropicKey && (

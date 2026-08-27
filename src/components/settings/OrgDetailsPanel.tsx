@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState, type MouseEvent } from "react";
+import { useActionState, useRef, useState, type MouseEvent } from "react";
+
+import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
 import { toast } from "sonner";
 import {
   updateOrgSettings,
@@ -49,6 +51,19 @@ export function OrgDetailsPanel({
   canEdit: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(updateOrgSettings, initialState);
+  // CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after
+  // the action returns — including on failure — by calling form.reset() and
+  // re-rendering, which reverted these three to the org's stored values and
+  // discarded the edit the error was asking the user to correct. The `key`
+  // below is what re-seeds this state from fresh server props after a save.
+  // See CLAUDE.md § Form/Action Field Parity.
+  const [name, setName] = useState(orgName);
+  const [timezone, setTimezone] = useState(orgTimezone);
+  const [currency, setCurrency] = useState(currencyFormat);
+  // This group owns a <select>, which React does not restore after the
+  // post-action form.reset() — see the hook for why.
+  const anchor = useRef<HTMLDivElement>(null);
+  useFormResetRestore(anchor);
   // Only the secret is stateful. The endpoint URL is keyed on organization_id
   // and does not change when the signing key rotates — that is the point of
   // the split, and showing it as rotatable would teach the wrong model.
@@ -90,16 +105,32 @@ export function OrgDetailsPanel({
               {state.error}
             </p>
           )}
-          <Input label="Organization name" name="name" defaultValue={orgName} required />
-          <div className="grid grid-cols-2 gap-3">
-            <Select label="Timezone" name="timezone" defaultValue={orgTimezone}>
+          <Input
+            label="Organization name"
+            name="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
+          <div ref={anchor} className="grid grid-cols-2 gap-3">
+            <Select
+              label="Timezone"
+              name="timezone"
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+            >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
                 </option>
               ))}
             </Select>
-            <Select label="Currency" name="currency_format" defaultValue={currencyFormat}>
+            <Select
+              label="Currency"
+              name="currency_format"
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value)}
+            >
               {CURRENCIES.map((currency) => (
                 <option key={currency} value={currency}>
                   {currency}

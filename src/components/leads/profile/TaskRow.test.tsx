@@ -88,3 +88,50 @@ describe("toDatetimeLocalValue", () => {
     expect(toDatetimeLocalValue("not-a-date")).toBe("");
   });
 });
+
+describe("TaskRow — surviving a failed submit", () => {
+  // Regression (2026-08-26). React 19 calls form.reset() after the action
+  // returns, failure included — e.g. updateTask rejecting an empty title. The
+  // edited title and description reverted to the task's stored values, so the
+  // form looked untouched and the correction was silently gone.
+  //
+  // The due-date field was ALREADY controlled (dueLocal state) and is not part
+  // of this fix — it is asserted here only to prove it stayed that way.
+  it("keeps the edited title and description when the form is reset", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TaskRow task={task} timeZone="UTC" onChanged={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Send the quote" }));
+
+    await user.clear(screen.getByLabelText("Task title"));
+    await user.type(screen.getByLabelText("Task title"), "Send the revised quote");
+    await user.clear(screen.getByLabelText("Task description"));
+    await user.type(screen.getByLabelText("Task description"), "Include the third option");
+
+    // React 19's real sequence is form.reset() — and NOT necessarily a
+    // re-render, since the component's props have not changed. Calling
+    // rerender() here would mask the bug this pins: a controlled <select> is
+    // restored by neither, so the group has to re-assert itself. Proven in the
+    // browser, where React's props read the new value while the DOM read the
+    // old one.
+    container.querySelector("form")!.reset();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Task title")).toHaveValue("Send the revised quote");
+    });
+    expect(screen.getByLabelText("Task description")).toHaveValue("Include the third option");
+  });
+
+  it("keeps the edited title across a re-render", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<TaskRow task={task} timeZone="UTC" onChanged={() => {}} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Send the quote" }));
+    await user.clear(screen.getByLabelText("Task title"));
+    await user.type(screen.getByLabelText("Task title"), "Send the revised quote");
+
+    rerender(<TaskRow task={task} timeZone="UTC" onChanged={() => {}} />);
+
+    expect(screen.getByLabelText("Task title")).toHaveValue("Send the revised quote");
+  });
+});

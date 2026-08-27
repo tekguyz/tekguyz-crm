@@ -1,5 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
+
+import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
+
 import type { Lead } from "@/lib/leads/queries";
 import { Select } from "@/components/ui/Select";
 import { memberLabel, useOrgMembers } from "@/components/shell/MembersContext";
@@ -16,19 +20,30 @@ import { memberLabel, useOrgMembers } from "@/components/shell/MembersContext";
 // organization, which the option list already satisfies; the trigger exists
 // for the paths this picker does not cover.
 //
-// Uncontrolled (defaultValue), like every other field group here, so the shell
-// needs no props beyond `lead` and updateLead can read it straight off
-// FormData.
+// CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after the
+// action returns, failure included, which silently reverted a reassignment.
+// See CLAUDE.md § Form/Action Field Parity.
 export function AssignmentField({ lead }: { lead: Lead }) {
   const members = useOrgMembers();
+  const [assignedTo, setAssignedTo] = useState(lead.assigned_to ?? "");
+  // This group owns a <select>, which React does not restore after the
+  // post-action form.reset() — see the hook for why.
+  const anchor = useRef<HTMLDivElement>(null);
+  useFormResetRestore(anchor);
 
   return (
-    // Form/Action Field Parity: updateLead reads formData.get("assigned_to")
-    // and stores null for "". This <select> is always rendered — never hidden
-    // behind a role check — so the column can never be NULLed by a field the
-    // user could not see. Pinned by a FormData assertion in
-    // AssignmentField.test.tsx.
-    <Select label="Assigned to" name="assigned_to" defaultValue={lead.assigned_to ?? ""}>
+    <div ref={anchor}>
+    {/* Form/Action Field Parity: updateLead reads formData.get("assigned_to")
+    and stores null for "". This <select> is always rendered — never hidden
+    behind a role check — so the column can never be NULLed by a field the
+    user could not see. Pinned by a FormData assertion in
+    AssignmentField.test.tsx. */}
+    <Select
+      label="Assigned to"
+      name="assigned_to"
+      value={assignedTo}
+      onChange={(event) => setAssignedTo(event.target.value)}
+    >
       <option value="">Unassigned</option>
       {members.map((member) => (
         <option key={member.user_id} value={member.user_id}>
@@ -45,5 +60,6 @@ export function AssignmentField({ lead }: { lead: Lead }) {
         <option value={lead.assigned_to}>Former member (no longer in this organization)</option>
       )}
     </Select>
+    </div>
   );
 }

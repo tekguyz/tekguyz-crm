@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
+
+import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
 import Link from "next/link";
 import {
   updateDisplayName,
@@ -30,6 +32,31 @@ export function AccountPanel({
     updateNotificationPreferences,
     initialState,
   );
+  // CONTROLLED, not defaultValue/defaultChecked. React 19 resets a
+  // <form action={...}> after the action returns — including on failure — by
+  // calling form.reset() and re-rendering, which wiped the typed name and
+  // reverted both toggles. The checkboxes are affected too: Radix survives a
+  // bare reset() on its own, but not the re-render that follows it. The `key`
+  // on each form re-seeds this state from fresh server props after a save.
+  // See CLAUDE.md § Form/Action Field Parity.
+  const [name, setName] = useState(displayName ?? "");
+  const [newLead, setNewLead] = useState(notifyNewLead);
+  const [weeklyReport, setWeeklyReport] = useState(notifyWeeklyReport);
+
+  // Controlling the checkboxes is necessary but NOT sufficient: Radix restores
+  // its own mount-time value on a form reset. The shared hook explains why and
+  // handles the ordering; these refs hold what the user actually chose.
+  const intent = useRef({ newLead: notifyNewLead, weeklyReport: notifyWeeklyReport });
+  const anchor = useRef<HTMLDivElement>(null);
+  useFormResetRestore(anchor, () => {
+    setNewLead(intent.current.newLead);
+    setWeeklyReport(intent.current.weeklyReport);
+  });
+
+  // Intent is recorded from onClick, never from onCheckedChange. Radix's reset
+  // listener drives onCheckedChange too, so recording there would overwrite the
+  // user's choice with the value being restored and make the restore a no-op.
+  // onClick only ever fires for a real pointer or keyboard interaction.
 
   return (
     <Card className="p-6">
@@ -70,7 +97,8 @@ export function AccountPanel({
         <Input
           label="Display name"
           name="display_name"
-          defaultValue={displayName ?? ""}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           placeholder="Not set — using your email's first letter"
         />
         <Button type="submit" variant="primary" loading={nameIsPending}>
@@ -100,15 +128,23 @@ export function AccountPanel({
         {/* Radix keeps a hidden native checkbox in the form for each of these,
             so formData.get("notify_new_lead") === "on" in the action still
             reads exactly as it did with a raw <input type="checkbox">. */}
-        <div className="space-y-2">
+        <div ref={anchor} className="space-y-2">
           <Checkbox
             name="notify_new_lead"
-            defaultChecked={notifyNewLead}
+            checked={newLead}
+            onClick={() => {
+              intent.current.newLead = !newLead;
+            }}
+            onCheckedChange={(checked) => setNewLead(checked === true)}
             label="New lead alerts"
           />
           <Checkbox
             name="notify_weekly_report"
-            defaultChecked={notifyWeeklyReport}
+            checked={weeklyReport}
+            onClick={() => {
+              intent.current.weeklyReport = !weeklyReport;
+            }}
+            onCheckedChange={(checked) => setWeeklyReport(checked === true)}
             label="Weekly revenue report"
           />
         </div>

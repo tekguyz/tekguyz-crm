@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
 import type { Lead } from "@/lib/leads/queries";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
@@ -30,6 +32,24 @@ export function PipelineFields({ lead }: { lead: Lead }) {
   const [nextActionLocal, setNextActionLocal] = useState(() =>
     toDatetimeLocalValue(lead.next_action_at),
   );
+  // CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after
+  // the action returns, failure included, and this group shares one <form> with
+  // four sibling files — so an uncontrolled field here loses its edit even when
+  // every other group is fixed. See CLAUDE.md § Form/Action Field Parity.
+  const [status, setStatus] = useState(lead.status);
+  const [estimatedRevenue, setEstimatedRevenue] = useState(
+    lead.estimated_revenue === null || lead.estimated_revenue === undefined
+      ? ""
+      : String(lead.estimated_revenue),
+  );
+  const [starred, setStarred] = useState(lead.is_starred);
+
+  // Radix's Checkbox restores its own mount-time value on a form reset, so
+  // controlling it is necessary but not sufficient — see the hook for why, and
+  // why intent is recorded from onClick rather than onCheckedChange.
+  const starredIntent = useRef(lead.is_starred);
+  const anchor = useRef<HTMLDivElement>(null);
+  useFormResetRestore(anchor, () => setStarred(starredIntent.current));
 
   // Falls back to the lead's existing value rather than throwing if the
   // input is momentarily empty (e.g. mid-edit while the user is typing).
@@ -39,9 +59,14 @@ export function PipelineFields({ lead }: { lead: Lead }) {
     : parsedNextAction.toISOString();
 
   return (
-    <>
+    <div ref={anchor} className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Status" name="status" defaultValue={lead.status}>
+        <Select
+          label="Status"
+          name="status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
           <option value="NEW">New</option>
           <option value="DISCOVERY">Discovery</option>
           <option value="QUOTED">Quoted</option>
@@ -53,7 +78,8 @@ export function PipelineFields({ lead }: { lead: Lead }) {
           type="number"
           min="0"
           step="0.01"
-          defaultValue={lead.estimated_revenue}
+          value={estimatedRevenue}
+          onChange={(e) => setEstimatedRevenue(e.target.value)}
         />
       </div>
 
@@ -77,7 +103,15 @@ export function PipelineFields({ lead }: { lead: Lead }) {
           new FormData assertion in PipelineFields.test.tsx.
           Checkbox's own `label` prop replaces the wrapping <label>: a <label>
           around a <button> does not toggle it the way it toggles an <input>. */}
-      <Checkbox name="is_starred" defaultChecked={lead.is_starred} label="Starred" />
-    </>
+      <Checkbox
+        name="is_starred"
+        checked={starred}
+        onClick={() => {
+          starredIntent.current = !starred;
+        }}
+        onCheckedChange={(checked) => setStarred(checked === true)}
+        label="Starred"
+      />
+    </div>
   );
 }
