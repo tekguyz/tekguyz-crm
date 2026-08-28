@@ -120,3 +120,4 @@ repo matches a title in this column.
 | 2026-08-26 — Prospect promotion: the write path into `leads` | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-26 — Controlled fields: closing the React 19 form-reset data loss | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
 | 2026-08-27 — Three UI defects: double scrollbar, the missing Maps link, the raw timezone id | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
+| 2026-08-28 — Command palette: tasks alongside contacts | [`docs/addenda/2026-08.md`](addenda/2026-08.md) |
