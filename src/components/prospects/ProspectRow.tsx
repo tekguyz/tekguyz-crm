@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { IconAlertTriangle, IconArchive, IconArchiveOff, IconPhone } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconArchive,
+  IconArchiveOff,
+  IconBrandGoogleMaps,
+  IconPhone,
+} from "@tabler/icons-react";
 
 import { ProspectStatusBadge } from "@/components/prospects/ProspectStatusBadge";
 import { Button } from "@/components/ui/Button";
@@ -44,7 +50,28 @@ export function ProspectRow({
     <TableRow className="align-top">
       <TableCell>
         <div className="flex flex-col gap-0.5">
-          <span className="text-body-md font-medium">{prospect.name}</span>
+          <span className="flex items-center gap-1">
+            <span className="text-body-md font-medium">{prospect.name}</span>
+            {/* The scraped GBP listing, which is how the operator checks a
+                business before ringing it. Icon-only and inline beside the
+                name rather than its own column: this table is already seven
+                columns wide, and a column would cost horizontal room on every
+                row to carry one link. New tab, because losing the call list
+                mid-call is worse than a stray tab. */}
+            {prospect.google_maps_url ? (
+              <Button asChild variant="ghost" size="sm" className="-my-1 px-1">
+                <a
+                  href={prospect.google_maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Open ${prospect.name} in Google Maps`}
+                >
+                  <IconBrandGoogleMaps className="size-4" stroke={1.75} aria-hidden="true" />
+                  <span className="sr-only">Open {prospect.name} in Google Maps</span>
+                </a>
+              </Button>
+            ) : null}
+          </span>
           <span className="text-caption text-ink-muted">{prospect.category ?? "—"}</span>
           {prospect.possible_duplicate_lead_id ? (
             // Informational, never a block. A shared switchboard number is an

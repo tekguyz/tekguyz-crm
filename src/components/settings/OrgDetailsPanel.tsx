@@ -11,7 +11,7 @@ import {
 } from "@/lib/organizations/actions";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { HelpTooltip } from "@/components/help/HelpTooltip";
-import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
+import { TIMEZONES, CURRENCIES, timezoneLabel } from "@/lib/organizations/org-options";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -119,9 +119,11 @@ export function OrgDetailsPanel({
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
             >
+              {/* The value stays the IANA id the action validates against; only
+                  the label is humanized. See org-options.ts. */}
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>
-                  {tz}
+                  {timezoneLabel(tz)}
                 </option>
               ))}
             </Select>

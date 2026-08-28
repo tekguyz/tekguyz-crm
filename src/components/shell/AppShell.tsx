@@ -71,8 +71,20 @@ export function AppShell({
                 <Header userEmail={userEmail} displayName={displayName} />
                 {/* pb-24 below md clears the fixed bottom tab bar; above md the
                     bar is not displayed and the padding returns to the shell's
-                    normal 6. */}
-                <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6">{children}</main>
+                    normal 6.
+
+                    `relative` is load-bearing, not decoration: it makes <main>
+                    the containing block for its own absolutely-positioned
+                    descendants. Without it they resolve to the shell's
+                    `relative` div instead, which is OUTSIDE this scroll
+                    container — so they are not clipped by overflow-y-auto and
+                    they inflate the DOCUMENT's scroll height to the full
+                    content height. That produced a second, page-length
+                    scrollbar underneath the real one on every long view: every
+                    `.sr-only` span (Tailwind's uses position:absolute) and
+                    Radix Checkbox's hidden bubble <input> escaped this way.
+                    Measured on /prospects and /settings before the fix. */}
+                <main className="relative flex-1 overflow-y-auto p-4 pb-24 md:p-6">{children}</main>
               </div>
               <Suspense fallback={<ProfileSheetSkeleton />}>
                 <ProfileSheetController />

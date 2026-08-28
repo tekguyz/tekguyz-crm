@@ -95,3 +95,18 @@ export const CURRENCIES = [
   "IDR",
   "PHP",
 ];
+
+// Presentation only. The stored value stays the IANA identifier — every zone
+// in TIMEZONES above is validated by organizations/actions.ts against that
+// exact string, and this label never reaches a form value or the database.
+//
+// An IANA id is a path with underscores for spaces ("America/New_York"), which
+// is a machine identifier being shown to a human. The last segment is the city
+// the operator is actually picking, so that is what renders. Checked against
+// the curated list above: all 55 entries have a distinct final segment, so a
+// bare city name is never ambiguous. If a zone is ever added whose city name
+// collides with one already there, this has to carry the region again.
+export function timezoneLabel(timezone: string): string {
+  const segments = timezone.split("/");
+  return segments[segments.length - 1].replaceAll("_", " ");
+}

@@ -13,6 +13,11 @@ import { DEMO_ORG_NAME } from "./demo-org";
 //   - every business name is transparently invented ("Fake Falls Plumbing").
 //   - every phone is in the 555-01xx block, reserved for fiction.
 //   - websites are on .invalid, the reserved never-resolves TLD (RFC 2606).
+//   - google_maps_url is a maps SEARCH url for the invented business name, not
+//     a /place/ url carrying a fabricated place id. It opens Google Maps and
+//     finds nothing, which is the honest result for a business that does not
+//     exist. One row leaves it null on purpose — a scrape does produce rows
+//     with no listing url, and the row has to render without a dead link.
 //
 // No row is seeded as CONVERTED. status='CONVERTED' is only ever legitimate
 // alongside a promoted_lead_id written in the same statement, and promotion is
@@ -31,6 +36,7 @@ type DemoProspect = {
   website_status: string;
   rating: number | null;
   review_count: number | null;
+  google_maps_url: string | null;
   niche_searched: string;
   city_searched: string;
   status: string;
@@ -52,6 +58,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "NO_WEBSITE",
     rating: 4.7,
     review_count: 63,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Fake+Falls+Plumbing+Fort+Worth+TX",
     niche_searched: "plumber",
     city_searched: "Fort Worth, TX",
     status: "NEW",
@@ -71,6 +78,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "HAS_WEBSITE",
     rating: 4.1,
     review_count: 21,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Notional+Nook+Roofing+Arlington+TX",
     niche_searched: "roofing",
     city_searched: "Arlington, TX",
     status: "CALLED",
@@ -92,6 +100,8 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "NO_WEBSITE",
     rating: null,
     review_count: null,
+    // The no-listing case: this row must render with no Maps link at all.
+    google_maps_url: null,
     niche_searched: "pest control",
     city_searched: "Dallas, TX",
     status: "CALLBACK",
@@ -111,6 +121,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "HAS_WEBSITE",
     rating: 3.4,
     review_count: 8,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Imaginary+Ice+HVAC+Plano+TX",
     niche_searched: "hvac",
     city_searched: "Plano, TX",
     status: "NOT_INTERESTED",
@@ -132,6 +143,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "NO_WEBSITE",
     rating: 4.9,
     review_count: 112,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Sample+Street+Electric+Irving+TX",
     niche_searched: "electrician",
     city_searched: "Irving, TX",
     status: "NEW",
@@ -151,6 +163,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "NO_WEBSITE",
     rating: 4.3,
     review_count: 37,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Pretend+Pines+Landscaping+Denton+TX",
     niche_searched: "landscaping",
     city_searched: "Denton, TX",
     status: "NEW",
@@ -170,6 +183,7 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
     website_status: "HAS_WEBSITE",
     rating: 4.6,
     review_count: 204,
+    google_maps_url: "https://www.google.com/maps/search/?api=1&query=Dummy+Drive+Dental+Frisco+TX",
     niche_searched: "dentist",
     city_searched: "Frisco, TX",
     // Archived: the retirement lever, so the Archived filter has something to
