@@ -4,7 +4,12 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
-import { getTasksForLead, type Task } from "@/lib/tasks/queries";
+import {
+  getTasksForLead,
+  searchTasksForOrg,
+  type Task,
+  type TaskSearchResult,
+} from "@/lib/tasks/queries";
 
 export type TaskFormState = { error?: string } | null;
 
@@ -248,4 +253,14 @@ export async function toggleTaskComplete(taskId: string, completed: boolean): Pr
   if (error) throw error;
 
   revalidatePath("/", "layout");
+}
+
+// Client-callable boundary for the CMD+K command palette's Tasks group — the
+// exact sibling of fetchSearchableContacts in lib/leads/actions.ts, and called
+// the same way: once when the palette opens, then ranked in the browser.
+// getCurrentOrg() resolves the tenant server-side, so no client-supplied
+// organization id is ever trusted here.
+export async function fetchSearchableTasks(): Promise<TaskSearchResult[]> {
+  const { orgId } = await getCurrentOrg();
+  return searchTasksForOrg(orgId);
 }

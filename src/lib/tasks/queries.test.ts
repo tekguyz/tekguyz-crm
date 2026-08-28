@@ -90,3 +90,58 @@ describe("getTasksDueForOrg", () => {
     ]);
   });
 });
+
+describe("searchTasksForOrg", () => {
+  it("filters dismissed at the database and joins leads to exclude archived ones", async () => {
+    const mock = mockSupabase([]);
+    const { searchTasksForOrg } = await loadQueries(mock);
+
+    await searchTasksForOrg("org-1");
+
+    expect(mock.eqCalls).toContainEqual(["organization_id", "org-1"]);
+    expect(mock.eqCalls).toContainEqual(["dismissed", false]);
+    // The join is not belt-and-braces here. closeTasksForArchivedLead writes
+    // `completed = true`, NOT `dismissed`, so an archived lead's tasks are
+    // still dismissed = false and this clause is the only thing excluding
+    // them. `!inner` is what makes the embedded filter restrict rows rather
+    // than merely null out the embed.
+    expect(mock.eqCalls).toContainEqual(["leads.archived", false]);
+    expect(mock.selects[0]).toContain("leads!inner");
+  });
+
+  it("does NOT filter on completed — completed tasks stay searchable history", async () => {
+    const mock = mockSupabase([]);
+    const { searchTasksForOrg } = await loadQueries(mock);
+
+    await searchTasksForOrg("org-1");
+
+    expect(mock.eqCalls.map(([column]) => column)).not.toContain("completed");
+  });
+
+  it("returns a completed-but-not-dismissed task, flattened for the palette", async () => {
+    const mock = mockSupabase([
+      {
+        id: "task-9",
+        title: "Chase the deposit",
+        due_at: "2026-09-01T15:00:00.000Z",
+        completed: true,
+        lead_id: "lead-1",
+        leads: { client_name: "Acme", archived: false },
+      },
+    ]);
+    const { searchTasksForOrg } = await loadQueries(mock);
+
+    const result = await searchTasksForOrg("org-1");
+
+    expect(result).toEqual([
+      {
+        id: "task-9",
+        title: "Chase the deposit",
+        due_at: "2026-09-01T15:00:00.000Z",
+        completed: true,
+        lead_id: "lead-1",
+        client_name: "Acme",
+      },
+    ]);
+  });
+});

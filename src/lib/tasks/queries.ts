@@ -88,3 +88,70 @@ export async function getTasksDueForOrg(orgId: string): Promise<TaskDue[]> {
     };
   });
 }
+
+// Flattened for the command palette's task result row — same shape rationale
+// as TaskDue, plus `completed` because the row renders the strikethrough/muted
+// treatment TaskRow already uses for a completed task.
+export type TaskSearchResult = {
+  id: string;
+  title: string;
+  due_at: string;
+  completed: boolean;
+  lead_id: string;
+  client_name: string;
+};
+
+// Tenant-wide task search source for the command palette. Fetched once when
+// the palette opens and ranked client-side by Fuse, exactly as
+// fetchSearchableContacts already is — so there is no per-keystroke round trip
+// and no pagination question to answer.
+//
+// Three deliberate filter decisions:
+//
+//   `dismissed = false` — dismissal is removal from every active surface, the
+//   role `archived` plays for a lead. A dismissed task must not be findable.
+//
+//   NO `completed` filter — completed is ordinary lifecycle state, not
+//   removal. A finished task is legitimate history a user searches for, the
+//   same precedent the Contacts directory sets by showing WON/LOST/ABANDONED.
+//   getTasksDueForOrg DOES filter it, because an agenda is a worklist; this is
+//   a search index and the two must not be assumed to share a filter shape.
+//
+//   `leads!inner(...)` + `leads.archived = false` — and this one is NOT
+//   redundant. closeTasksForArchivedLead (lib/tasks/actions.ts) writes
+//   `completed = true` when a lead is archived, never `dismissed`, so an
+//   archived lead's tasks remain dismissed = false and would otherwise be
+//   returned by this query. With no `completed` filter above to incidentally
+//   hide them, this join is the ONLY thing keeping an archived lead's tasks
+//   out of global search. `!inner` is what makes the embedded filter restrict
+//   rows rather than just null out the embed.
+//
+// No new SQL: both tables are already covered by plain
+// `organization_id IN (SELECT private.current_org_ids())` RLS policies, so the
+// tenant boundary here is the same one every other read uses.
+export async function searchTasksForOrg(orgId: string): Promise<TaskSearchResult[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, title, due_at, completed, lead_id, leads!inner(client_name, archived)")
+    .eq("organization_id", orgId)
+    .eq("dismissed", false)
+    .eq("leads.archived", false)
+    .order("due_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => {
+    // Same to-one embed normalization as getTasksDueForOrg — supabase-js
+    // widens the type to a possible array, so normalize rather than assert.
+    const lead = Array.isArray(row.leads) ? row.leads[0] : row.leads;
+    return {
+      id: row.id,
+      title: row.title,
+      due_at: row.due_at,
+      completed: row.completed,
+      lead_id: row.lead_id,
+      client_name: lead?.client_name ?? "Unknown lead",
+    };
+  });
+}

@@ -16,10 +16,16 @@ export function ProfileSheet({
   lead,
   open,
   onClose,
+  highlightTaskId = null,
 }: {
   lead: Lead;
   open: boolean;
   onClose: () => void;
+  // Set only when the sheet was opened from a task result in the command
+  // palette. Passed straight through to TasksSection, which owns the tab
+  // selection, the scroll and the temporary marker. Defaults to null so every
+  // existing caller (EditLeadModal, ProfileSheetController) is unchanged.
+  highlightTaskId?: string | null;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -91,7 +97,7 @@ export function ProfileSheet({
 
             <div className="flex-1 space-y-6 overflow-y-auto p-6">
               <ExecutiveBrief brief={lead.ai_brief} />
-              <TasksSection leadId={lead.id} />
+              <TasksSection leadId={lead.id} highlightTaskId={highlightTaskId} />
               {/* Above Activity deliberately: what the customer sent comes
                   before what we did about it, and the two stay separate
                   columns rather than one interleaved stream. */}

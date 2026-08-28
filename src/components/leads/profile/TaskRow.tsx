@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { cn } from "@/lib/utils/cn";
 
 const initialState: TaskFormState = null;
 
@@ -41,10 +42,15 @@ export function TaskRow({
   task,
   timeZone,
   onChanged,
+  highlighted = false,
 }: {
   task: Task;
   timeZone: string;
   onChanged: () => void;
+  // True for the one row the command palette navigated to, for a couple of
+  // seconds after arrival. TasksSection owns the timer and the tab selection;
+  // this only renders the marker and scrolls itself into view.
+  highlighted?: boolean;
 }) {
   const saveTask = updateTask.bind(null, task.id);
   const [state, formAction, isPending] = useActionState(saveTask, initialState);
@@ -60,6 +66,15 @@ export function TaskRow({
   const [description, setDescription] = useState(task.description ?? "");
   const [, startTransition] = useTransition();
   const wasPending = useRef(false);
+  const rowRef = useRef<HTMLLIElement>(null);
+
+  // Same recipe OptionRow uses for the palette's roving highlight: the row
+  // brings itself into view rather than an ancestor reaching in to move it.
+  // `block: "nearest"` scrolls the ProfileSheet body only as far as it must,
+  // so arriving at an already-visible task does not jerk the panel.
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [highlighted]);
 
   // Close and refetch only on the falling edge of isPending with no returned
   // error — the same success guard TasksSection uses for create.
@@ -143,8 +158,28 @@ export function TaskRow({
     );
   }
 
+  // The arrival marker is deliberately NOT new visual language: it is
+  // OptionRow's "this is the one" idiom — a solid --accent bar down the
+  // leading edge over a --canvas-soft tint — reused at the same geometry, so
+  // the app keeps one signal for that meaning rather than two. The tint alone
+  // could not carry it (canvas-soft on canvas-pure is a near-invisible pair),
+  // and this row is not focusable, so a focus ring is not available either.
+  //
+  // `relative` and `rounded-md` are unconditional so the pseudo-element has a
+  // containing block that does not appear only in the highlighted branch. The
+  // padding is cancelled by matching negative margins, so switching the marker
+  // on and off shifts nothing in the list. `transition-colors` is flattened by
+  // the global prefers-reduced-motion clamp.
   return (
-    <li className="group flex items-start gap-2">
+    <li
+      ref={rowRef}
+      className={cn(
+        "group relative flex items-start gap-2 rounded-md transition-colors",
+        highlighted &&
+          "-mx-2 -my-1 bg-canvas-soft px-2 py-1 before:absolute before:top-1/2 before:left-0 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-accent",
+      )}
+      data-highlighted={highlighted ? "true" : undefined}
+    >
       {/* No `name` and no enclosing form: this is a controlled toggle that
           calls toggleTaskComplete directly, not a form field. */}
       <Checkbox

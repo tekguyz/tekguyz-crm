@@ -6,36 +6,64 @@ import { AnimatePresence, motion } from "motion/react";
 import Fuse from "fuse.js";
 import { IconSearch } from "@tabler/icons-react";
 import { fetchSearchableContacts } from "@/lib/leads/actions";
+import { fetchSearchableTasks } from "@/lib/tasks/actions";
 import type { ContactLead } from "@/lib/leads/queries";
+import type { TaskSearchResult } from "@/lib/tasks/queries";
 import { CommandResultItem } from "@/components/command/CommandResultItem";
+import { CommandTaskItem } from "@/components/command/CommandTaskItem";
+import { CommandGroupLabel } from "@/components/command/CommandGroupLabel";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
 import { Input } from "@/components/ui/Input";
 
+// Per group, not overall — otherwise a query matching many contacts could
+// push the Tasks group off the list entirely and the palette would look like
+// it never searched tasks at all.
 const MAX_RESULTS = 8;
 
 // One palette is mounted per shell, so a fixed id is unambiguous. The rows
 // need stable ids of their own for aria-activedescendant to point at.
 const LISTBOX_ID = "command-bar-results";
-const optionId = (leadId: string) => `${LISTBOX_ID}-${leadId}`;
+const CONTACTS_LABEL_ID = `${LISTBOX_ID}-contacts-label`;
+const TASKS_LABEL_ID = `${LISTBOX_ID}-tasks-label`;
+// Prefixed by kind: a task id and a lead id are different namespaces, and an
+// unprefixed collision would point aria-activedescendant at the wrong row.
+const optionId = (kind: "contact" | "task", id: string) => `${LISTBOX_ID}-${kind}-${id}`;
+
+// The two groups are rendered as separate blocks but indexed as ONE list, so
+// arrow keys run continuously from the last contact into the first task with
+// no dead keypress at the seam. Contacts always occupy the lower indices.
+type Selection =
+  | { kind: "contact"; lead: ContactLead }
+  | { kind: "task"; task: TaskSearchResult };
 
 export function CommandBar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
   const [contacts, setContacts] = useState<ContactLead[] | null>(null);
+  const [tasks, setTasks] = useState<TaskSearchResult[] | null>(null);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedLead, setSelectedLead] = useState<ContactLead | null>(null);
+  // Set only when the sheet was opened FROM a task result. ProfileSheet passes
+  // it to TasksSection, which selects the matching Open/Completed tab and
+  // scrolls that row into view. Null for a contact result, so the sheet opens
+  // exactly as it always has.
+  const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Refetch every time the palette opens — cheap, and keeps results in sync
-  // with edits made elsewhere in the app during the same session.
+  // Both sources refetch every time the palette opens, once — never per
+  // keystroke. Ranking and filtering happen in the browser (Fuse, below), so
+  // typing costs no round trips and there is no debounce or pagination to
+  // reason about. Tasks deliberately follow the identical pattern contacts
+  // already used rather than introducing a second fetch strategy.
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setActiveIndex(0);
     fetchSearchableContacts().then(setContacts);
+    fetchSearchableTasks().then(setTasks);
   }, [open]);
 
   useEffect(() => {
@@ -53,7 +81,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
     };
   }, [open, onClose]);
 
-  const fuse = useMemo(() => {
+  const contactFuse = useMemo(() => {
     if (!contacts) return null;
     return new Fuse(contacts, {
       keys: [
@@ -66,28 +94,79 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
     });
   }, [contacts]);
 
-  const results: ContactLead[] = query.trim()
-    ? (fuse?.search(query).map((r) => r.item) ?? []).slice(0, MAX_RESULTS)
+  // A separate index rather than one merged corpus: the two record shapes have
+  // no fields in common, and a single Fuse instance would have to score a
+  // task's title against a contact's email weighting. Two indexes also keep
+  // each group's ranking independent, which is what the grouped layout implies.
+  const taskFuse = useMemo(() => {
+    if (!tasks) return null;
+    return new Fuse(tasks, {
+      keys: [
+        { name: "title", weight: 2 },
+        { name: "client_name", weight: 1 },
+      ],
+      threshold: 0.35,
+    });
+  }, [tasks]);
+
+  const contactResults: ContactLead[] = query.trim()
+    ? (contactFuse?.search(query).map((r) => r.item) ?? []).slice(0, MAX_RESULTS)
     : (contacts ?? []).slice(0, MAX_RESULTS);
 
-  function handleSelect(lead: ContactLead) {
-    setSelectedLead(lead);
+  const taskResults: TaskSearchResult[] = query.trim()
+    ? (taskFuse?.search(query).map((r) => r.item) ?? []).slice(0, MAX_RESULTS)
+    : (tasks ?? []).slice(0, MAX_RESULTS);
+
+  const selections: Selection[] = [
+    ...contactResults.map((lead): Selection => ({ kind: "contact", lead })),
+    ...taskResults.map((task): Selection => ({ kind: "task", task })),
+  ];
+
+  const loading = contacts === null || tasks === null;
+
+  function handleSelect(selection: Selection) {
+    if (selection.kind === "contact") {
+      setSelectedLead(selection.lead);
+      setHighlightTaskId(null);
+    } else {
+      // Both sources are already in memory and a task's lead is guaranteed to
+      // be among the contacts — searchTasksForOrg excludes archived leads and
+      // getAllContacts returns every non-archived one — so this resolves
+      // locally with no extra round trip. Guarded anyway: if the two fetches
+      // ever disagree, doing nothing beats opening a sheet for the wrong lead.
+      const lead = contacts?.find((c) => c.id === selection.task.lead_id);
+      if (!lead) return;
+      setSelectedLead(lead);
+      setHighlightTaskId(selection.task.id);
+    }
     onClose();
   }
 
   function handleInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+      setActiveIndex((i) => Math.min(i + 1, selections.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const lead = results[activeIndex];
-      if (lead) handleSelect(lead);
+      const selection = selections[activeIndex];
+      if (selection) handleSelect(selection);
     }
   }
+
+  function handleSheetClose() {
+    setSelectedLead(null);
+    setHighlightTaskId(null);
+  }
+
+  const active = selections[activeIndex];
+  const activeOptionId = active
+    ? active.kind === "contact"
+      ? optionId("contact", active.lead.id)
+      : optionId("task", active.task.id)
+    : undefined;
 
   if (!mounted) return null;
 
@@ -114,8 +193,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
             >
               {/* Icon layered over a real Input — the same relative-wrapper +
                   absolute Tabler icon recipe Select uses for its chevron, and
-                  the same one HelpDrawer's search uses. Search behaviour,
-                  arrow-key handling and the Fuse config above are untouched. */}
+                  the same one HelpDrawer's search uses. */}
               <div className="border-b border-hairline p-3">
                 <div className="relative">
                   {/* Combobox pattern: the input keeps DOM focus throughout and
@@ -129,17 +207,15 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
                     aria-expanded
                     aria-controls={LISTBOX_ID}
                     aria-autocomplete="list"
-                    aria-activedescendant={
-                      results[activeIndex] ? optionId(results[activeIndex].id) : undefined
-                    }
+                    aria-activedescendant={activeOptionId}
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
                       setActiveIndex(0);
                     }}
                     onKeyDown={handleInputKeyDown}
-                    placeholder="Search contacts…"
-                    aria-label="Search contacts"
+                    placeholder="Search contacts and tasks…"
+                    aria-label="Search contacts and tasks"
                     className="pl-8"
                   />
                   <IconSearch
@@ -153,24 +229,58 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
               <div
                 id={LISTBOX_ID}
                 role="listbox"
-                aria-label="Contacts"
+                aria-label="Contacts and tasks"
                 className="max-h-80 overflow-y-auto p-2"
               >
-                {contacts === null ? (
+                {loading ? (
                   <p className="text-body-md p-3 text-ink-muted">Loading…</p>
-                ) : results.length === 0 ? (
-                  <p className="text-body-md p-3 text-ink-muted">No contacts found.</p>
+                ) : selections.length === 0 ? (
+                  <p className="text-body-md p-3 text-ink-muted">No contacts or tasks found.</p>
                 ) : (
-                  results.map((lead, index) => (
-                    <CommandResultItem
-                      key={lead.id}
-                      id={optionId(lead.id)}
-                      lead={lead}
-                      active={index === activeIndex}
-                      onSelect={() => handleSelect(lead)}
-                      onHover={() => setActiveIndex(index)}
-                    />
-                  ))
+                  <>
+                    {/* Each group renders only when it has matches, so a
+                        one-sided query never leaves a labelled empty header. */}
+                    {contactResults.length > 0 && (
+                      <div role="group" aria-labelledby={CONTACTS_LABEL_ID}>
+                        <CommandGroupLabel id={CONTACTS_LABEL_ID}>Contacts</CommandGroupLabel>
+                        {contactResults.map((lead, index) => (
+                          <CommandResultItem
+                            key={lead.id}
+                            id={optionId("contact", lead.id)}
+                            lead={lead}
+                            active={index === activeIndex}
+                            onSelect={() => handleSelect({ kind: "contact", lead })}
+                            onHover={() => setActiveIndex(index)}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {taskResults.length > 0 && (
+                      <div role="group" aria-labelledby={TASKS_LABEL_ID}>
+                        {/* The divider only exists between two populated
+                            groups — a rule above the first group would read as
+                            a stray line. */}
+                        <div
+                          className={
+                            contactResults.length > 0 ? "mt-2 border-t border-hairline" : undefined
+                          }
+                        >
+                          <CommandGroupLabel id={TASKS_LABEL_ID}>Tasks</CommandGroupLabel>
+                        </div>
+                        {taskResults.map((task, index) => (
+                          <CommandTaskItem
+                            key={task.id}
+                            id={optionId("task", task.id)}
+                            task={task}
+                            active={contactResults.length + index === activeIndex}
+                            onSelect={() => handleSelect({ kind: "task", task })}
+                            onHover={() => setActiveIndex(contactResults.length + index)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </motion.div>
@@ -182,7 +292,8 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
         <ProfileSheet
           lead={selectedLead}
           open={!!selectedLead}
-          onClose={() => setSelectedLead(null)}
+          onClose={handleSheetClose}
+          highlightTaskId={highlightTaskId}
         />
       )}
     </>,

@@ -9,6 +9,13 @@ import { TaskRow } from "@/components/leads/profile/TaskRow";
 
 const initialState: TaskFormState = null;
 
+// Long enough to be noticed after the sheet's slide-in settles, short enough
+// that it never reads as a persistent selected state. The global
+// prefers-reduced-motion clamp in globals.css already flattens the row's
+// colour transition; the delay itself is an appearance duration, not motion,
+// so it is deliberately not shortened for that preference.
+const HIGHLIGHT_MS = 2000;
+
 // Sibling of ActivityTimeline / NoteCaptureForm — ProfileSheet mounts all
 // three directly rather than nesting them.
 //
@@ -16,7 +23,15 @@ const initialState: TaskFormState = null;
 // search-param pattern Contacts uses: that's a server-side full-page
 // navigation, and this sheet is a client-side portal that a navigation would
 // tear down mid-interaction.
-export function TasksSection({ leadId }: { leadId: string }) {
+export function TasksSection({
+  leadId,
+  highlightTaskId = null,
+}: {
+  leadId: string;
+  // The command palette's Tasks group opens the sheet with the id of the task
+  // that was selected. Null for every other caller.
+  highlightTaskId?: string | null;
+}) {
   const createTaskForLead = createTask.bind(null, leadId);
   const [state, formAction, isPending] = useActionState(createTaskForLead, initialState);
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -25,6 +40,12 @@ export function TasksSection({ leadId }: { leadId: string }) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [dueLocal, setDueLocal] = useState("");
+  // Explicit state keyed to the task id, NOT a one-time imperative DOM query.
+  // The rows are re-rendered by the refetch that follows any task mutation, so
+  // a "find the node once and style it" approach would silently no-op the
+  // moment the list re-rendered. State survives that; a stale node reference
+  // does not.
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
 
@@ -58,6 +79,30 @@ export function TasksSection({ leadId }: { leadId: string }) {
     }
     wasPending.current = isPending;
   }, [isPending, state]);
+
+  // Selecting a task in the command palette has to do two things, and the
+  // second one is easy to miss: the row must be visible before it can be
+  // scrolled to. This section's Open/Completed toggle filters the list on
+  // `task.completed`, so a COMPLETED target task is not in the DOM at all
+  // under the default Open tab — scrolling to it would find nothing and the
+  // feature would silently do nothing for exactly the rows the search is most
+  // useful for. So the tab is switched to match the task first.
+  //
+  // Waits on `tasks` because the target's `completed` value is only knowable
+  // once the fetch lands. The marker then clears itself on a timer — it is a
+  // "you arrived here" cue, not a persistent selected state.
+  useEffect(() => {
+    if (!highlightTaskId || !tasks) return;
+
+    const target = tasks.find((task) => task.id === highlightTaskId);
+    if (!target) return;
+
+    setShowCompleted(target.completed);
+    setHighlightedId(target.id);
+
+    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightTaskId, tasks]);
 
   // Every per-task mutation (complete, edit, dismiss) lives in TaskRow and
   // reports back through this one callback, so the list has a single refetch
@@ -131,6 +176,7 @@ export function TasksSection({ leadId }: { leadId: string }) {
               task={task}
               timeZone={timeZone}
               onChanged={handleChanged}
+              highlighted={task.id === highlightedId}
             />
           ))}
         </ul>
