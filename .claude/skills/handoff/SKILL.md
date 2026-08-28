@@ -395,7 +395,7 @@ Structure:
 - <every check-12 residue finding, if any, with the scoped DELETE to run — the user runs it, not you. Omit entirely when that check exits 0.>
 
 ### Attach to this Project
-Permanent: CLAUDE.md · docs/KNOWN_GAPS.md · docs/ADDENDA_LOG.md (the ~12 KB index)
+Permanent: CLAUDE.md · docs/KNOWN_GAPS.md · docs/ADDENDA_LOG.md (the ~12 KB index) · docs/ROADMAP.md (~4 KB)
 Per chat, only when that chat needs it: docs/SCHEMA_REFERENCE.md (schema/RLS/migration
 planning) · docs/DESIGN.md (visual-design argument)
 Never: docs/addenda/*.md — ~480 KB of dated narrative; name a section and it gets pasted
