@@ -6,6 +6,14 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    // 10s, not vitest's 5s default. Several component tests drive eight or
+    // more fields through userEvent, which is genuinely slow rather than
+    // stuck — CreateLeadModal's form-reset test measures ~3s alone and timed
+    // out under full-suite load on an 8GB machine while passing in isolation.
+    // Set here rather than per test: the cause is machine speed, so it applies
+    // to every test equally, and a per-test override would only move the next
+    // flake to a different file.
+    testTimeout: 10_000,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     // *.rls.test.ts files talk to the real Supabase project and create/tear
