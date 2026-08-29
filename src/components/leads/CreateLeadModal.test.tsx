@@ -56,7 +56,9 @@ describe("CreateLeadModal — surviving a failed submit", () => {
     expect(screen.getByPlaceholderText("Lead source")).toHaveValue("Referral");
     expect(screen.getByPlaceholderText("Service category")).toHaveValue("Roofing");
     expect(screen.getByPlaceholderText("Estimated revenue")).toHaveValue(1200);
-  });
+  }, 10_000); // 10s, not the 5s default: this test types into eight fields
+  // with userEvent, which is genuinely slow, and it timed out under full-suite
+  // load on an 8GB machine while passing in isolation.
 
   it("keeps typed values across a re-render", async () => {
     const user = userEvent.setup();
