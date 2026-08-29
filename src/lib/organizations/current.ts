@@ -1,15 +1,46 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getCurrentOrg() {
+// Wrapped in React's cache(), and that is load-bearing rather than a
+// micro-optimisation. This is called by (app)/layout.tsx AND by every page
+// under it, and each call was a full re-resolution: a network round-trip to
+// the Supabase Auth server plus two queries. On a document load that ran
+// twice concurrently (measured at 663ms and 683ms for the same request).
+// cache() dedupes it per request, so the layout and the page share one result.
+// It is per-request memoisation, NOT a cross-request cache — nothing is shared
+// between users or tenants.
+export const getCurrentOrg = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
+  // getClaims, NOT getUser — the same reasoning as the middleware's, and for
+  // the same reason it matters twice as much here: this runs on every render
+  // of every page, so getUser() put a second network round-trip to the
+  // Supabase Auth server in front of every single client-side navigation, on
+  // top of the middleware's. getClaims verifies the JWT signature locally
+  // against the project's asymmetric (ES256) signing key. It is not
+  // getSession(): the signature is checked, so a forged or tampered cookie is
+  // rejected exactly as getUser() rejected it.
+  //
+  // Everything read below comes from the token itself — sub, email and
+  // user_metadata are all real claims on a Supabase access token (verified
+  // against a live token, not assumed). The one consequence is that
+  // user_metadata is as fresh as the token, which lives an hour: that is why
+  // updateDisplayName in src/lib/account/actions.ts refreshes the session
+  // after writing, so a renamed user is not looking at their old name until
+  // the token happens to roll over.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
+
+  if (!claims) {
     redirect("/login");
   }
+
+  const user = {
+    id: claims.sub as string,
+    email: claims.email as string | undefined,
+    user_metadata: (claims.user_metadata ?? {}) as Record<string, unknown>,
+  };
 
   // organization_members can legitimately hold several rows for one user, so
   // "the" membership has to be a defined choice rather than whatever Postgres
@@ -17,11 +48,20 @@ export async function getCurrentOrg() {
   // land in, stable across sessions and across any later membership. There is
   // deliberately no persisted "active org" and no switcher yet — that needs its
   // own migration; this only makes today's arbitrary pick deterministic.
+  // The organization is EMBEDDED in this select rather than fetched by a second
+  // round-trip. It used to be two serial queries — memberships, then
+  // organizations — and the second could not start until the first named the
+  // org id, so the two latencies added up on every render of every page. One
+  // PostgREST embed over the existing organization_members -> organizations
+  // foreign key returns both in a single round-trip. RLS is unchanged and still
+  // applies to the embedded organizations row exactly as it did to the separate
+  // query; this is purely one request instead of two.
   const { data: memberships, count } = await supabase
     .from("organization_members")
-    .select("organization_id, role, notify_new_lead, notify_weekly_report", {
-      count: "exact",
-    })
+    .select(
+      "organization_id, role, notify_new_lead, notify_weekly_report, organizations(id, name, timezone, currency_format)",
+      { count: "exact" },
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: true })
     .limit(1);
@@ -44,11 +84,10 @@ export async function getCurrentOrg() {
     );
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id, name, timezone, currency_format")
-    .eq("id", membership.organization_id)
-    .single();
+  // Supplied by the embed above. PostgREST types a to-one embed as possibly an
+  // array, so it is normalised here rather than at each read site.
+  const embedded = membership.organizations;
+  const org = (Array.isArray(embedded) ? embedded[0] : embedded) ?? null;
 
   return {
     // The auth.users id, not the organization_members row id. This is what
@@ -69,4 +108,4 @@ export async function getCurrentOrg() {
     notifyNewLead: membership.notify_new_lead as boolean,
     notifyWeeklyReport: membership.notify_weekly_report as boolean,
   };
-}
+});

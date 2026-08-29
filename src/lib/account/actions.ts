@@ -21,6 +21,16 @@ export async function updateDisplayName(
     return { error: error.message };
   }
 
+  // Mint a new access token before revalidating, and that ordering is
+  // load-bearing. getCurrentOrg reads display_name out of the JWT's
+  // user_metadata claim rather than paying a network round-trip to the Auth
+  // server on every page render, and updateUser above does NOT reissue the
+  // token — it only writes the record. Without this refresh the old name stays
+  // in the cookie for the rest of the token's hour and the rename silently
+  // appears not to have worked. Failure here is not fatal: the write already
+  // succeeded, and the name appears on the next token roll.
+  await supabase.auth.refreshSession();
+
   // Header (rendered by the shared (app) layout) reads displayName from
   // getCurrentOrg() on every request — a full layout revalidation is what
   // makes the new name actually show up there without a hard reload.

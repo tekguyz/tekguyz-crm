@@ -27,9 +27,22 @@ export async function updateSession(request: NextRequest) {
 
   // Refreshes the auth token if expired. Do not add logic between
   // createServerClient and this call — it must run on every request.
+  //
+  // getClaims, NOT getUser. getUser() is a network round-trip to the Supabase
+  // Auth server on EVERY request this matcher covers — which is every page
+  // load AND every client-side RSC navigation. Measured at ~340ms of TTFB
+  // before Next had rendered a single byte, on every route alike, which is
+  // what made the loading.tsx skeleton flash on navigations that had almost no
+  // data to fetch. getClaims verifies the JWT signature locally with the Web
+  // Crypto API against the project's cached asymmetric (ES256) signing key, so
+  // it is the same security guarantee without the round-trip — it is NOT
+  // getSession(), which trusts the cookie unverified and must never be used
+  // here. It still refreshes an expired token, because it reads the session
+  // through the same storage adapter getUser() did.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: claimsData,
+  } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   const path = request.nextUrl.pathname;
   const isAuthRoute =
