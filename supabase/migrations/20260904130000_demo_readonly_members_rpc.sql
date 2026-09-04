@@ -1,0 +1,28 @@
+-- Follow-up to 20260904120000_demo_readonly_role.sql.
+--
+-- The demo identity could read every table it needed but could not render a
+-- single page: src/app/(app)/layout.tsx — the app shell, so EVERY route —
+-- calls public.get_organization_members, and demo_readonly held no EXECUTE
+-- grant on it. Every page returned "Something went wrong" with
+-- 42501 permission denied for function get_organization_members.
+--
+-- This is the previous migration's design working as intended, not a defect in
+-- it. A SELECT-only role fails CLOSED: the first thing that went wrong was the
+-- demo being too locked down, visible on the very first page load. The
+-- alternative design (a VIEWER value checked inside policies) fails the other
+-- way — a missed clause is a silent write hole nobody sees.
+--
+-- Granted deliberately and narrowly, after reading the function body:
+--   * it is `stable`, so it cannot write;
+--   * it is SECURITY DEFINER but self-scoping — its own WHERE clause carries
+--     `and p_org_id in (select private.current_org_ids())`, so a caller can
+--     only ever read the members of an org it already belongs to. Passing the
+--     real TEKGUYZ org id returns zero rows for this identity;
+--   * it returns user_id, email and role — no secret, no token, no credential.
+--
+-- This is the ONLY function grant demo_readonly gets. Every other RPC in this
+-- schema either writes or reads something a stranger must not see, and all of
+-- them stay denied by the absence of a grant. Verified by probing every read
+-- the app performs on a render path before writing this file: this function
+-- was the single failure.
+grant execute on function public.get_organization_members(uuid) to demo_readonly;

@@ -10,6 +10,7 @@
 // there (use `npm run seed:demo:reset` to wipe and reseed fresh).
 import { ensureDemoOrg, DEMO_ORG_NAME } from "./lib/demo-org";
 import { ensureDemoVisitor } from "./lib/demo-visitor";
+import { removeRealPeopleFromDemoOrg } from "./lib/demo-membership-hygiene";
 import { createAdminClient } from "./lib/clients";
 import { seedDemoLeads, countDemoLeads } from "./lib/demo-data";
 import { seedDemoProspects, countDemoProspects } from "./lib/demo-prospects";
@@ -43,6 +44,21 @@ async function main() {
       ? `Created read-only demo visitor ${visitorId}.`
       : `Found existing read-only demo visitor ${visitorId} — role, password and membership re-asserted.`,
   );
+
+  // /demo is public, and the app shell renders the org's member list (with
+  // real email addresses) on every page. Anything that is not an @example.com
+  // address is a real person's address on a page strangers can read.
+  const hygiene = await removeRealPeopleFromDemoOrg(orgId);
+  if (hygiene.removedMembers.length || hygiene.removedInvites.length) {
+    console.log(
+      `Removed non-@example.com identities from the demo org — ` +
+        `members: [${hygiene.removedMembers.join(", ") || "none"}], ` +
+        `invites: [${hygiene.removedInvites.join(", ") || "none"}]. ` +
+        `Auth accounts themselves were not touched.`,
+    );
+  } else {
+    console.log("Demo org membership is @example.com only — nothing to redact.");
+  }
 
   // Leads and prospects are checked independently rather than behind one
   // early return. They are separate tables filled by separate units, and a
