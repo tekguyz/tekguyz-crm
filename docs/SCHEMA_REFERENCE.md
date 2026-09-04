@@ -963,3 +963,64 @@ Live-verified: 76/76 on `npm run test:rls` (64 pre-existing unchanged, 12 new in
 `src/lib/prospects/prospect-promotion.rls.test.ts`), plus a real promotion driven
 through the UI. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-26 — Prospect
 promotion: the write path into `leads`.
+
+---
+
+## `demo_readonly` role addendum (2026-09-04)
+
+Migrations `20260904120000_demo_readonly_role.sql` and
+`20260904130000_demo_readonly_members_rpc.sql`. Full rationale:
+`docs/addenda/2026-09.md` § 2026-09-04 — The public read-only demo identity.
+
+### The role
+
+`demo_readonly`, `NOLOGIN`, granted to `authenticator` so PostgREST can
+`set local role` into it. It is reached only through the JWT's `role` claim,
+which GoTrue copies from `auth.users.role` — set on the demo visitor account by
+`scripts/seed/lib/demo-visitor.ts`. **No Custom Access Token Hook is configured
+and none is needed.**
+
+### Exact privileges — verified live after apply
+
+| Object | Privilege |
+|---|---|
+| schema `public`, `private`, `storage` | `USAGE` |
+| `public.organizations` | `SELECT` |
+| `public.organization_members` | `SELECT` |
+| `public.organization_invites` | `SELECT` |
+| `public.leads` | `SELECT` |
+| `public.activity_logs` | `SELECT` |
+| `public.tasks` | `SELECT` |
+| `public.lead_submissions` | `SELECT` |
+| `public.prospects` | `SELECT` |
+| `storage.objects` | `SELECT` |
+| `private.current_org_ids()` | `EXECUTE` |
+| `public.get_organization_members(uuid)` | `EXECUTE` |
+
+**Zero `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` anywhere**, and those two are the
+**only** functions it may execute. Everything else in `public` — including
+`import_leads_chunk`, `import_prospects_chunk`, `create_organization_with_owner`,
+`accept_organization_invite`, `change_member_role`,
+`remove_organization_member`, `vault_set_org_credential`,
+`vault_clear_org_credential` and `get_org_webhook_secret` — is denied by the
+absence of a grant, which is what stops a `SECURITY DEFINER` function that RLS
+cannot.
+
+`public.organization_credentials` and `public.report_sends` hold no grants for
+any client role and were not changed.
+
+### No policy changes were made, and none are needed
+
+Not one policy in this schema carries a `TO` clause, so every policy already
+applies to `PUBLIC` — any role. `demo_readonly` is covered by the existing read
+policies unchanged, still scoped by
+`organization_id in (select private.current_org_ids())` and still keyed on
+`auth.uid()`. **Adding a `TO authenticated` clause to any existing policy would
+break the demo** — it would silently stop applying to this role.
+
+### New column
+
+`public.organizations.is_demo boolean NOT NULL DEFAULT false`. Marks the demo
+tenant. Read by `/api/cron/weekly-report`'s org sweep and by
+`src/lib/demo/is-demo-org.ts`. **Not part of `LEAD_COLUMNS` and read by no lead
+query.**

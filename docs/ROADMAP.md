@@ -55,13 +55,15 @@ sessions had no home this repo's tooling reads.
 Previously informal, formalised here 2026-08-27. Order is intent, not a
 commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
 
-- **P1 — Login/landing redesign.** No schema changes, highest visibility. Three
-  pieces raised 2026-08-15 and never specced: a pre-auth landing page (no such
-  route exists — `/` is auth-gated), a redesigned `/login`, and a real
-  onboarding experience (the `/onboarding` route exists but was never
-  designed). A genuinely public marketing route is the one trigger named by the
-  `robots: noindex` decision in `docs/KNOWN_GAPS.md` for revisiting per-path
-  indexing.
+- **P1 — Login/landing redesign.** *Partially shipped 2026-09-04.* The public
+  entry route now exists as `/demo`, a read-only demo identity linked from
+  tekguyz.com — that closes the "no genuinely public route" half of this item.
+  Full history: `docs/addenda/2026-09.md` § 2026-09-04, status row in CLAUDE.md
+  § 3. **Still open, and still unspecced:** the redesigned `/login`, the
+  pre-auth marketing landing page, and a real onboarding experience (the
+  `/onboarding` route exists but was never designed). Note the `robots: noindex`
+  revisit trigger recorded in `docs/KNOWN_GAPS.md` has now fired — `/demo` is a
+  public route — and was deliberately not acted on; see that file.
 - **P2 — Observability + error tracking + webhook rate limiting.**
 - **P3 — Webhook replay protection.** Depends on P2; a breaking protocol
   change.

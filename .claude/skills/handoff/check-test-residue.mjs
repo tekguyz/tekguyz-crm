@@ -50,6 +50,17 @@ if (!DEMO_ORG_NAME || !DEMO_OWNER_EMAIL) {
   bail(`CANNOT PARSE ${SEED_LIB} — DEMO_ORG_NAME / DEMO_OWNER_EMAIL not found. Update this script.`);
 }
 
+// The demo org gained a SECOND permanent member on 2026-09-04: the public
+// read-only demo visitor behind /demo (scripts/seed/lib/demo-visitor.ts). It is
+// seeded, not residue, and its email comes from the environment rather than
+// from source — so it is read from there, and there is no third hardcoded copy.
+//
+// This matters beyond a false positive. Until this was added, the removal SQL
+// this script prints deleted every membership except the owner's, which would
+// have taken the demo visitor with it and broken the public demo the next time
+// a human pasted it.
+const DEMO_VISITOR_EMAIL = process.env.DEMO_VISITOR_EMAIL?.trim() || null;
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SECRET_KEY;
 if (!url || !key) {
@@ -71,10 +82,16 @@ async function sel(table, columns, build) {
 // ---------------------------------------------------------------------------
 // A. The demo org should contain exactly what the seed creates.
 //
-// scripts/seed/lib/demo-org.ts creates ONE membership — the demo OWNER — and no
-// invites at all. So any second membership, any non-OWNER role, and any invite
-// row is residue by construction, and `npm run seed:demo` will never clear it.
-// This is the exact shape of the 2026-08-18 finding.
+// The seed creates exactly TWO memberships and no invites: the demo OWNER
+// (scripts/seed/lib/demo-org.ts) and, since 2026-09-04, the public read-only
+// demo visitor behind /demo (scripts/seed/lib/demo-visitor.ts). Anything else —
+// a third membership, an unexpected role, any invite row — is residue by
+// construction, and `npm run seed:demo` will never clear it. This is the exact
+// shape of the 2026-08-18 finding.
+//
+// Note the seed now actively redacts non-@example.com members and invites from
+// the demo org on every run (demo-membership-hygiene.ts), because /demo is
+// public and the app shell renders member emails on every page.
 // ---------------------------------------------------------------------------
 const orgs = await sel("organizations", "id, name");
 const demo = orgs.find((o) => o.name === DEMO_ORG_NAME);
@@ -91,23 +108,39 @@ if (!demo) {
     const { data, error } = await db.auth.admin.getUserById(m.user_id);
     if (error) bail(`Could not resolve auth user ${m.user_id} — ${error.message}`);
     const email = data?.user?.email ?? "(unknown)";
-    if (email !== DEMO_OWNER_EMAIL || m.role !== "OWNER") {
+    const isSeededOwner = email === DEMO_OWNER_EMAIL && m.role === "OWNER";
+    const isSeededVisitor =
+      DEMO_VISITOR_EMAIL && email === DEMO_VISITOR_EMAIL && m.role === "MEMBER";
+    if (!isSeededOwner && !isSeededVisitor) {
       unexpected.push(`${email} (${m.role}, created ${m.created_at})`);
     }
   }
   if (unexpected.length) {
     findings.push(
       `DEMO ORG MEMBERSHIPS: ${unexpected.length} membership row(s) in "${DEMO_ORG_NAME}" that the seed ` +
-        `does not create — ${unexpected.join("; ")}. The seed creates only ${DEMO_OWNER_EMAIL} as OWNER.`,
+        `does not create — ${unexpected.join("; ")}. The seed creates ${DEMO_OWNER_EMAIL} as OWNER` +
+        (DEMO_VISITOR_EMAIL ? ` and ${DEMO_VISITOR_EMAIL} as MEMBER.` : `.`),
     );
+    // The keep-list names what must survive, never what to drop. A WHERE clause
+    // that enumerates what to keep survives a mistake; one that enumerates what
+    // to drop does not. Deleting the demo visitor's row here would break the
+    // public /demo entry point with no error anywhere.
+    const keep = [DEMO_OWNER_EMAIL, DEMO_VISITOR_EMAIL]
+      .filter(Boolean)
+      .map((e) => `'${e}'`)
+      .join(", ");
     findings.push(
       `  Removal (run by hand, per CLAUDE.md § Test-Data Cleanup):\n` +
         `    SELECT * FROM organization_members WHERE organization_id = '${demo.id}';\n` +
         `    DELETE FROM organization_members WHERE organization_id = '${demo.id}'\n` +
-        `      AND user_id <> (SELECT id FROM auth.users WHERE email = '${DEMO_OWNER_EMAIL}');`,
+        `      AND user_id NOT IN (SELECT id FROM auth.users WHERE email IN (${keep}));`,
     );
   } else {
-    notes.push(`"${DEMO_ORG_NAME}" memberships clean (${members.length} row, seeded owner only)`);
+    notes.push(
+      `"${DEMO_ORG_NAME}" memberships clean (${members.length} row(s), seeded owner` +
+        (DEMO_VISITOR_EMAIL ? ` and demo visitor` : ``) +
+        ` only)`,
+    );
   }
 
   const invites = await sel("organization_invites", "id, email, status, created_at", (q) =>
