@@ -15,7 +15,19 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  const { data: organizations, error } = await supabase.from("organizations").select("id");
+  // is_demo orgs are excluded HERE, not skipped inside the loop, so nothing
+  // downstream runs for them at all — no aggregation, no Gemini narrative, no
+  // Resend send. TEKGUYZ Demo's owner is a fake @example.com address, so every
+  // weekly run for it billed a narrative and posted a send that could only
+  // bounce. create-demo-org.ts flagged this in its own output the day the demo
+  // org was built and it was never fixed; this is that fix.
+  //
+  // No other organization's behaviour changes: is_demo is NOT NULL DEFAULT
+  // false, so every real org matches this filter exactly as it did before.
+  const { data: organizations, error } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("is_demo", false);
 
   if (error) {
     console.error("[weekly-report cron] failed to list organizations:", error);

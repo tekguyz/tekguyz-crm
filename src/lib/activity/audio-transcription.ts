@@ -2,11 +2,17 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { resolveOrgCredential } from "@/lib/credentials/resolve-org-credential";
+import { isDemoOrg } from "@/lib/demo/is-demo-org";
 import { GEMINI_TRANSCRIPTION_MODEL } from "@/lib/ai/models";
 import type { ActivityLog } from "@/lib/activity/queries";
 
 const TRANSCRIPTION_TIMEOUT_MS = 20000;
 const AUDIO_BUCKET = "audio-notes";
+
+// Shown in place of a transcript for the public demo org. The recording still
+// uploads and the activity_logs row still says an audio note exists — the
+// feature is visibly present, it just costs nothing.
+const DEMO_SKIP_MESSAGE = "Voice notes are not transcribed in the public demo.";
 
 const TRANSCRIPTION_PROMPT =
   "Transcribe this voice memo verbatim. Return only the transcription text, no commentary or formatting.";
@@ -53,7 +59,21 @@ export async function transcribeAndSaveAudioNote(
   // Fallback behavior: no credential, a Gemini error, or a timeout must never
   // lose the recording — the audio is already uploaded above regardless of
   // what happens next. Each case just changes what the log's content says.
-  const content = await transcribeOrFallback(organizationId, buffer, mimeType);
+  //
+  // Belt and braces. The public demo identity holds the demo_readonly Postgres
+  // role, so it cannot upload to storage or insert an activity_logs row and can
+  // never reach this line at all — but a stranger's recording must not be able
+  // to spend Gemini credit even if that grant is ever loosened by mistake.
+  //
+  // The check MUST stay above transcribeOrFallback, because that is where
+  // resolveOrgCredential runs, and resolveOrgCredential falls back to
+  // PLATFORM_GEMINI_API_KEY. Below it, this guard would stop holding the moment
+  // that env var is set — which it is, in production. Ordering is asserted by
+  // audio-transcription.test.ts.
+  const isDemo = await isDemoOrg(organizationId);
+  const content = isDemo
+    ? DEMO_SKIP_MESSAGE
+    : await transcribeOrFallback(organizationId, buffer, mimeType);
 
   const { data, error } = await supabase
     .from("activity_logs")
