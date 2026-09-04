@@ -13,6 +13,7 @@ import { ensureDemoVisitor } from "./lib/demo-visitor";
 import { createAdminClient } from "./lib/clients";
 import { seedDemoLeads, countDemoLeads } from "./lib/demo-data";
 import { seedDemoProspects, countDemoProspects } from "./lib/demo-prospects";
+import { seedDemoTasks, countDemoTasks } from "./lib/demo-tasks";
 import { reportNonDemoOrgSafety } from "./lib/safety";
 
 async function main() {
@@ -55,6 +56,17 @@ async function main() {
     console.log("\nSeeding demo leads and activity logs...");
     const { leadCount, logCount } = await seedDemoLeads(orgId);
     console.log(`Seeded ${leadCount} leads and ${logCount} activity log entries.`);
+  }
+
+  // Tasks are checked independently for the same reason leads and prospects
+  // are, and must run after leads: tasks.lead_id is NOT NULL.
+  const existingTaskCount = await countDemoTasks(orgId);
+  if (existingTaskCount > 0) {
+    console.log(`"${DEMO_ORG_NAME}" already has ${existingTaskCount} task(s) — skipping task seeding.`);
+  } else {
+    console.log("Seeding demo follow-up tasks...");
+    const taskCount = await seedDemoTasks(orgId);
+    console.log(`Seeded ${taskCount} tasks.`);
   }
 
   const existingProspectCount = await countDemoProspects(orgId);

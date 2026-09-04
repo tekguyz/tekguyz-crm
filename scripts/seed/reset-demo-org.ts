@@ -7,6 +7,7 @@
 import { ensureDemoOrg, DEMO_ORG_NAME } from "./lib/demo-org";
 import { wipeDemoLeads, seedDemoLeads } from "./lib/demo-data";
 import { wipeDemoProspects, seedDemoProspects } from "./lib/demo-prospects";
+import { seedDemoTasks } from "./lib/demo-tasks";
 import { reportNonDemoOrgSafety } from "./lib/safety";
 
 async function main() {
@@ -24,13 +25,22 @@ async function main() {
   const wipedProspects = await wipeDemoProspects(orgId);
   console.log(`Deleted ${wipedProspects} existing prospect(s).`);
 
-  console.log("Wiping existing demo leads (activity_logs and lead_submissions cascade)...");
+  // Tasks need no explicit wipe: tasks.lead_id is ON DELETE CASCADE, so the
+  // lead wipe below takes them with it. Wiping them separately first would be
+  // a second statement that can only ever be a no-op, and a no-op statement in
+  // a reset script reads like a safety measure while providing none.
+  console.log("Wiping existing demo leads (activity_logs, lead_submissions and tasks cascade)...");
   const wiped = await wipeDemoLeads(orgId);
   console.log(`Deleted ${wiped} existing lead(s).`);
 
   console.log("Re-seeding fresh demo leads and activity logs...");
   const { leadCount, logCount } = await seedDemoLeads(orgId);
   console.log(`Seeded ${leadCount} leads and ${logCount} activity log entries.`);
+
+  // After leads, always — tasks.lead_id is NOT NULL.
+  console.log("Re-seeding demo follow-up tasks...");
+  const taskCount = await seedDemoTasks(orgId);
+  console.log(`Seeded ${taskCount} tasks.`);
 
   console.log("Re-seeding synthetic demo prospects...");
   const prospectCount = await seedDemoProspects(orgId);
