@@ -59,7 +59,7 @@ export const getCurrentOrg = cache(async () => {
   const { data: memberships, count } = await supabase
     .from("organization_members")
     .select(
-      "organization_id, role, notify_new_lead, notify_weekly_report, organizations(id, name, timezone, currency_format)",
+      "organization_id, role, notify_new_lead, notify_weekly_report, organizations(id, name, timezone, currency_format, is_demo)",
       { count: "exact" },
     )
     .eq("user_id", user.id)
@@ -103,6 +103,11 @@ export const getCurrentOrg = cache(async () => {
     orgId: membership.organization_id as string,
     orgName: org?.name ?? "Organization",
     orgTimezone: org?.timezone ?? "UTC",
+    // Drives the shell's read-only badge. One extra column on an embed that was
+    // already being selected, so it costs nothing on a path that runs for every
+    // render of every page. Defaults to false, so a fetch that somehow returns
+    // no org never mislabels a real tenant as a demo.
+    isDemo: org?.is_demo === true,
     currencyFormat: org?.currency_format ?? "USD",
     role: membership.role as string,
     notifyNewLead: membership.notify_new_lead as boolean,

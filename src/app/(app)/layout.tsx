@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // sidebar for someone who prefers the rail. This layout was already dynamic
   // (getCurrentOrg reads the Supabase auth cookies), so reading one more
   // cookie costs nothing.
-  const [{ orgId, orgName, userEmail, displayName, role }, cookieStore] = await Promise.all([
+  const [{ orgId, orgName, userEmail, displayName, role, isDemo }, cookieStore] = await Promise.all([
     getCurrentOrg(),
     cookies(),
   ]);
@@ -31,6 +31,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       displayName={displayName}
       role={role}
       members={members}
+      isDemo={isDemo}
       sidebar={parseSidebarState(cookieStore.get(SIDEBAR_COOKIE_NAME)?.value)}
     >
       {children}

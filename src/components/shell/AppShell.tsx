@@ -21,6 +21,7 @@ export function AppShell({
   role,
   members,
   sidebar,
+  isDemo,
 }: {
   children: ReactNode;
   orgName: string;
@@ -37,6 +38,11 @@ export function AppShell({
   // Read from a cookie in the server layout, so the first paint already has
   // the right sidebar width. See src/lib/shell/sidebar-cookie.ts.
   sidebar: SidebarState;
+  // organizations.is_demo for the current tenant. Drives the header's
+  // read-only badge and nothing else — it is presentation only. The actual
+  // boundary is the demo_readonly Postgres role, which refuses every write
+  // below RLS whether or not this prop is ever passed correctly.
+  isDemo: boolean;
 }) {
   return (
     // HelpProvider wraps the whole shell so the identity menu's Help item, the
@@ -68,7 +74,7 @@ export function AppShell({
                   visually. */}
               <MobileTabBar orgName={orgName} userEmail={userEmail} />
               <div className="flex min-w-0 flex-1 flex-col">
-                <Header userEmail={userEmail} displayName={displayName} />
+                <Header userEmail={userEmail} displayName={displayName} isDemo={isDemo} />
                 {/* pb-24 below md clears the fixed bottom tab bar; above md the
                     bar is not displayed and the padding returns to the shell's
                     normal 6.
