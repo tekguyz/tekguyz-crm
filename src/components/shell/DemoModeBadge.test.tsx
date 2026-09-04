@@ -19,24 +19,30 @@ const PROPS = { userEmail: "someone@example.com", displayName: null };
 describe("the demo read-only badge", () => {
   it("is absent for a real tenant", () => {
     render(<Header {...PROPS} isDemo={false} />);
-    expect(screen.queryByText(/Demo/)).toBeNull();
+    expect(screen.queryByText("Read-only")).toBeNull();
   });
 
   it("is shown for the demo tenant", () => {
     render(<Header {...PROPS} isDemo />);
-    expect(screen.getByText(/Demo/)).toBeInTheDocument();
+    expect(screen.getByText("Read-only")).toBeInTheDocument();
   });
 
-  it("tells a screen reader that nothing can be saved", () => {
-    // The visible text abbreviates to "Demo" below the sm breakpoint, so the
-    // full meaning has to live somewhere that does not depend on viewport
-    // width. If this label is ever dropped, a phone visitor gets the word
-    // "Demo" and no indication that writes are refused.
+  it("says read-only, not just the word Demo", () => {
+    // The sidebar already says "TEKGUYZ Demo". A badge that repeats it tells a
+    // visitor nothing new, and the one fact they cannot get anywhere else is
+    // that writes are refused. If this ever regresses to "Demo", the badge has
+    // stopped earning its place in a header reserved for two things.
     render(<Header {...PROPS} isDemo />);
-    expect(
-      screen.getByLabelText(
-        "Demo workspace. This session is read-only — nothing can be saved.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Read-only").textContent).toBe("Read-only");
+  });
+
+  it("does not use the orange pill, which the Overdue badge owns", () => {
+    // Shipped orange first. On the Today view that put it in the same colour
+    // as the SLA "Overdue" pills a few pixels below — one colour, two
+    // unrelated meanings, and the other is a real alert.
+    const { container } = render(<Header {...PROPS} isDemo />);
+    const badge = container.querySelector("span.text-label");
+    expect(badge?.className).not.toMatch(/pill-orange/);
+    expect(badge?.className).toMatch(/bg-canvas-soft/);
   });
 });

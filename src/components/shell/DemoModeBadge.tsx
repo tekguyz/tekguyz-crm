@@ -14,7 +14,8 @@ import { Badge } from "@/components/ui/Badge";
 // Why the org name is not enough: the sidebar already says "TEKGUYZ Demo", but
 // that is the tenant's name. It tells you the DATA is a sample; it says nothing
 // about whether you can save. Those are two different messages and only one of
-// them is the one that matters when a write is refused.
+// them is the one that matters when a write is refused — which is why this
+// badge carries that message and nothing else.
 //
 // Why the header and not the sidebar: WorkspaceBlock is `sr-only` when the
 // sidebar is collapsed and the sidebar is not rendered at all on mobile — and
@@ -26,22 +27,35 @@ import { Badge } from "@/components/ui/Badge";
 // per-tenant label the sidebar already owns. This is a session-mode indicator:
 // it is not shown to any real tenant at all, so for every non-demo user the
 // header still holds exactly two things.
+// WHY IT SAYS "READ-ONLY" AND NOT "DEMO".
+// The sidebar's WorkspaceBlock already says "TEKGUYZ Demo", and the visitor
+// arrived through a link that called it a demo. The word adds nothing. What
+// nobody can see from anywhere else is that this session cannot save, so that
+// is the entire text. Dropping "Demo" also makes it short enough to fit a
+// 375px header intact, which means there is no abbreviation to weaken the
+// message on exactly the devices most likely to open a case-study link.
+//
+// WHY NEUTRAL AND NOT ORANGE. It shipped orange first, which put it in the
+// same pill colour as the "Overdue" badges directly beneath it on the Today
+// view — one colour carrying two unrelated meanings on a single screen, and
+// the other one is a real SLA alert. This project's rule is that colour is
+// signal, not decoration; read-only is a standing condition, not an alert, so
+// it takes the neutral pill and stays legible without competing.
 export function DemoModeBadge() {
   return (
+    // The hairline is not decoration. Badge's neutral pill is canvas-soft,
+    // which measures 1.06:1 against the header's canvas-pure — so the pill
+    // shape is invisible there and the badge reads as loose text floating
+    // beside the search control. This design system's stated answer is that
+    // structure comes from hairline borders and spacing, never shadow, so it
+    // gets a border rather than a louder fill.
     <Badge
-      tone="orange"
+      tone="neutral"
       dot
-      // Read out as one phrase; the visual text is abbreviated on narrow
-      // screens and a screen reader should not get the abbreviation.
-      aria-label="Demo workspace. This session is read-only — nothing can be saved."
+      className="border border-hairline"
+      title="This is a public demo. Nothing you do here is saved."
     >
-      <span aria-hidden="true">
-        Demo
-        {/* Dropped below `sm` so the header still fits a phone: the word
-            "Demo" plus the amber dot carries the signal on its own there, and
-            the full phrase is in the aria-label at every width. */}
-        <span className="hidden sm:inline"> · read-only</span>
-      </span>
+      Read-only
     </Badge>
   );
 }
