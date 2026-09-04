@@ -9,6 +9,8 @@
 // empty for the demo org, so a re-run is a no-op for whichever is already
 // there (use `npm run seed:demo:reset` to wipe and reseed fresh).
 import { ensureDemoOrg, DEMO_ORG_NAME } from "./lib/demo-org";
+import { ensureDemoVisitor } from "./lib/demo-visitor";
+import { createAdminClient } from "./lib/clients";
 import { seedDemoLeads, countDemoLeads } from "./lib/demo-data";
 import { seedDemoProspects, countDemoProspects } from "./lib/demo-prospects";
 import { reportNonDemoOrgSafety } from "./lib/safety";
@@ -19,6 +21,27 @@ async function main() {
   console.log(`\nEnsuring "${DEMO_ORG_NAME}" exists...`);
   const { orgId, orgCreated } = await ensureDemoOrg();
   console.log(orgCreated ? `Created org ${orgId}` : `Found existing org ${orgId}`);
+
+  // Marks this org for the weekly-report cron's exclusion and the voice
+  // transcription skip. Re-asserted every run so a restored backup or a manual
+  // edit cannot silently leave the demo org receiving real report emails again.
+  const { error: markError } = await createAdminClient()
+    .from("organizations")
+    .update({ is_demo: true })
+    .eq("id", orgId);
+  if (markError) {
+    throw new Error(`Failed to mark org ${orgId} as is_demo: ${markError.message}`);
+  }
+  console.log(`Marked ${orgId} as is_demo — excluded from the weekly-report cron.`);
+
+  // The public read-only demo identity. Powerless by grant (the demo_readonly
+  // Postgres role), not by hidden UI.
+  const { userId: visitorId, created: visitorCreated } = await ensureDemoVisitor(orgId);
+  console.log(
+    visitorCreated
+      ? `Created read-only demo visitor ${visitorId}.`
+      : `Found existing read-only demo visitor ${visitorId} — role, password and membership re-asserted.`,
+  );
 
   // Leads and prospects are checked independently rather than behind one
   // early return. They are separate tables filled by separate units, and a
@@ -47,9 +70,9 @@ async function main() {
 
   console.log(
     `\nRun \`npm run seed:demo:reset\` to wipe and reseed fresh.` +
-      `\n\nNote: Prompt 14's weekly revenue cron sweeps every organization, including this one — once seeded, ` +
-      `"${DEMO_ORG_NAME}" will start receiving real weekly report emails to its owner account. Flagging, not ` +
-      `deciding: either accept that as harmless noise, or add an \`is_demo\` exclusion to the cron's org loop.`,
+      `\n\nThis org is marked is_demo, so the weekly revenue cron skips it — no report email is generated ` +
+      `for or sent to the demo account, and no Gemini narrative is billed for it. (That warning used to ` +
+      `live here as an open flag; the exclusion it asked for shipped 2026-09-04.)`,
   );
 
   await reportNonDemoOrgSafety("after");

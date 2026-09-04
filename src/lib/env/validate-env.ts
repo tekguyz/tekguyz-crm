@@ -26,6 +26,13 @@ const REQUIRED_ENV_VARS: RequiredEnvVar[] = [
   { name: "PLATFORM_RESEND_API_KEY", description: "Platform-wide fallback Resend API key" },
   { name: "CRON_SECRET", description: "Bearer secret gating /api/cron/* routes" },
   { name: "NEXT_PUBLIC_APP_URL", description: "Public app URL used in notification/report email deep links" },
+  // The public read-only demo identity, signed in by src/app/demo/route.ts.
+  // Required rather than optional on purpose: without them /demo returns 503,
+  // and a case-study link that silently dead-ends is exactly the failure this
+  // whole feature exists to remove. Both must be set in Vercel Production AND
+  // Preview — this project has had the two scopes disagree before.
+  { name: "DEMO_VISITOR_EMAIL", description: "Public read-only demo identity's email" },
+  { name: "DEMO_VISITOR_PASSWORD", description: "Public read-only demo identity's password" },
 ];
 
 export class MissingEnvVarError extends Error {
