@@ -55,15 +55,35 @@ sessions had no home this repo's tooling reads.
 Previously informal, formalised here 2026-08-27. Order is intent, not a
 commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
 
-- **P1 — Login/landing redesign.** *Partially shipped 2026-09-04.* The public
-  entry route now exists as `/demo`, a read-only demo identity linked from
-  tekguyz.com — that closes the "no genuinely public route" half of this item.
-  Full history: `docs/addenda/2026-09.md` § 2026-09-04, status row in CLAUDE.md
-  § 3. **Still open, and still unspecced:** the redesigned `/login`, the
-  pre-auth marketing landing page, and a real onboarding experience (the
-  `/onboarding` route exists but was never designed). Note the `robots: noindex`
-  revisit trigger recorded in `docs/KNOWN_GAPS.md` has now fired — `/demo` is a
-  public route — and was deliberately not acted on; see that file.
+- **P1 — Login/landing redesign.** *Partially shipped 2026-09-04, narrowed
+  2026-09-05.* The public entry route now exists as `/demo`, a read-only demo
+  identity linked from tekguyz.com — that closes the "no genuinely public
+  route" half of this item. `/login` now also carries its own **View demo**
+  link, so a visitor arriving at the production URL directly is no longer stuck
+  at a wall. Full history: `docs/addenda/2026-09.md` § 2026-09-04 and
+  § 2026-09-05, status row in CLAUDE.md § 3. Note the `robots: noindex` revisit
+  trigger recorded in `docs/KNOWN_GAPS.md` has now fired — `/demo` is a public
+  route — and was deliberately not acted on; see that file.
+
+  Three pieces of this item were considered on 2026-09-05 and deliberately
+  deferred:
+  - **Self-serve signup** — *rejected — revisit trigger* (2026-09-05). The
+    business model is invite-only / sales-assisted, not SaaS: accounts are
+    provisioned by hand for one or two trusted collaborators. Public signup was
+    live on `/signup` and was closed the same day (see CLAUDE.md
+    § Multi-Tenant Security Model, rule 7). Same shape as the **RESTful API**
+    rejection above — not a closed door. Revisit when the product is actually
+    being sold self-serve, with a billing model and ToS behind it; not on "it'd
+    be nice".
+  - **Marketing landing page** — *deferred* (2026-09-05). A landing page's job
+    is conversion, and with no self-serve signup there is nothing to convert
+    into. `/demo` plus tekguyz.com's own case study already fill that role.
+    Unblocks when self-serve signup does.
+  - **Onboarding** — *deferred* (2026-09-05). The `/onboarding` route exists
+    and was never designed. Deferred until an actual invite is imminent, so it
+    is designed against a real first user rather than an imagined one.
+
+  **Still open and unspecced:** the redesigned `/login` itself.
 - **P2 — Observability + error tracking + webhook rate limiting.**
 - **P3 — Webhook replay protection.** Depends on P2; a breaking protocol
   change.

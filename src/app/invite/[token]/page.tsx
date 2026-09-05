@@ -57,7 +57,7 @@ export default async function InvitePage({
           <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Sign in</Link>
         </Button>
         <Button asChild variant="secondary" className="w-full">
-          <Link href={`/signup?next=${encodeURIComponent(nextPath)}`}>Sign up</Link>
+          <Link href={`/signup?token=${encodeURIComponent(token)}`}>Sign up</Link>
         </Button>
       </div>
     );

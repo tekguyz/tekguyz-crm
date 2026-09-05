@@ -40,15 +40,17 @@ export default async function LoginPage({
         </Button>
       </form>
 
+      {/* No self-serve signup link: account creation is invite-only, and an
+          invitee arrives through /invite/<token>, never through here. What a
+          stranger landing on the production URL gets instead is a way to
+          actually see the product. */}
       <p className="mt-4 text-sm text-ink-muted">
-        No account?{" "}
-        <Link
-          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
-          className="font-medium text-accent underline"
-        >
-          Sign up
+        Just looking?{" "}
+        <Link href="/demo" className="font-medium text-accent underline">
+          View demo
         </Link>
       </p>
+
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resetPasswordSchema } from "@/lib/validation/reset-password-schema";
+import { checkInviteToken } from "@/lib/invites/signup-gate";
 
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -19,14 +20,34 @@ export async function signIn(formData: FormData) {
   redirect(next);
 }
 
+// Account creation is invite-only. This action is POST-able directly, so the
+// gate lives HERE, not only in the page that hides the form: a stranger who
+// crafts the request still gets nothing without a token naming a live PENDING
+// invite, and the address they sign up with must be the invited one. See
+// src/lib/invites/signup-gate.ts.
 export async function signUp(formData: FormData) {
-  const email = String(formData.get("email") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "");
+  const token = String(formData.get("token") ?? "").trim();
+
+  const gate = await checkInviteToken(token || undefined);
+  if (!gate.ok) {
+    redirect(`/login?error=${encodeURIComponent(gate.reason)}`);
+  }
+  if (gate.email !== email) {
+    redirect(
+      `/signup?token=${encodeURIComponent(token)}&error=${encodeURIComponent(
+        "This invite is for a different email address.",
+      )}`,
+    );
+  }
+
+  // An invite always lands the new account back on its own accept page.
+  const next = `/invite/${token}`;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const confirmUrl = new URL("/auth/confirm", appUrl);
-  if (next) confirmUrl.searchParams.set("next", next);
+  confirmUrl.searchParams.set("next", next);
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -38,7 +59,9 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    redirect(
+      `/signup?token=${encodeURIComponent(token)}&error=${encodeURIComponent(error.message)}`,
+    );
   }
 
   if (!data.session) {
@@ -47,7 +70,7 @@ export async function signUp(formData: FormData) {
     );
   }
 
-  redirect(next || "/onboarding");
+  redirect(next);
 }
 
 export async function signOut() {
