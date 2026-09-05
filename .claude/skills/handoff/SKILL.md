@@ -377,6 +377,7 @@ Structure:
 **Deployed:** <what production is currently running — commit sha + one line, or "unverified — Vercel not checked this session">
 **Repo:** <clean / N uncommitted files> · <in sync with remote / N unpushed>
 **Gates:** <build/lint/typecheck/test — pass, or not run this session>
+**Docs changed this audit:** <file · file, or "none — every claim measured accurate">
 
 ### Shipped since last handoff
 - <one line per initiative or batch, with the measured figure that matters — test count, file count, whatever is real>
@@ -427,3 +428,9 @@ Rules for the block:
   attached; only what the *planning* side needs belongs there. If a new permanent
   doc is added or one is retired, place it in the right tier here and keep it
   consistent with CLAUDE.md's own Reference Index.
+- **Say what job 1 changed, and never more than that.** The planning Project
+  decides whether to re-upload its attachments from the `Docs changed this
+  audit:` line, not from the presence of a handoff block. When job 1 changed
+  nothing, that line reads `none` and the attachments there are still current --
+  do not tell the user to re-upload. Telling them to re-upload on every handoff
+  trained the instruction to be ignored, which is worse than not having it.
