@@ -4,6 +4,7 @@ import {
   PIPELINE_STATUS_LABELS,
   type PipelineStatus,
 } from "@/lib/leads/pipeline";
+import type { PeriodRange } from "@/lib/reports/periods";
 
 export type StageRow = {
   status: string;
@@ -52,22 +53,46 @@ const OUTCOME_ORDER: OutcomeKey[] = ["WON", "LOST", "ABANDONED"];
 //           would silently shrink realized revenue.
 // Both are scoped by organization_id on top of RLS, the same belt-and-braces
 // every other lead query here uses.
-export async function getPipelineReport(orgId: string): Promise<PipelineReport> {
+//
+// `range` narrows both halves to a calendar period resolved in the org's own
+// timezone (lib/reports/periods.ts); null is all-time and applies no date
+// filter at all. The two halves bucket on DIFFERENT timestamps, and that is
+// the point rather than an inconsistency:
+//   closed — closed_at. When a lead was decided is the only date that makes a
+//            win rate or realized revenue mean anything for a period. This
+//            covers ABANDONED too: it stays out of the win-rate denominator
+//            (unchanged formula) but still belongs to the period it ended in.
+//   open   — created_at. An open lead has no closed_at, so bucketing it by
+//            closed_at would empty the pipeline figure entirely; "opened in
+//            this period and still open" is the honest reading.
+export async function getPipelineReport(
+  orgId: string,
+  range: PeriodRange = null,
+): Promise<PipelineReport> {
   const supabase = await createClient();
 
-  const [open, closed] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("status, estimated_revenue")
-      .eq("organization_id", orgId)
-      .eq("archived", false)
-      .is("outcome", null),
-    supabase
-      .from("leads")
-      .select("outcome, actual_revenue")
-      .eq("organization_id", orgId)
-      .not("outcome", "is", null),
-  ]);
+  let openQuery = supabase
+    .from("leads")
+    .select("status, estimated_revenue")
+    .eq("organization_id", orgId)
+    .eq("archived", false)
+    .is("outcome", null);
+
+  let closedQuery = supabase
+    .from("leads")
+    .select("outcome, actual_revenue")
+    .eq("organization_id", orgId)
+    .not("outcome", "is", null);
+
+  if (range) {
+    // gte/lt, never gte/lte — the end is exclusive, so a lead closed at the
+    // exact instant a month begins belongs to that month only and is never
+    // counted twice across two adjacent periods.
+    openQuery = openQuery.gte("created_at", range.startISO).lt("created_at", range.endISO);
+    closedQuery = closedQuery.gte("closed_at", range.startISO).lt("closed_at", range.endISO);
+  }
+
+  const [open, closed] = await Promise.all([openQuery, closedQuery]);
 
   if (open.error) throw open.error;
   if (closed.error) throw closed.error;

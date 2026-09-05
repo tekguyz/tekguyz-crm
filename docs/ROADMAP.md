@@ -87,8 +87,6 @@ commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
 - **P2 — Observability + error tracking + webhook rate limiting.**
 - **P3 — Webhook replay protection.** Depends on P2; a breaking protocol
   change.
-- **P4 — Cheap registered gaps in one wave:** CSV export, `/reports` period
-  filter, dead CSS.
 - **P5 — Lead enrichment** via an append-only `lead_enrichments` table, with a
   mandatory human-apply step.
 - **P6 — PWA** with push notifications only; offline explicitly declined.

@@ -2,6 +2,8 @@ import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts } from "@/lib/leads/queries";
 import { ContactsGrid } from "@/components/contacts/ContactsGrid";
 import { FilterTabs } from "@/components/leads/FilterTabs";
+import { Button } from "@/components/ui/Button";
+import { IconDownload } from "@tabler/icons-react";
 
 // Preserves whichever filters are NOT being changed, so Archived + My Leads
 // combine instead of resetting each other. Both are omitted when off rather
@@ -63,6 +65,21 @@ export default async function ContactsPage({
             },
           ]}
         />
+
+        {/* A plain <a>, not a Link: this navigates to a file download, and
+            next/link would try to client-navigate a route that returns CSV.
+            Button's asChild supplies the classes so no copy of them exists
+            here. `download` is a hint only — the route's own
+            Content-Disposition is what actually names the file. The export is
+            the whole directory, so it deliberately ignores the filters above:
+            a backup that silently omitted the rows you had filtered out would
+            be wrong in the one way an export must not be. */}
+        <Button asChild size="sm" variant="secondary" className="ml-auto">
+          <a href="/api/leads/export" download>
+            <IconDownload size={16} stroke={1.5} aria-hidden="true" />
+            Export CSV
+          </a>
+        </Button>
       </div>
 
       <ContactsGrid

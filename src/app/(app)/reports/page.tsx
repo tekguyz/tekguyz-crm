@@ -5,14 +5,36 @@ import { Figure } from "@/components/reports/Figure";
 import { StageLedger } from "@/components/reports/StageLedger";
 import { OutcomeLedger } from "@/components/reports/OutcomeLedger";
 import { Card } from "@/components/ui/Card";
+import { FilterTabs } from "@/components/leads/FilterTabs";
+import {
+  REPORT_PERIODS,
+  REPORT_PERIOD_LABELS,
+  parseReportPeriod,
+  resolvePeriodRange,
+} from "@/lib/reports/periods";
+import { timezoneLabel } from "@/lib/organizations/org-options";
 
-// Read-only, all-time, whole-tenant. No role gate: every MEMBER already sees
-// every lead in the org (see CLAUDE.md § Multi-Tenant Security Model), so an
-// aggregate of those same rows may not be narrower or wider than the lists
-// they can already read. RLS is the boundary; this page adds none of its own.
-export default async function ReportsPage() {
-  const { orgId, orgName, currencyFormat } = await getCurrentOrg();
-  const report = await getPipelineReport(orgId);
+// Read-only, whole-tenant. No role gate: every MEMBER already sees every lead
+// in the org (see CLAUDE.md § Multi-Tenant Security Model), so an aggregate of
+// those same rows may not be narrower or wider than the lists they can already
+// read. RLS is the boundary; this page adds none of its own.
+//
+// The period is a searchParam, so the filter stays a server query with no
+// client state — the same shape as the Contacts and Pipeline filter tabs.
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const { period: periodParam } = await searchParams;
+  const period = parseReportPeriod(periodParam);
+
+  const { orgId, orgName, currencyFormat, orgTimezone } = await getCurrentOrg();
+  // Resolved against the ORG's timezone, not UTC and not the viewer's — every
+  // member of a tenant must see the same month. No proration: a part-elapsed
+  // month reports the leads it has.
+  const range = resolvePeriodRange(period, orgTimezone);
+  const report = await getPipelineReport(orgId, range);
 
   const decided = report.wonCount + report.lostCount;
   const hasAnyLeads = report.openCount > 0 || decided > 0 || report.abandonedCount > 0;
@@ -22,9 +44,21 @@ export default async function ReportsPage() {
       <div>
         <h1 className="text-h1">Reports</h1>
         <p className="text-body-sm text-ink-muted">
-          Every lead {orgName} has ever recorded. There is no date filter yet.
+          {period === "all"
+            ? `Every lead ${orgName} has ever recorded.`
+            : `${REPORT_PERIOD_LABELS[period]} in ${timezoneLabel(orgTimezone)} time — the ` +
+              `whole calendar period, never a part-month projection. Closed leads count ` +
+              `in the period they closed; open leads in the period they arrived.`}
         </p>
       </div>
+
+      <FilterTabs
+        tabs={REPORT_PERIODS.map((value) => ({
+          label: REPORT_PERIOD_LABELS[value],
+          href: value === "all" ? "/reports" : `/reports?period=${value}`,
+          active: value === period,
+        }))}
+      />
 
       {hasAnyLeads ? (
         <>
@@ -76,9 +110,18 @@ export default async function ReportsPage() {
         </>
       ) : (
         <Card className="p-6">
-          <p className="text-body-md">No leads yet.</p>
+          {/* An empty period and an empty tenant are different facts, and
+              saying "No leads yet" for a quiet month would be a lie about the
+              whole account. */}
+          <p className="text-body-md">
+            {period === "all"
+              ? "No leads yet."
+              : `No leads in ${REPORT_PERIOD_LABELS[period].toLowerCase()}.`}
+          </p>
           <p className="text-body-sm text-ink-muted">
-            These figures fill in as leads arrive and you close them.
+            {period === "all"
+              ? "These figures fill in as leads arrive and you close them."
+              : "Try a wider period, or All time."}
           </p>
         </Card>
       )}

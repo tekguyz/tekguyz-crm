@@ -259,12 +259,21 @@
      elevation shadow — v2 fields are Level 0 and stay flat when focused.
      The :not() must remain a SINGLE :not() with a comma-separated list.
      Chaining :not(a):not(b) silently fails to compile under this project's
-     Lightning CSS / Turbopack pipeline — no error, just no focus styling. */
+     Lightning CSS / Turbopack pipeline — no error, just no focus styling.
+
+     There is deliberately NO border-color here. Input/Textarea/Select each
+     carry a `border-hairline` (or `border-danger`) utility, and utilities sit
+     in a later cascade layer than @layer base — so a border-color declared
+     here lost to that utility on every field in the app and never painted a
+     single pixel. It was removed on 2026-09-05 rather than promoted, because
+     the box-shadow below already carries the accessibility floor on its own:
+     an accent ring at full opacity, drawn at the field's edge. Do not add it
+     back; if the border itself must change on focus, that belongs on the
+     primitives as a `focus-visible:` utility, not here. */
   input:not([type="checkbox"], [type="radio"]):focus-visible,
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    border-color: var(--accent);
     box-shadow: 0 0 0 1px var(--accent);
   }
 
