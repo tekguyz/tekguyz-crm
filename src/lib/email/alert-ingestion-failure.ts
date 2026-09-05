@@ -48,7 +48,7 @@ export async function sendIngestionFailureAlert(failure: WebhookFailure): Promis
     }
 
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: NOTIFICATION_FROM,
       to: recipients,
       subject: `[Action needed] Inbound lead failed to save (${failure.code})`,
@@ -60,7 +60,15 @@ export async function sendIngestionFailureAlert(failure: WebhookFailure): Promis
         `[sendIngestionFailureAlert] Resend send failed for org ${failure.organizationId} (${failure.code}):`,
         error,
       );
+      return;
     }
+
+    // Mirrors sendNewLeadNotification: the only durable record that a given
+    // failure actually reached a human. Without it, "no error was logged" is
+    // the only evidence an alert went out, which is not evidence.
+    console.log(
+      `[sendIngestionFailureAlert] alerted ${recipients.length} recipient(s) for org ${failure.organizationId} (${failure.code}), resend_id=${data?.id ?? "unknown"}`,
+    );
   } catch (err) {
     console.error(
       `[sendIngestionFailureAlert] threw while alerting on ${failure.code} for org ${failure.organizationId}:`,
