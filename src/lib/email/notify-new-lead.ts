@@ -11,7 +11,10 @@ import type { Lead } from "@/lib/leads/queries";
 // Prompt 14 fix didn't reach; it produced the exact double-slash deep-link
 // bug send-weekly-report.ts already had fixed, just never verified here.
 const APP_URL = trimTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
-const NOTIFICATION_FROM = "TEKGUYZ CRM <onboarding@resend.dev>";
+// Exported so the ingestion-failure alert (lib/email/alert-ingestion-failure.ts)
+// sends from the same address rather than keeping a second copy of this
+// literal — same drift shape as a hand-copied primitive.
+export const NOTIFICATION_FROM = "TEKGUYZ CRM <onboarding@resend.dev>";
 
 // Fire-and-forget from the caller's perspective — ingest-lead.ts wraps this
 // call so a failure here never fails the webhook response; the lead is

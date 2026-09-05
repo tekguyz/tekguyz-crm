@@ -7,6 +7,11 @@ import { evaluateLeadForSpam } from "@/lib/ai/spam-shield";
 import { sendNewLeadNotification } from "@/lib/email/notify-new-lead";
 import { SPAM_FLAG_PREFIX } from "@/lib/leads/spam-review";
 import { recordLeadSubmission, type RecordedSubmission } from "@/lib/submissions/record";
+import {
+  logWebhookFailure,
+  WEBHOOK_ERROR_CODES,
+  WebhookIngestionError,
+} from "@/lib/webhooks/ingestion-failure";
 
 type IngestResult = { leadId: string; submissionId: string };
 
@@ -50,7 +55,17 @@ export async function ingestWebhookLead(
     .maybeSingle();
 
   if (lookupError) {
-    throw new Error(lookupError.message);
+    // Every fatal path below throws a coded WebhookIngestionError rather than a
+    // bare Error (2026-09-05). The route catches it, prints one structured log
+    // line and emails the operator — before this, a signature-valid request
+    // that failed here produced a 500 and no signal anywhere. Only the error
+    // MESSAGE travels; PostgREST's `details`/`hint` quote the offending column
+    // value and would drag the enquiry's email address into a public log.
+    throw new WebhookIngestionError(
+      WEBHOOK_ERROR_CODES.LEAD_LOOKUP_FAILED,
+      "lead lookup",
+      lookupError.message,
+    );
   }
 
   let lead: Lead;
@@ -77,7 +92,11 @@ export async function ingestWebhookLead(
       .single();
 
     if (updateError) {
-      throw new Error(updateError.message);
+      throw new WebhookIngestionError(
+        WEBHOOK_ERROR_CODES.LEAD_UPDATE_FAILED,
+        "lead update",
+        updateError.message,
+      );
     }
 
     lead = updated;
@@ -104,7 +123,11 @@ export async function ingestWebhookLead(
       .single();
 
     if (insertError) {
-      throw new Error(insertError.message);
+      throw new WebhookIngestionError(
+        WEBHOOK_ERROR_CODES.LEAD_INSERT_FAILED,
+        "lead insert",
+        insertError.message,
+      );
     }
 
     lead = inserted;
@@ -118,7 +141,7 @@ export async function ingestWebhookLead(
   // is now the record of what was said, so if anything downstream fails, the
   // enquiry content is already durable. It throws rather than logging — losing
   // it silently is the exact failure shape this table exists to prevent.
-  const submission = await recordLeadSubmission(supabase, {
+  const submission = await recordSubmissionOrThrow(supabase, {
     leadId: lead.id,
     organizationId,
     clientName: payload.client_name,
@@ -152,7 +175,11 @@ export async function ingestWebhookLead(
   const { error: logError } = await supabase.from("activity_logs").insert(ingestionLogs);
 
   if (logError) {
-    throw new Error(logError.message);
+    throw new WebhookIngestionError(
+      WEBHOOK_ERROR_CODES.ACTIVITY_LOG_WRITE_FAILED,
+      "activity log write",
+      logError.message,
+    );
   }
 
   await runSpamShieldAndNotify(supabase, organizationId, lead, submission);
@@ -228,7 +255,15 @@ async function runSpamShieldAndNotify(
       content: alertContent,
     } satisfies LogEntry);
     if (error) {
-      console.error(`[ingestWebhookLead] failed to write Spam Shield SYSTEM_ALERT for lead ${lead.id}:`, error);
+      // Non-fatal: the lead itself is already persisted, so this logs and the
+      // request still succeeds. Structured all the same, so it is greppable by
+      // code next to the fatal ones.
+      logWebhookFailure({
+        code: WEBHOOK_ERROR_CODES.SPAM_ALERT_WRITE_FAILED,
+        organizationId,
+        stage: "spam shield alert write",
+        detail: error.message,
+      });
     }
   }
 
@@ -242,6 +277,31 @@ async function runSpamShieldAndNotify(
   try {
     await sendNewLeadNotification(organizationId, lead, spamReason);
   } catch (err) {
-    console.error(`[ingestWebhookLead] sendNewLeadNotification threw for lead ${lead.id}:`, err);
+    logWebhookFailure({
+      code: WEBHOOK_ERROR_CODES.NOTIFICATION_FAILED,
+      organizationId,
+      stage: "new-lead notification",
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+// recordLeadSubmission throws a bare Error by design (it is also called from
+// the CSV import path, which has no webhook context). This adapter is the one
+// place that gives it a webhook error code, so the route can report it like
+// every other fatal ingest failure instead of falling back to the generic
+// "unexpected" bucket.
+async function recordSubmissionOrThrow(
+  supabase: ReturnType<typeof createWebhookServiceClient>,
+  input: Parameters<typeof recordLeadSubmission>[1],
+): Promise<RecordedSubmission> {
+  try {
+    return await recordLeadSubmission(supabase, input);
+  } catch (err) {
+    throw new WebhookIngestionError(
+      WEBHOOK_ERROR_CODES.SUBMISSION_WRITE_FAILED,
+      "submission write",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }

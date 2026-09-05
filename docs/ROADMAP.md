@@ -84,9 +84,18 @@ commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
     is designed against a real first user rather than an imagined one.
 
   **Still open and unspecced:** the redesigned `/login` itself.
-- **P2 — Observability + error tracking + webhook rate limiting.**
-- **P3 — Webhook replay protection.** Depends on P2; a breaking protocol
-  change.
+- **P2 — Webhook rate limiting.** Narrowed 2026-09-05: the observability half
+  shipped (structured failure logging plus an operator alert on the triage
+  route — see `docs/ADDENDA_LOG.md` § 2026-09-05 — Webhook ingestion failure
+  visibility) and leaves this file. What remains is rate limiting only, and a
+  crude per-tenant limit already exists — `src/lib/webhooks/rate-limit.ts`
+  counts `activity_logs` WEBHOOK rows in a 60s window, after signature
+  verification, failing open on an infra error. Hardening it is a
+  request-authentication-surface change, so **fold it into the P3
+  replay-protection prompt** rather than scheduling it alone; both touch the
+  same surface and should land as one protocol change.
+- **P3 — Webhook replay protection.** A breaking protocol change; carries P2's
+  rate-limit hardening with it.
 - **P5 — Lead enrichment** via an append-only `lead_enrichments` table, with a
   mandatory human-apply step.
 - **P6 — PWA** with push notifications only; offline explicitly declined.
