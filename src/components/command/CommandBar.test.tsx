@@ -50,9 +50,31 @@ const doneTask = {
   client_name: "Amanda Chu",
 };
 
+// Belongs to the signed-in tenant. `city` is what the Prospects group's
+// subtitle and its Fuse index key on, and it is unique to this group.
+const prospect = {
+  id: "prospect-1",
+  name: "Redwood Plumbing",
+  category: "Plumber",
+  city: "Gisborne",
+  phone: "+64 6 555 0101",
+  status: "NEW",
+};
+
 const fetchSearchableContacts = vi.fn(async () => [lead]);
 const fetchSearchableTasks = vi.fn(async () => [openTask, doneTask]);
+// The source is RLS-scoped server-side (searchProspectsForOrg filters on the
+// org getCurrentOrg() resolved), so a prospect in another tenant never reaches
+// this boundary at all. Returning only the in-tenant row is what that looks
+// like from the client's side; the cross-tenant assertion below pins that the
+// palette renders exactly what the boundary returned and invents nothing.
+const fetchSearchableProspects = vi.fn(async () => [prospect]);
+const routerPush = vi.fn();
 const profileSheetProps = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
+}));
 
 vi.mock("@/lib/leads/actions", () => ({
   fetchSearchableContacts: () => fetchSearchableContacts(),
@@ -60,6 +82,10 @@ vi.mock("@/lib/leads/actions", () => ({
 
 vi.mock("@/lib/tasks/actions", () => ({
   fetchSearchableTasks: () => fetchSearchableTasks(),
+}));
+
+vi.mock("@/lib/actions/prospect-actions", () => ({
+  fetchSearchableProspects: () => fetchSearchableProspects(),
 }));
 
 // ProfileSheet pulls in the whole profile module tree (server-action
@@ -88,8 +114,10 @@ async function openPalette() {
 describe("CommandBar — grouped results", () => {
   beforeEach(() => {
     profileSheetProps.mockClear();
+    routerPush.mockClear();
     fetchSearchableContacts.mockClear();
     fetchSearchableTasks.mockClear();
+    fetchSearchableProspects.mockClear();
   });
 
   it("fetches each source once per open, not per keystroke", async () => {
@@ -100,13 +128,36 @@ describe("CommandBar — grouped results", () => {
 
     expect(fetchSearchableContacts).toHaveBeenCalledTimes(1);
     expect(fetchSearchableTasks).toHaveBeenCalledTimes(1);
+    expect(fetchSearchableProspects).toHaveBeenCalledTimes(1);
   });
 
-  it("renders both labelled groups when both sources match", async () => {
+  it("renders all three labelled groups when every source matches", async () => {
     await openPalette();
 
     expect(screen.getByRole("group", { name: "Contacts" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Prospects" })).toBeInTheDocument();
+  });
+
+  it("renders no empty Prospects header when the query matches no prospect", async () => {
+    const user = userEvent.setup();
+    await openPalette();
+
+    // Matches a task title only — no prospect scores against it.
+    await user.type(screen.getByRole("combobox"), "quote");
+
+    await waitFor(() => expect(screen.queryByRole("group", { name: "Prospects" })).toBeNull());
+    expect(screen.getByRole("group", { name: "Tasks" })).toBeInTheDocument();
+  });
+
+  it("shows only the prospects the RLS-scoped source returned — nothing cross-tenant", async () => {
+    await openPalette();
+
+    const group = screen.getByRole("group", { name: "Prospects" });
+    const rows = within(group).getAllByRole("option");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Redwood Plumbing");
+    expect(screen.queryByText(/Ashfield Roofing/)).toBeNull();
   });
 
   it("renders no empty group header when one source has no matches", async () => {
@@ -127,12 +178,12 @@ describe("CommandBar — grouped results", () => {
     expect(within(row).getByText("Quote follow-up call").className).toMatch(/line-through/);
   });
 
-  it("runs arrow keys continuously from the last contact into the first task", async () => {
+  it("runs arrow keys continuously across all three groups", async () => {
     const user = userEvent.setup();
     await openPalette();
     const input = screen.getByRole("combobox");
 
-    // One contact, then two tasks: index 0 is the contact, 1 is the first task.
+    // One contact, two tasks, one prospect — four indices, two seams.
     expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("lead-1"));
 
     await user.keyboard("{ArrowDown}");
@@ -141,8 +192,34 @@ describe("CommandBar — grouped results", () => {
     await user.keyboard("{ArrowDown}");
     expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("task-2"));
 
+    // The second seam: last task into first prospect, no dead keypress.
+    await user.keyboard("{ArrowDown}");
+    expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("prospect-1"));
+
     await user.keyboard("{ArrowUp}");
-    expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("task-1"));
+    expect(input).toHaveAttribute("aria-activedescendant", expect.stringContaining("task-2"));
+  });
+
+  it("selects the prospect the keyboard landed on at the third group", async () => {
+    const user = userEvent.setup();
+    await openPalette();
+
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/prospects?highlight=prospect-1"));
+  });
+
+  it("navigates to /prospects naming the row, and opens no profile sheet", async () => {
+    const user = userEvent.setup();
+    await openPalette();
+
+    await user.click(screen.getByRole("option", { name: /Redwood Plumbing/ }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledTimes(1));
+    // The ?highlight= param IS the arrival highlight's whole input — the page
+    // reads it and hands it to ProspectsTable's useArrivalHighlight.
+    expect(routerPush).toHaveBeenCalledWith("/prospects?highlight=prospect-1");
+    expect(profileSheetProps).not.toHaveBeenCalled();
   });
 
   it("opens the task's parent lead and passes the task id to highlight", async () => {

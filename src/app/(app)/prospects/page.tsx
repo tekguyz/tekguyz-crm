@@ -14,9 +14,12 @@ import { getProspects } from "@/lib/prospects/queries";
 export default async function ProspectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string }>;
+  // `highlight` is written only by the CMD+K palette's Prospects group. It
+  // names the row to scroll to and mark on arrival — there is no per-prospect
+  // detail route to send the user to instead.
+  searchParams: Promise<{ archived?: string; highlight?: string }>;
 }) {
-  const { archived } = await searchParams;
+  const { archived, highlight } = await searchParams;
   const showArchived = archived === "true";
 
   const { orgId } = await getCurrentOrg();
@@ -50,7 +53,7 @@ export default async function ProspectsPage({
         ]}
       />
 
-      <ProspectsTable prospects={prospects} />
+      <ProspectsTable prospects={prospects} highlightProspectId={highlight ?? null} />
     </div>
   );
 }

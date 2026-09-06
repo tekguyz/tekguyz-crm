@@ -69,3 +69,39 @@ export async function getProspects(
   if (error) throw error;
   return data as unknown as Prospect[];
 }
+
+// The CMD+K palette's Prospects group. A deliberately narrow column list, not
+// PROSPECT_COLUMNS: this array is shipped to the browser in full on every
+// palette open, and the palette only ever renders a name, a place and a status.
+// Same shape and same reasoning as searchTasksForOrg's own narrow select.
+export type ProspectSearchResult = {
+  id: string;
+  name: string;
+  category: string | null;
+  city: string | null;
+  phone: string | null;
+  status: string;
+};
+
+const PROSPECT_SEARCH_COLUMNS = "id, name, category, city, phone, status";
+
+// Tenant isolation is the existing "Members read tenant prospects" RLS policy —
+// this is a read through the same authenticated client every other prospects
+// query uses, not a new access pattern, so no policy, grant or migration is
+// involved. The eq() is the same belt-and-braces index hint getProspects uses.
+//
+// Archived prospects are excluded: /prospects only shows them behind an
+// explicit tab, and the palette navigates to the default (active) view, so a
+// hit on an archived row would land on a page that does not contain it.
+export async function searchProspectsForOrg(orgId: string): Promise<ProspectSearchResult[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("prospects")
+    .select(PROSPECT_SEARCH_COLUMNS)
+    .eq("organization_id", orgId)
+    .eq("archived", false)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as ProspectSearchResult[];
+}

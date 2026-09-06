@@ -6,15 +6,9 @@ import type { Task } from "@/lib/tasks/queries";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { TaskRow } from "@/components/leads/profile/TaskRow";
+import { useArrivalHighlight } from "@/lib/hooks/use-arrival-highlight";
 
 const initialState: TaskFormState = null;
-
-// Long enough to be noticed after the sheet's slide-in settles, short enough
-// that it never reads as a persistent selected state. The global
-// prefers-reduced-motion clamp in globals.css already flattens the row's
-// colour transition; the delay itself is an appearance duration, not motion,
-// so it is deliberately not shortened for that preference.
-const HIGHLIGHT_MS = 2000;
 
 // Sibling of ActivityTimeline / NoteCaptureForm — ProfileSheet mounts all
 // three directly rather than nesting them.
@@ -40,12 +34,6 @@ export function TasksSection({
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [dueLocal, setDueLocal] = useState("");
-  // Explicit state keyed to the task id, NOT a one-time imperative DOM query.
-  // The rows are re-rendered by the refetch that follows any task mutation, so
-  // a "find the node once and style it" approach would silently no-op the
-  // moment the list re-rendered. State survives that; a stale node reference
-  // does not.
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
 
@@ -86,23 +74,12 @@ export function TasksSection({
   // `task.completed`, so a COMPLETED target task is not in the DOM at all
   // under the default Open tab — scrolling to it would find nothing and the
   // feature would silently do nothing for exactly the rows the search is most
-  // useful for. So the tab is switched to match the task first.
-  //
-  // Waits on `tasks` because the target's `completed` value is only knowable
-  // once the fetch lands. The marker then clears itself on a timer — it is a
-  // "you arrived here" cue, not a persistent selected state.
-  useEffect(() => {
-    if (!highlightTaskId || !tasks) return;
-
-    const target = tasks.find((task) => task.id === highlightTaskId);
-    if (!target) return;
-
-    setShowCompleted(target.completed);
-    setHighlightedId(target.id);
-
-    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS);
-    return () => clearTimeout(timer);
-  }, [highlightTaskId, tasks]);
+  // useful for. So the tab is switched to match the task first, in the hook's
+  // onArrive callback. The marker and its timer are the shared hook's — the
+  // Prospects group uses the identical one.
+  const highlightedId = useArrivalHighlight(highlightTaskId, tasks, (task) =>
+    setShowCompleted(task.completed),
+  );
 
   // Every per-task mutation (complete, edit, dismiss) lives in TaskRow and
   // reports back through this one callback, so the list has a single refetch

@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { isOperatorStatus } from "@/lib/prospects/statuses";
+import { getCurrentOrg } from "@/lib/organizations/current";
+import {
+  searchProspectsForOrg,
+  type ProspectSearchResult,
+} from "@/lib/prospects/queries";
 import { createClient } from "@/lib/supabase/server";
 
 // Inline edits for a single prospect row on /prospects.
@@ -87,4 +92,14 @@ export async function setProspectArchived(
 
   revalidatePath("/prospects");
   return null;
+}
+
+// Client-callable boundary for the CMD+K command palette's Prospects group —
+// the exact sibling of fetchSearchableContacts and fetchSearchableTasks, and
+// called the same way: once when the palette opens, then ranked in the browser.
+// getCurrentOrg() resolves the tenant server-side, so no client-supplied
+// organization id is ever trusted here.
+export async function fetchSearchableProspects(): Promise<ProspectSearchResult[]> {
+  const { orgId } = await getCurrentOrg();
+  return searchProspectsForOrg(orgId);
 }

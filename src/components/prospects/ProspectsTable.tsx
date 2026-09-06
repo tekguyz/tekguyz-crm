@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from "@/components/ui/TableRow";
 import type { Prospect } from "@/lib/prospects/queries";
+import { useArrivalHighlight } from "@/lib/hooks/use-arrival-highlight";
 import { OPERATOR_PROSPECT_STATUSES, prospectStatusLabel } from "@/lib/prospects/statuses";
 import {
   filterProspects,
@@ -39,7 +40,15 @@ const COLUMNS: Column[] = [
 // full server round trip per header click would lose scroll position in the
 // middle of a call sheet. The archived/active split IS in the URL — that one
 // changes which rows exist, so it is a different query, not a different view.
-export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
+export function ProspectsTable({
+  prospects,
+  highlightProspectId = null,
+}: {
+  prospects: Prospect[];
+  // Set only by the CMD+K palette's Prospects group, via ?highlight= on the
+  // URL. Null for every other arrival at this page.
+  highlightProspectId?: string | null;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [sortKey, setSortKey] = useState<ProspectSortKey>("name");
@@ -50,6 +59,17 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
     () => sortProspects(filterProspects(prospects, { query, status }), sortKey, direction),
     [prospects, query, status, sortKey, direction],
   );
+
+  // The same hook TasksSection uses, not a second copy of it. onArrive clears
+  // the two client-side filters, for the same reason TasksSection switches its
+  // Open/Completed tab first: a target the current filter excludes is not in
+  // the DOM at all, so scrolling to it would silently find nothing — and this
+  // page keeps its search box and status filter across a client-side
+  // navigation, so a stale filter really can hide the row the user just picked.
+  const highlightedId = useArrivalHighlight(highlightProspectId, prospects, () => {
+    setQuery("");
+    setStatus("ALL");
+  });
 
   function toggleSort(key: ProspectSortKey) {
     if (key === sortKey) {
@@ -127,7 +147,12 @@ export function ProspectsTable({ prospects }: { prospects: Prospect[] }) {
           </TableHead>
           <TableBody>
             {visible.map((prospect) => (
-              <ProspectRow key={prospect.id} prospect={prospect} onPromote={setPromoting} />
+              <ProspectRow
+                key={prospect.id}
+                prospect={prospect}
+                onPromote={setPromoting}
+                highlighted={prospect.id === highlightedId}
+              />
             ))}
           </TableBody>
         </Table>

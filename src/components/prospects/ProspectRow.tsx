@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   IconAlertTriangle,
   IconArchive,
@@ -21,17 +21,32 @@ import {
   setProspectStatus,
 } from "@/lib/actions/prospect-actions";
 import type { Prospect } from "@/lib/prospects/queries";
+import { cn } from "@/lib/utils/cn";
 import { OPERATOR_PROSPECT_STATUSES, prospectStatusLabel } from "@/lib/prospects/statuses";
 
 export function ProspectRow({
   prospect,
   onPromote,
+  highlighted = false,
 }: {
   prospect: Prospect;
   onPromote: (prospect: Prospect) => void;
+  // True for the one row the command palette navigated to, for a couple of
+  // seconds after arrival. ProspectsTable owns the timer and the filter reset;
+  // this only renders the marker and scrolls itself into view. Same split
+  // TaskRow / TasksSection use.
+  highlighted?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+
+  // The row brings itself into view rather than an ancestor reaching in to move
+  // it — the same recipe TaskRow and OptionRow use. `block: "nearest"` scrolls
+  // the shell's <main> only as far as it must.
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [highlighted]);
 
   // promoted_lead_id, never status === "CONVERTED". The status string is a
   // label an operator can set by hand and cannot carry the lead's identity;
@@ -47,7 +62,20 @@ export function ProspectRow({
   }
 
   return (
-    <TableRow className="align-top">
+    // The arrival marker is TaskRow's idiom, not new visual language: an
+    // --accent bar down the leading edge over a --canvas-soft tint. Drawn as an
+    // inset box-shadow on the first cell rather than a border or a
+    // pseudo-element, because a <tr> is a poor containing block and a real
+    // border would shift every cell in the row by its own width.
+    <TableRow
+      ref={rowRef}
+      className={cn(
+        "align-top transition-colors",
+        highlighted &&
+          "bg-canvas-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--accent)]",
+      )}
+      data-highlighted={highlighted ? "true" : undefined}
+    >
       <TableCell>
         <div className="flex flex-col gap-0.5">
           <span className="flex items-center gap-1">

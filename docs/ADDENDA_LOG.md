@@ -128,3 +128,4 @@ repo matches a title in this column.
 | 2026-09-05 — Signup is invite-only, and `/login` offers the demo | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-05 — Three registered gaps closed: leads CSV export, the `/reports` period filter, one dead declaration | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-05 — Webhook ingestion failure visibility | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-05 — Command palette: prospects as the third source | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
