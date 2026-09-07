@@ -49,6 +49,12 @@ sessions had no home this repo's tooling reads.
 - **Smart patterns / shortcuts for everyday tasks** — *needs discovery*
   (2026-08-27). Too vague to action; needs a concrete example before it is a
   real item.
+- **Dashboard/Today visual redesign** — *needs discovery* (2026-09-06).
+  Deliberately **separate from the Shell/IA redesign pass** (CLAUDE.md § 3,
+  scope in `docs/KNOWN_GAPS.md`): that pass covers the shell, detail panel,
+  pipeline card density and the form/Settings layout, and does not include the
+  Today dashboard's own content. Reference screenshots exist but have not been
+  shared into the repo yet, so this cannot be scoped until they are.
 
 ## Phase queue
 
