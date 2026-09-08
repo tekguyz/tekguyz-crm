@@ -33,9 +33,6 @@ sessions had no home this repo's tooling reads.
   external consumer exists beyond the one real webhook caller
   (`tekguyz-site`). Revisit only when an actual second consumer appears, not
   on "it'd be nice."
-- **Avatar images (small profile photos)** — *idea* (2026-08-27). Not started.
-  If picked up, recommend initials-first (hash-based colour, zero storage),
-  with real photo upload as a separate later feature.
 - **Unstructured-input lead creation** ("dump a note/link/text, extract
   fields") — *needs discovery* (2026-08-27). Any implementation must keep a
   human confirming before insert, the same governance as the planned lead

@@ -1,3 +1,4 @@
+import { AvatarSection } from "./sections/AvatarSection";
 import { ButtonsSection } from "./sections/ButtonsSection";
 import { FormsSection } from "./sections/FormsSection";
 import { NavSection } from "./sections/NavSection";
@@ -29,6 +30,7 @@ export function ThemePane({ theme }: { theme: "light" | "dark" }) {
           <ButtonsSection />
           <FormsSection />
           <SurfacesSection />
+          <AvatarSection />
           <NavSection />
           <TableSection />
           <OverlaysSection />
