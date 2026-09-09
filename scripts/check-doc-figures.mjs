@@ -17,7 +17,8 @@
 //
 // Repo-only. No browser, no dev server, no database — same fence as check 9.
 // Exit 0 clean · 1 drift · 2 could not read something (NOT a pass).
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 const findings = [];
@@ -51,32 +52,110 @@ if (gaps !== null) {
     );
   } else {
     const [, claimedTests, claimedSuites] = [m[0], Number(m[1]), Number(m[2])];
-    let json;
-    try {
-      // --silent keeps vitest's own output off stdout so the JSON parses.
-      // shell:true is required on Windows — npx is a .cmd shim and execFileSync
-      // rejects it with EINVAL otherwise.
-      const out = execFileSync("npx", ["vitest", "run", "--reporter=json", "--silent"], {
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
-        stdio: ["ignore", "pipe", "ignore"],
-        shell: true,
-      });
-      json = JSON.parse(out.slice(out.indexOf("{")));
-    } catch (e) {
-      hardFail = true;
-      findings.push(`CANNOT RUN vitest for the test-count check — ${e.message.split("\n")[0]}`);
+
+    // Counting the tests means running them, and running them is ~60s. That is
+    // paid on EVERY `npm run check:docs`, which the handoff skill runs every
+    // time — so a normal day of handoffs spent ten minutes re-deriving a number
+    // that changes maybe twice a week. The count is a pure function of the test
+    // files and the vitest config, so it is cached against a hash of exactly
+    // those inputs: touch a test and the suite runs, touch anything else and it
+    // does not. The guarantee is unchanged — a stale count is still impossible,
+    // because the only edit that can change the count also busts the hash.
+    //
+    // Cache lives under node_modules/.cache (already gitignored, and wiped by a
+    // reinstall, which is the right failure mode: it re-derives). Set
+    // DOC_FIGURES_NO_CACHE=1 to force a real run.
+    const cacheDir = "node_modules/.cache";
+    const cachePath = `${cacheDir}/tekguyz-doc-figures.json`;
+    const fingerprint = (() => {
+      const h = createHash("sha256");
+      // The config decides which files are tests and how they are grouped into
+      // suites, so it is part of the input, not context around it.
+      for (const p of ["vitest.config.mts", "src/test/setup.ts"]) {
+        h.update(p).update(read(p) ?? "");
+      }
+      const walk = (dir) => {
+        for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+          a.name < b.name ? -1 : 1,
+        )) {
+          const p = `${dir}/${e.name}`;
+          if (e.isDirectory()) walk(p);
+          // Mirrors vitest.config.mts's include/exclude: *.test.ts and
+          // *.test.tsx, never *.rls.test.ts (those are not in `npm test`).
+          else if (/\.test\.tsx?$/.test(e.name) && !/\.rls\.test\.ts$/.test(e.name)) {
+            h.update(p).update(read(p) ?? "");
+          }
+        }
+      };
+      try {
+        walk("src");
+      } catch {
+        return null; // cannot fingerprint — fall through to a real run.
+      }
+      return h.digest("hex");
+    })();
+
+    let json = null;
+    let cached = null;
+    if (fingerprint && !process.env.DOC_FIGURES_NO_CACHE) {
+      try {
+        const c = JSON.parse(readFileSync(cachePath, "utf8"));
+        if (c.fingerprint === fingerprint) cached = c;
+      } catch {
+        // No cache, or unreadable/corrupt — just run the suite.
+      }
     }
+
+    if (!cached) {
+      try {
+        // --silent keeps vitest's own output off stdout so the JSON parses.
+        // shell:true is required on Windows — npx is a .cmd shim and execFileSync
+        // rejects it with EINVAL otherwise.
+        const out = execFileSync("npx", ["vitest", "run", "--reporter=json", "--silent"], {
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+          shell: true,
+        });
+        json = JSON.parse(out.slice(out.indexOf("{")));
+      } catch (e) {
+        hardFail = true;
+        findings.push(`CANNOT RUN vitest for the test-count check — ${e.message.split("\n")[0]}`);
+      }
+    }
+
+    if (cached) {
+      // Re-checked against KNOWN_GAPS.md below exactly as a fresh run would be:
+      // the cache stores what the suite reported, never whether it matched.
+      json = { testResults: null, cachedTests: cached.tests, cachedSuites: cached.suites };
+    } else if (json) {
+      const t = json.testResults.reduce((n, r) => n + r.assertionResults.length, 0);
+      try {
+        mkdirSync(cacheDir, { recursive: true });
+        writeFileSync(
+          cachePath,
+          JSON.stringify({ fingerprint, tests: t, suites: json.testResults.length }),
+        );
+      } catch {
+        // A cache we cannot write is a slow check, not a wrong one.
+      }
+    }
+
     if (json) {
-      const realSuites = json.testResults.length;
-      const realTests = json.testResults.reduce((n, t) => n + t.assertionResults.length, 0);
+      const realSuites = json.testResults?.length ?? json.cachedSuites;
+      const realTests =
+        json.testResults?.reduce((n, t) => n + t.assertionResults.length, 0) ?? json.cachedTests;
       if (realTests !== claimedTests || realSuites !== claimedSuites) {
         findings.push(
           `TEST COUNT: docs/KNOWN_GAPS.md claims ${claimedTests} tests / ${claimedSuites} suites; ` +
-            `a real vitest run reports ${realTests} tests / ${realSuites} suites.`,
+            `${cached ? "the cached count for these exact test files is" : "a real vitest run reports"} ` +
+            `${realTests} tests / ${realSuites} suites.`,
         );
       } else {
-        notes.push(`test count ${realTests}/${realSuites} matches KNOWN_GAPS.md`);
+        notes.push(
+          `test count ${realTests}/${realSuites} matches KNOWN_GAPS.md` +
+            (cached ? " (cached — no test file has changed)" : ""),
+        );
       }
     }
   }
