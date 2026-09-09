@@ -131,7 +131,7 @@ Check, in this order:
    attach-list below but never opened. Run:
 
    ```bash
-   node .claude/skills/handoff/check-design-drift.mjs
+   node scripts/check-design-drift.mjs
    ```
 
    Checks 9, 10 and 11 are all repo-only and are wired together as one npm
@@ -177,7 +177,7 @@ Check, in this order:
     time, that cannot be reasoned past under context pressure. Run:
 
     ```bash
-    node .claude/skills/handoff/check-doc-figures.mjs
+    node scripts/check-doc-figures.mjs
     ```
 
     It checks three things, all repo-only — no browser, no dev server, no
@@ -229,7 +229,7 @@ Check, in this order:
     that works, until a reader goes looking and finds nothing. Run:
 
     ```bash
-    node .claude/skills/handoff/check-section-pointers.mjs
+    node scripts/check-section-pointers.mjs
     ```
 
     Three deterministic checks, repo-only — no browser, no dev server, no
