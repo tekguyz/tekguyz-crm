@@ -55,9 +55,21 @@ block; do not treat silence as clean.
 2. `npm run check:residue` — live test residue. Needs `.env`, so **run it
    through the PowerShell tool**, not Bash (the Bash tool is sandboxed and
    cannot see `.env`).
-3. `git log --oneline -20` and, if the branch tracks a remote,
+3. **`git fetch origin` FIRST, before any other git command.** Then
+   `git log --oneline -20` and, if the branch tracks a remote,
    `git log origin/main --oneline -5`.
-4. `git status -sb` and `git diff --stat`.
+
+   The fetch is not optional. `origin/main` is a **cached local ref**: without
+   a fetch it holds whatever the last fetch on THIS machine saw. The user works
+   from two laptops against one repo, so on the laptop that did not do the work
+   `git status -sb` reports "in sync with origin/main" while the remote is many
+   commits ahead — a confident, wrong, measured-looking claim, which is the
+   worst kind a handoff block can carry.
+4. `git status -sb` and `git diff --stat`, **after the fetch**. Report three
+   states separately and never merge them: **uncommitted in the working tree**
+   (not shipped), **ahead of origin** (committed here, not pushed), and
+   **behind origin** — say "behind origin/main by N commits — run `git pull`
+   before working here", and do not describe the tree as current.
 5. `docs/KNOWN_GAPS.md` open bullets, by grep.
 6. `CLAUDE.md` § 3, from context.
 
