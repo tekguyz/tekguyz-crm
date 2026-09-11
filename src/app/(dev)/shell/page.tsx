@@ -77,6 +77,10 @@ export default function ShellVariantsIndex() {
         <Link href="/shell/detail" className="text-accent underline underline-offset-2">
           Prompt 2 of 4 — lead detail panel variants →
         </Link>
+        <br />
+        <Link href="/shell/pipeline" className="text-accent underline underline-offset-2">
+          Prompt 3 of 4 — pipeline card variants →
+        </Link>
       </p>
 
       <div className="grid gap-3 md:grid-cols-3">
