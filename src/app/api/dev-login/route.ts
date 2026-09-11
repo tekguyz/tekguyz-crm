@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/server";
 const DEMO_OWNER_EMAIL = "tekguyz.demo.owner@example.com";
 const DEMO_OWNER_PASSWORD = "Tekguyz-Demo-Seed-Owner-2026!";
 
-export async function GET() {
+export async function GET(request: Request) {
   // Allowlist rather than a `!== "production"` denylist: on any build whose
   // NODE_ENV is unset or unexpected, this route does not exist.
   if (process.env.NODE_ENV !== "development") {
@@ -41,5 +41,28 @@ export async function GET() {
     );
   }
 
-  return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"));
+  // Back to the SAME origin the request came in on, never a fixed one. This
+  // used to resolve against NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // so a dev server on any other port (3001, when a stale `node` holds 3000 —
+  // common on this Windows machine) signed you in and then threw you onto a
+  // different server. The session cookie is host-scoped, not port-scoped, so
+  // staying on the request's own origin is all that was ever needed.
+  //
+  // `?next=/some/path` lands on that page instead of `/`, so one link reaches
+  // a dev-only route like /shell/pipeline directly. Same-origin only, checked
+  // AFTER parsing rather than by string prefix: `//evil.example` and
+  // `/\evil.example` both parse to a foreign host (WHATWG treats `\` as `/`),
+  // and a startsWith("/") check passes the second one. Anything that resolves
+  // off this origin falls back to `/`, so this cannot become an open redirect.
+  const url = new URL(request.url);
+  const next = url.searchParams.get("next");
+  let resolved: URL | null = null;
+  try {
+    resolved = next ? new URL(next, url.origin) : null;
+  } catch {
+    // Unparseable (e.g. `http://[`) — fall through to `/`.
+  }
+  const target = resolved && resolved.origin === url.origin ? resolved : new URL("/", url.origin);
+
+  return NextResponse.redirect(target);
 }
