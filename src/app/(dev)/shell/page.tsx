@@ -70,6 +70,15 @@ export default function ShellVariantsIndex() {
         </p>
       </header>
 
+      {/* Prompt 2 of 4 lives one level down rather than in the grid below: it
+          explores a different surface (the lead detail panel), not a fourth
+          answer to the sidebar/header/tab-bar question these three share. */}
+      <p className="text-body-md mb-6">
+        <Link href="/shell/detail" className="text-accent underline underline-offset-2">
+          Prompt 2 of 4 — lead detail panel variants →
+        </Link>
+      </p>
+
       <div className="grid gap-3 md:grid-cols-3">
         {VARIANTS.map((variant) => (
           <Card key={variant.href} className="flex flex-col gap-2">
