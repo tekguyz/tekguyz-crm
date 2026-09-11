@@ -12,7 +12,7 @@ import {
   NotesBlock,
 } from "@/app/(dev)/shell/detail/preview/SectionBlocks";
 import { TasksBlock } from "@/app/(dev)/shell/detail/preview/TasksBlock";
-import { MOCK_ACTIVITY, MOCK_SUBMISSIONS, MOCK_TASKS } from "@/app/(dev)/shell/detail/preview/mock-lead";
+import { COUNTS, countedLabel } from "@/app/(dev)/shell/detail/preview/counts";
 import { QUIET_SCROLLBAR } from "@/app/(dev)/shell/detail/preview/scrollbar";
 import { SECTIONS, type SectionId } from "@/app/(dev)/shell/detail/preview/sections";
 
@@ -31,32 +31,13 @@ import { SECTIONS, type SectionId } from "@/app/(dev)/shell/detail/preview/secti
 // prose rather than a list, and the one an operator reads first.
 //
 // Counts, not badges with colour: a number in ink-muted says the same thing
-// and spends nothing from the pill palette, which is reserved for status.
+// and spends nothing from the pill palette, which is reserved for status. The
+// counts themselves live in preview/counts.ts, shared with Variant A.
 //
 // Native disclosure semantics by hand (button + aria-expanded + aria-controls)
 // rather than <details>/<summary>, because a <summary> cannot carry the
 // count on the opposite side of the row without fighting its own marker box.
 // No outline-none: each header IS an interactive row and keeps the ring.
-
-const COUNTS: Partial<Record<SectionId, number>> = {
-  tasks: MOCK_TASKS.filter((task) => !task.completed).length,
-  enquiries: MOCK_SUBMISSIONS.length,
-  activity: MOCK_ACTIVITY.length,
-};
-
-// The noun the count is counting. It exists because the number alone is not a
-// sentence: "Tasks 3" tells a sighted operator plenty next to two other rows
-// carrying numbers, and tells a screen-reader user almost nothing.
-//
-// Caught by a test, not by looking: with the label and the count in adjacent
-// spans and no whitespace text node between them, the button's accessible name
-// computed as the single word "Tasks3". Nothing about that is visible on the
-// page — the gap is CSS — so a screenshot pass would never have found it.
-const COUNT_NOUN: Partial<Record<SectionId, string>> = {
-  tasks: "open",
-  enquiries: "recorded",
-  activity: "entries",
-};
 
 export function AccordionPanel() {
   const [open, setOpen] = useState<SectionId[]>(["brief"]);
@@ -86,11 +67,7 @@ export function AccordionPanel() {
                 // Explicit, so the spoken name is "Tasks, 3 open" rather than
                 // the concatenation of two adjacent spans. The visible text is
                 // unchanged.
-                aria-label={
-                  typeof count === "number"
-                    ? `${section.label}, ${count} ${COUNT_NOUN[section.id] ?? ""}`.trim()
-                    : section.label
-                }
+                aria-label={countedLabel(section.id, section.label)}
                 onClick={() => toggle(section.id)}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-left transition-colors hover:bg-canvas-soft"
               >

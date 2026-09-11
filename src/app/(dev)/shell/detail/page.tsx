@@ -79,8 +79,16 @@ export default function DetailVariantsIndex() {
           Activity or Notes without scrolling the whole panel? The compact
           header, the 4-up metadata strip and all five section bodies are
           identical in all four — only the navigation varies, so the comparison
-          is honest. Click a tile to open it full size.{" "}
-          <strong className="text-ink-main">No variant is picked.</strong>
+          is honest. Click a tile to open it full size.
+        </p>
+        <p className="text-caption mt-2 max-w-[70ch] text-ink-muted">
+          <strong className="text-ink-main">Picked on 2026-09-09: Variant A.</strong>{" "}
+          It hides nothing and adds a way to skip, for five px more than B.
+          B cannot show a task beside the enquiry that created it, C hides the
+          most on the normal-sized lead, and D stops being a slide-over. A now
+          carries C&apos;s counts in its strip, so it does not read as a tab
+          bar. B, C and D are kept as the record of what A was chosen over;
+          they are not maintained past this date.
         </p>
       </header>
 
@@ -88,7 +96,7 @@ export default function DetailVariantsIndex() {
         {/* Each thumb renders the REAL panel component. If a variant changes,
             its tile changes with it — a screenshot would have gone stale on the
             first edit. */}
-        <VariantThumb href="/shell/detail/jump" name="Variant A — Jump strip" nav="Sticky jump strip + scroll-spy" frameWidth={512}>
+        <VariantThumb href="/shell/detail/jump" name="Variant A — Jump strip" nav="Sticky jump strip + scroll-spy + counts" frameWidth={512} picked>
           <JumpPanel />
         </VariantThumb>
 

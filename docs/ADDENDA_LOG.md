@@ -131,3 +131,4 @@ repo matches a title in this column.
 | 2026-09-05 — Command palette: prospects as the third source | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-07 — Shell/IA Stage 1, prompt 1 of 4: the sidebar, header and mobile tab bar | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-09 — Doc checks on a PostToolUse hook, and the browser 16 tests never used | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-11 — Shell/IA Stage 1, prompt 2 of 4: the lead detail panel, and why the jump strip won | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

@@ -12,17 +12,24 @@ import {
   NotesBlock,
 } from "@/app/(dev)/shell/detail/preview/SectionBlocks";
 import { TasksBlock } from "@/app/(dev)/shell/detail/preview/TasksBlock";
+import { COUNTS, countedLabel } from "@/app/(dev)/shell/detail/preview/counts";
 import { QUIET_SCROLLBAR } from "@/app/(dev)/shell/detail/preview/scrollbar";
 import { SECTIONS, type SectionId } from "@/app/(dev)/shell/detail/preview/sections";
 
-// VARIANT A — RAIL. One scroll, but you can leap.
+// VARIANT A — JUMP STRIP. One scroll, but you can leap. PICKED 2026-09-09.
 //
 // The panel stays a single continuous document, exactly as it is today; what
 // is added is a sticky strip of jump buttons under the header and a scroll-spy
 // that keeps the current one marked. Nothing is hidden, so the answer to
 // "what else is on this lead" stays "scroll and you will see it" — that is
-// this variant's whole bet, and its cost is the ~36px the strip never gives
-// back.
+// this variant's whole bet. Its strip measures 41px, five more than B's tabs;
+// see ../page.tsx for why that, and not "36px against nothing", is the cost.
+//
+// COUNTS IN THE STRIP, added with the pick. A jump strip and a tab strip look
+// alike, so a click that SCROLLS where a user expected it to SWITCH is a real
+// surprise. "Tasks 3" does not read as a tab, and it says what is below before
+// you scroll to it. Borrowed from Variant C via preview/counts.ts. Each counted
+// button carries an explicit aria-label — see counts.ts for the "Tasks3" trap.
 //
 // aria-current="true", not aria-pressed: these are navigation targets, not
 // toggles. Buttons rather than <a href="#id"> because a hash navigation in a
@@ -95,10 +102,14 @@ export function JumpPanel() {
             size="sm"
             variant={active === section.id ? "secondary" : "ghost"}
             aria-current={active === section.id ? "true" : undefined}
+            aria-label={countedLabel(section.id, section.label)}
             onClick={() => jumpTo(section.id)}
             className="shrink-0"
           >
             {section.label}
+            {typeof COUNTS[section.id] === "number" ? (
+              <span className="tabular-nums text-ink-muted">{COUNTS[section.id]}</span>
+            ) : null}
           </Button>
         ))}
       </nav>

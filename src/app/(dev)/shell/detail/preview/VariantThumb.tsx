@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/Badge";
+
 // A LIVE, SCALED PREVIEW OF ONE VARIANT — not a description of it.
 //
 // The first draft of the index page was four cards of prose explaining what
@@ -23,6 +25,7 @@ export function VariantThumb({
   name,
   nav,
   frameWidth,
+  picked = false,
   children,
 }: {
   href: string;
@@ -32,6 +35,9 @@ export function VariantThumb({
   // panel; the other three are max-w-lg. Passing it per variant is what keeps
   // the wide one from being silently previewed as if it were narrow.
   frameWidth: number;
+  // Marks the variant the review chose, with the same neutral badge /shell
+  // uses for Prompt 1's pick.
+  picked?: boolean;
   children: ReactNode;
 }) {
   const TILE_WIDTH = 340;
@@ -90,9 +96,18 @@ export function VariantThumb({
       </div>
 
       <div>
-        <Link href={href} className="text-h2 text-accent underline underline-offset-2">
-          {name}
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href={href} className="text-h2 text-accent underline underline-offset-2">
+            {name}
+          </Link>
+          {/* Neutral, not accent — same reasoning as /shell: the link beside it
+              already spends --accent. */}
+          {picked ? (
+            <Badge tone="neutral" dot className="shrink-0 border border-hairline">
+              Picked
+            </Badge>
+          ) : null}
+        </div>
         <p className="text-label uppercase text-ink-muted">{nav}</p>
       </div>
     </div>

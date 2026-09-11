@@ -60,7 +60,7 @@ describe("Variant A — Jump strip", () => {
     const user = userEvent.setup();
     render(<JumpPanel />);
 
-    await user.click(screen.getByRole("button", { name: "Activity" }));
+    await user.click(screen.getByRole("button", { name: "Activity, 3 entries" }));
 
     const activity = document.getElementById("activity");
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
@@ -79,15 +79,41 @@ describe("Variant A — Jump strip", () => {
       "true",
     );
 
-    await user.click(within(nav).getByRole("button", { name: "Enquiries" }));
+    await user.click(within(nav).getByRole("button", { name: "Enquiries, 2 recorded" }));
 
-    expect(within(nav).getByRole("button", { name: "Enquiries" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Enquiries, 2 recorded" })).toHaveAttribute(
       "aria-current",
       "true",
     );
     expect(within(nav).getByRole("button", { name: "Brief" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  it("names each counted jump button as a sentence, never as one run-on word", () => {
+    render(<JumpPanel />);
+    const nav = screen.getByRole("navigation", { name: "Jump to section" });
+
+    // The trap the accordion shipped: label and count in adjacent spans with no
+    // whitespace text node between them compute as "Tasks3". Assert the exact
+    // name, so a dropped aria-label fails here rather than on a screen reader.
+    expect(within(nav).getByRole("button", { name: "Tasks, 3 open" })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: "Enquiries, 2 recorded" })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: "Activity, 3 entries" })).toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: /Tasks3|Enquiries2|Activity3/ })).toBeNull();
+  });
+
+  it("shows the count on screen for list sections and invents none for Brief or Notes", () => {
+    render(<JumpPanel />);
+    const nav = screen.getByRole("navigation", { name: "Jump to section" });
+
+    // The visible number is what stops the strip reading as a tab bar — an
+    // aria-label alone would pass the test above while changing nothing a
+    // sighted operator sees.
+    expect(within(nav).getByRole("button", { name: "Tasks, 3 open" })).toHaveTextContent(/^Tasks\s*3$/);
+    expect(within(nav).getByRole("button", { name: "Activity, 3 entries" })).toHaveTextContent(/^Activity\s*3$/);
+    expect(within(nav).getByRole("button", { name: "Brief" })).toHaveTextContent(/^Brief$/);
+    expect(within(nav).getByRole("button", { name: "Notes" })).toHaveTextContent(/^Notes$/);
   });
 });
 
