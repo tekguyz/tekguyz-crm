@@ -46,9 +46,15 @@ export default async function LoginPage({
           actually see the product. */}
       <p className="mt-4 text-sm text-ink-muted">
         Just looking?{" "}
-        <Link href="/demo" className="font-medium text-accent underline">
+        {/* A plain <a>, NOT next/link, and that is load-bearing. /demo is a
+            route handler that signs the visitor in, so a <Link> here made Next
+            prefetch it and mint a demo session for anyone who merely LOOKED at
+            this page — which on 2026-09-11 replaced a signed-in operator's own
+            session. The route now refuses RSC requests too, but the link
+            should not be asking in the first place. */}
+        <a href="/demo" className="font-medium text-accent underline">
           View demo
-        </Link>
+        </a>
       </p>
 
     </div>
