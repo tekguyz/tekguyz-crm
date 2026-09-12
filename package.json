@@ -12,6 +12,7 @@
     "test:rls": "vitest run --config vitest.rls.config.mts",
     "check:docs": "node scripts/check-design-drift.mjs && node scripts/check-doc-figures.mjs && node scripts/check-section-pointers.mjs",
     "check:residue": "node --env-file=.env scripts/check-test-residue.mjs",
+    "check:widths": "node scripts/check-comp-text-widths.mjs",
     "seed:demo": "tsx --env-file=.env scripts/seed/create-demo-org.ts",
     "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts"
   },

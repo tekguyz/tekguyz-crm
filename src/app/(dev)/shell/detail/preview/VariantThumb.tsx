@@ -26,6 +26,8 @@ export function VariantThumb({
   nav,
   frameWidth,
   picked = false,
+  tileWidth = 340,
+  tileHeight = 420,
   children,
 }: {
   href: string;
@@ -38,17 +40,22 @@ export function VariantThumb({
   // Marks the variant the review chose, with the same neutral badge /shell
   // uses for Prompt 1's pick.
   picked?: boolean;
+  // The tile's own box. Defaulted to the portrait 340x420 the detail-panel
+  // and pipeline indexes were built around, so neither of those pages changes.
+  // Prompt 4's surfaces are whole pages rather than panels or columns, and a
+  // landscape page squeezed into a portrait tile is not a picture of it — so
+  // that index passes its own box instead of a second copy of this component.
+  tileWidth?: number;
+  tileHeight?: number;
   children: ReactNode;
 }) {
-  const TILE_WIDTH = 340;
-  const TILE_HEIGHT = 420;
-  const scale = TILE_WIDTH / frameWidth;
+  const scale = tileWidth / frameWidth;
 
   return (
-    <div className="group flex w-[340px] flex-col gap-2">
+    <div className="group flex flex-col gap-2" style={{ width: tileWidth }}>
       <div
         className="relative overflow-hidden rounded-lg border border-hairline bg-canvas-pure transition-colors group-hover:border-accent"
-        style={{ height: TILE_HEIGHT }}
+        style={{ height: tileHeight }}
       >
         <div
           // `inert`, not just aria-hidden. Each preview is a real panel with
@@ -71,7 +78,7 @@ export function VariantThumb({
           className="pointer-events-none absolute top-0 left-0 flex origin-top-left flex-col"
           style={{
             width: frameWidth,
-            height: TILE_HEIGHT / scale,
+            height: tileHeight / scale,
             transform: `scale(${scale})`,
           }}
         >

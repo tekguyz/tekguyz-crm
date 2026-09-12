@@ -133,3 +133,5 @@ repo matches a title in this column.
 | 2026-09-09 — Doc checks on a PostToolUse hook, and the browser 16 tests never used | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-11 — Shell/IA Stage 1, prompt 2 of 4: the lead detail panel, and why the jump strip won | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-11 — Shell/IA Stage 1, prompt 3 of 4: the pipeline card, and why Grouped won | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-11 — Shell/IA Stage 1, prompt 4 of 4: the form's container, the Settings layout, and a width check a unit test cannot be | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-12 — The lead form at real scale: what actually causes the scrolling, and why width was not it | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
