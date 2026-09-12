@@ -42,7 +42,7 @@ export default async function FullFormPage({
         <p className="text-body-sm max-w-[75ch] text-ink-muted">
           Not a fourth container. This is the picked drawer holding the real
           edit form — the same eighteen fields the five{" "}
-          <code className="text-body-sm">edit-modal/</code> groups share today —
+          <code className="text-body-sm">edit-form/</code> groups share today —
           grouped into four sections, laid out two-up, with the two
           rarely-touched groups closed and the action bar pinned.
         </p>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { IconPhone, IconMessage, IconMail, IconMapPin } from "@tabler/icons-react";
 import type { ContactLead } from "@/lib/leads/queries";
-import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 
@@ -75,7 +75,7 @@ export function ContactCard({ lead }: { lead: ContactLead }) {
         </div>
       </Card>
 
-      <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />
+      <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

@@ -106,3 +106,23 @@ export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> 
 
   return { signingSecret: newSecret };
 }
+
+// Client-callable boundary for the lead read panel's metadata strip, which
+// prints a currency figure and a follow-up date and therefore needs the
+// tenant's own display settings.
+//
+// Same thin-wrapper reason fetchTasksForLead already carries: every other
+// consumer of these two values gets them threaded down from a server page,
+// but ProfileSheet is opened from three unrelated places (a card, the command
+// palette, a ?leadId= deep link) and none of them has them. Resolving it here
+// keeps the tenant's real settings authoritative without prop-drilling two
+// strings through every caller.
+//
+// Read-only and writes nothing.
+export async function fetchOrgDisplaySettings(): Promise<{
+  timeZone: string;
+  currencyFormat: string;
+}> {
+  const { orgTimezone, currencyFormat } = await getCurrentOrg();
+  return { timeZone: orgTimezone, currencyFormat };
+}

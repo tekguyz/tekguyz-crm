@@ -27,11 +27,17 @@ export function ActivityTimeline({
   refreshKey,
   pendingEntry,
   onDismissPending,
+  onCountChange,
 }: {
   leadId: string;
   refreshKey: number;
   pendingEntry?: PendingVoiceNote | null;
   onDismissPending?: () => void;
+  // How many stored entries this lead has, for the read panel's jump strip.
+  // The in-flight pendingEntry is deliberately NOT counted: it is optimistic
+  // local state for a transcription that has not been written yet, and the
+  // strip should not claim a record the database does not have.
+  onCountChange?: (count: number) => void;
 }) {
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +59,10 @@ export function ActivityTimeline({
       cancelled = true;
     };
   }, [leadId, refreshKey]);
+
+  useEffect(() => {
+    if (logs) onCountChange?.(logs.length);
+  }, [logs, onCountChange]);
 
   const hasEntries = (logs && logs.length > 0) || Boolean(pendingEntry);
 

@@ -115,7 +115,7 @@ export async function getLeadById(leadId: string): Promise<Lead | null> {
 }
 
 // physical_address now lives on the base Lead type/LEAD_COLUMNS itself (every
-// view needs the true current value, not just Contacts — EditLeadModal is
+// view needs the true current value, not just Contacts — EditLeadDrawer is
 // shared across Pipeline/Agenda/Contacts, and a view that fetched a stale/
 // missing value would silently null the field out on save). ContactLead is
 // kept as a distinct name since many files already import it by that name,

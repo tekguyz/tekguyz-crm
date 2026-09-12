@@ -49,3 +49,27 @@ if (typeof HTMLDialogElement !== "undefined") {
     };
   }
 }
+
+// jsdom ships no IntersectionObserver. The lead read panel's jump strip uses
+// one for its scroll-spy, so without this stub every test that renders the
+// panel throws "IntersectionObserver is not defined" inside an effect, before
+// a single assertion runs — the same shape as the ResizeObserver gap above.
+//
+// A no-op is the honest stub: an intersection only happens where boxes are
+// really laid out, and jsdom has no layout engine, so a fake that invented
+// callbacks would be asserting on fiction. Which section the strip marks as
+// current is a browser question (npm run check:widths territory), not a unit
+// one; what the unit tests pin is that the strip renders, labels and jumps.
+if (!("IntersectionObserver" in globalThis)) {
+  globalThis.IntersectionObserver = class {
+    root = null;
+    rootMargin = "";
+    thresholds: number[] = [];
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  } as unknown as typeof IntersectionObserver;
+}

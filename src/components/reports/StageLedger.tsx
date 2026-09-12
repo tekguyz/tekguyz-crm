@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/lib/format";
 import type { StageRow } from "@/lib/leads/report-queries";
-import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
+import { STATUS_TONE } from "@/lib/leads/status-tone";
 import { Card } from "@/components/ui/Card";
 import {
   Table,
@@ -10,17 +11,6 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@/components/ui/TableRow";
-
-// The same stage->pill mapping the lead cards use (STATUS_TONE in
-// components/agenda/LeadCard.tsx). A stage has to look the same everywhere it
-// appears or the colour stops being a stage language and becomes decoration,
-// which the design system does not allow. If one map changes, change both.
-const STAGE_TONE: Record<string, BadgeTone> = {
-  NEW: "sky",
-  DISCOVERY: "purple",
-  QUOTED: "orange",
-  ACTIVE: "green",
-};
 
 // The bar in the SHARE column, in the stage's own pill foreground. It is the
 // one place this view spends colour, and it earns it: the percentage is
@@ -67,7 +57,7 @@ export function StageLedger({
           {stages.map((stage) => (
             <TableRow key={stage.status}>
               <TableCell className="px-4">
-                <Badge tone={STAGE_TONE[stage.status] ?? "neutral"} className="rounded-full px-2">
+                <Badge tone={STATUS_TONE[stage.status] ?? "neutral"} className="rounded-full px-2">
                   {stage.label}
                 </Badge>
               </TableCell>

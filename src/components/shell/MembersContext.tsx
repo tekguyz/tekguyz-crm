@@ -8,7 +8,7 @@ import type { TeamMember } from "@/lib/invites/queries";
 //
 // A context for exactly the reason RoleContext is one, and it is worth
 // restating rather than cross-referencing: the two consumers that need this —
-// the assignment picker inside EditLeadModal, and the assignee label on the
+// the assignment picker inside EditLeadDrawer, and the assignee label on the
 // cards — are reached from four unrelated card components (agenda, contacts,
 // pipeline focus list, pipeline kanban), each rendered by its own page. Every
 // one of those pages renders MANY cards, so a prop would also mean the same

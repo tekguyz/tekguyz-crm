@@ -32,7 +32,7 @@ import { useEffect, useReducer, useRef, type RefObject } from "react";
 //    Radix's internals staying as they are;
 //  - the form is found by walking up from `anchor` rather than being passed in,
 //    because a field group is often a sibling component that does not own the
-//    <form> element. EditLeadModal's form is split across five such files.
+//    <form> element. EditLeadDrawer's form is split across five such files.
 //
 // `restore` is optional and is for state a reset can corrupt (a Checkbox's).
 // A plain <select> needs no callback — the re-render alone fixes it.

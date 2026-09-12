@@ -16,7 +16,7 @@ import type { TeamMember } from "@/lib/invites/queries";
 // the card comps and the form comps describe the same lead.
 //
 // DELIBERATELY NOT PRODUCTION-ACCURATE, and that is a constraint on Stage 2,
-// not a licence. The shipped CreateLeadModal posts eight fields — it adds
+// not a licence. The shipped CreateLeadDrawer posts eight fields — it adds
 // email, phone, website, lead_source and service_category — and the shipped
 // edit form adds the address/social group, the pipeline group, outcome and
 // archive. Stage 2 owes its own Form/Action field-parity diff against the real

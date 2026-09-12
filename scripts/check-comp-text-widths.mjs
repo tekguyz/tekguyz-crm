@@ -41,10 +41,20 @@
 // second browser download into a repo that has neither.
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const BASE = process.env.CHECK_WIDTHS_BASE ?? "http://localhost:3000";
+
+// Optional: `--shots <dir>` saves one full-viewport PNG per route per viewport.
+// Off by default, because the check is a pass/fail gate and writing images on
+// every run would make it one. It exists so a real screenshot of a real
+// overlay can be produced without a browser pane - the Browser pane is hidden
+// in some sessions, and a page that loaded while it was hidden never
+// composites, so its screenshots are blank.
+const shotFlag = process.argv.indexOf("--shots");
+const SHOT_DIR = shotFlag > -1 ? process.argv[shotFlag + 1] : null;
+if (SHOT_DIR) mkdirSync(SHOT_DIR, { recursive: true });
 
 // The floor. 24px is about two characters of the smallest type role in this
 // system — below it a value is not truncated, it is gone. Prompt 3's two
@@ -67,7 +77,79 @@ const VIEWPORTS = [
 // `?long=1` is what makes this a check rather than a formality: it swaps in the
 // deliberately longest fixture values (see preview/mock-form.ts and
 // preview/mock-org.ts). The ordinary fixtures never squeeze anything.
+// An entry is either a plain path string, or an object that also carries an
+// `open` expression to run IN the page before measuring. The real lead panels
+// are overlays with no URL of their own - there is no ?editLeadId= and adding
+// one would be production surface invented for a check - so the only honest
+// way to measure them is to open them the way a person does, by clicking.
+//
+// The expression is awaited, polls for hydration rather than sleeping a fixed
+// amount, and returns a string the runner prints. A route whose `open` does
+// not return "ok" FAILS the run: a check that silently measured the page
+// behind an overlay that never opened would be the vacuous pass this whole
+// file exists to avoid.
+const OPEN_EDIT_DRAWER = `(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < 60; i += 1) {
+    const card = document.querySelector('div[role="button"].cursor-pointer');
+    if (card) { card.click(); break; }
+    await sleep(250);
+  }
+  for (let i = 0; i < 60; i += 1) {
+    if (document.querySelector('[data-slot="sheet-content"]')) break;
+    await sleep(250);
+  }
+  await sleep(500);
+  return document.querySelector('[data-slot="sheet-content"]') ? "ok" : "no drawer";
+})()`;
+
+const OPEN_READ_PANEL = `(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < 60; i += 1) {
+    const card = document.querySelector('div[role="button"].cursor-pointer');
+    if (card) { card.click(); break; }
+    await sleep(250);
+  }
+  for (let i = 0; i < 60; i += 1) {
+    if (document.querySelector('[data-slot="sheet-content"]')) break;
+    await sleep(250);
+  }
+  await sleep(400);
+  const toProfile = [...document.querySelectorAll("button")]
+    .find((b) => b.textContent.trim() === "View full profile");
+  if (!toProfile) return "no profile button";
+  toProfile.click();
+  for (let i = 0; i < 60; i += 1) {
+    if (document.querySelector('nav[aria-label="Jump to section"]')) break;
+    await sleep(250);
+  }
+  await sleep(600);
+  return document.querySelector('nav[aria-label="Jump to section"]') ? "ok" : "no panel";
+})()`;
+
+const OPEN_CREATE_DRAWER = `(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < 60; i += 1) {
+    const trigger = [...document.querySelectorAll("button")]
+      .find((b) => b.textContent.trim() === "New Lead");
+    if (trigger) { trigger.click(); break; }
+    await sleep(250);
+  }
+  for (let i = 0; i < 60; i += 1) {
+    if (document.querySelector('[data-slot="sheet-content"]')) break;
+    await sleep(250);
+  }
+  await sleep(500);
+  return document.querySelector('[data-slot="sheet-content"]') ? "ok" : "no drawer";
+})()`;
+
 const ROUTES = [
+  // THE REAL ROUTES, added with Shell/IA Stage 2. The comps below are still
+  // checked because they are still the record of the comparison, but the
+  // shipped surfaces are what actually has to survive a long value now.
+  { path: "/contacts", label: "real lead EDIT drawer", open: OPEN_EDIT_DRAWER },
+  { path: "/contacts", label: "real lead READ panel", open: OPEN_READ_PANEL },
+  { path: "/contacts", label: "real lead CREATE drawer", open: OPEN_CREATE_DRAWER },
   "/shell/form/modal?long=1",
   "/shell/form/drawer?long=1",
   "/shell/form/inline?long=1",
@@ -100,8 +182,21 @@ const CHROME_CANDIDATES = [
 //  - `option` elements report a 0x0 rect in Chrome while their <select> is
 //    closed. Every one of them would be a false positive, on every page.
 //  - visually-hidden text (Tailwind's .sr-only) is 1px by design and is
-//    detected by its computed `clip`, not by its size — checking size would
-//    also swallow the real collapses this exists to find.
+//    detected by its computed `clip` AND `clip-path`, not by its size —
+//    checking size would also swallow the real collapses this exists to find.
+//    BOTH properties are needed: Tailwind v4 implements .sr-only with
+//    `clip-path: inset(50%)`, so a `clip`-only test misses every one of them.
+//    Found 2026-09-12, when the wired read panel's visually-hidden Radix
+//    dialog heading was reported as a 1px collapsed box.
+//
+// MIN_CHARS counts ALPHANUMERIC characters, not every character. `sm:` is a
+// deliberate three-character code token in the comp prose that renders at
+// 18.2px because that is how wide "sm:" is — nothing squeezed it, and it is
+// the same class of false positive as the "·" separators MIN_CHARS was raised
+// to 3 for in the first place. Stripping punctuation first leaves it at two
+// characters and out of scope, while a real field value
+// ("Holloway Custom Cabinetry & Millwork Incorporated") is untouched. This
+// one was failing the check before Stage 2 touched anything.
 const PROBE = `(() => {
   const MIN_WIDTH_PX = ${MIN_WIDTH_PX};
   const MIN_CHARS = ${MIN_CHARS};
@@ -120,12 +215,13 @@ const PROBE = `(() => {
       if (node.nodeType === Node.TEXT_NODE) own += node.nodeValue;
     }
     own = own.replace(/\\s+/g, " ").trim();
-    if (own.length < MIN_CHARS) continue;
+    if (own.replace(/[^a-z0-9]/gi, "").length < MIN_CHARS) continue;
 
     const style = getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden") continue;
     if (parseFloat(style.opacity) === 0) continue;
     if (style.clip && style.clip !== "auto") continue;
+    if (style.clipPath && style.clipPath !== "none") continue;
 
     const rect = el.getBoundingClientRect();
     if (rect.height <= 0) continue;
@@ -293,7 +389,11 @@ async function main() {
         mobile: false,
       });
 
-      for (const route of ROUTES) {
+      for (const entry of ROUTES) {
+        const route = typeof entry === "string" ? entry : entry.path;
+        const opener = typeof entry === "string" ? null : entry.open;
+        const name = typeof entry === "string" ? entry : `${entry.path} (${entry.label})`;
+
         const done = cdp.once("Page.loadEventFired");
         await cdp.send("Page.navigate", { url: `${BASE}${route}` });
         await done;
@@ -302,12 +402,36 @@ async function main() {
         // Two frames plus a beat is enough and is cheap.
         await delay(600);
 
+        if (opener) {
+          const opened = await cdp.send("Runtime.evaluate", {
+            expression: opener,
+            awaitPromise: true,
+            returnByValue: true,
+          });
+          if (opened.result.value !== "ok") {
+            failures += 1;
+            console.log(
+              `  FAIL ${viewport.width}x${viewport.height} ${name} — could not open it: ${opened.result.value}`,
+            );
+            continue;
+          }
+        }
+
+        if (SHOT_DIR) {
+          const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
+          const file = `${SHOT_DIR}/${viewport.width}-${route.replace(/[^a-z0-9]+/gi, "_")}${
+            opener ? `-${(typeof entry === "string" ? "" : entry.label).replace(/[^a-z0-9]+/gi, "_")}` : ""
+          }.png`;
+          writeFileSync(file, Buffer.from(shot.data, "base64"));
+          console.log(`  shot ${file}`);
+        }
+
         const evaluated = await cdp.send("Runtime.evaluate", {
           expression: PROBE,
           returnByValue: true,
         });
         const { probed, findings } = evaluated.result.value;
-        const label = `${viewport.width}x${viewport.height} ${route}`;
+        const label = `${viewport.width}x${viewport.height} ${name}`;
 
         if (findings.length === 0) {
           console.log(`  ok   ${label} — ${probed} text boxes, none under ${MIN_WIDTH_PX}px`);

@@ -65,7 +65,7 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
   }, [state]);
 
   async function handleClearConfirm(e: MouseEvent<HTMLButtonElement>) {
-    // Same "stay open through the async call" override as EditLeadModal's
+    // Same "stay open through the async call" override as EditLeadDrawer's
     // archive confirm and OrgDetailsPanel's rotate confirm.
     e.preventDefault();
     if (!clearDialogField) return;

@@ -5,7 +5,7 @@ import { IconStar } from "@tabler/icons-react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { PIPELINE_STATUSES, PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipeline";
-import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
@@ -94,7 +94,7 @@ export function FocusListCard({
         </div>
       </Card>
 
-      <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />
+      <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

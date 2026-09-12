@@ -187,8 +187,8 @@ export default function LeadFormVariantsIndex() {
 
       <p className="text-caption mt-6 max-w-[70ch] text-ink-muted">
         Static fixture data. No Server Action, no Supabase query, no migration,
-        no RLS. The shipped CreateLeadModal, EditLeadModal and the five
-        edit-modal field groups are untouched.
+        no RLS. The shipped CreateLeadDrawer, EditLeadDrawer and the five
+        edit-form field groups are untouched.
       </p>
     </main>
   );

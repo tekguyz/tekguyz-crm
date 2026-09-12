@@ -10,7 +10,7 @@
 // this fixture carries all eighteen.
 //
 // EIGHTEEN, COUNTED FROM THE REAL FILES, NOT GUESSED — the five groups under
-// src/components/leads/edit-modal/ that share EditLeadModal's one <form>:
+// src/components/leads/edit-form/ that share EditLeadDrawer's one <form>:
 //
 //   IdentityFields      client_name, email, phone, company, website,
 //                       lead_source, service_category                     (7)

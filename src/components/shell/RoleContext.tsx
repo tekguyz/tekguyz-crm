@@ -6,7 +6,7 @@ import { createContext, useContext, type ReactNode } from "react";
 // getCurrentOrg() in the (app) server layout and handed down here.
 //
 // A context rather than a prop chain because the only consumer that needs it —
-// EditLeadModal — is mounted from four unrelated card components (agenda,
+// EditLeadDrawer — is mounted from four unrelated card components (agenda,
 // contacts, pipeline focus list, pipeline kanban), each rendered by its own
 // page. Threading one static server value through eight files to reach one
 // modal is the kind of restructuring that makes the field set of a form harder

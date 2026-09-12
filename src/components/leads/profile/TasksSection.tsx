@@ -20,11 +20,18 @@ const initialState: TaskFormState = null;
 export function TasksSection({
   leadId,
   highlightTaskId = null,
+  onOpenCountChange,
 }: {
   leadId: string;
   // The command palette's Tasks group opens the sheet with the id of the task
   // that was selected. Null for every other caller.
   highlightTaskId?: string | null;
+  // Reports how many OPEN tasks this lead has, so the read panel's jump strip
+  // can print a count it did not have to fetch a second time. Optional, so a
+  // caller that does not want a count is unchanged. Never called before the
+  // rows actually load - a premature 0 would be a wrong number on screen, not
+  // an empty one.
+  onOpenCountChange?: (count: number) => void;
 }) {
   const createTaskForLead = createTask.bind(null, leadId);
   const [state, formAction, isPending] = useActionState(createTaskForLead, initialState);
@@ -57,7 +64,7 @@ export function TasksSection({
   }, [leadId, refreshKey]);
 
   // Clear the form and refetch only once a create actually succeeds — the
-  // falling edge of isPending with no returned error, same guard EditLeadModal
+  // falling edge of isPending with no returned error, same guard EditLeadDrawer
   // uses to decide whether to close on submit.
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) {
@@ -80,6 +87,13 @@ export function TasksSection({
   const highlightedId = useArrivalHighlight(highlightTaskId, tasks, (task) =>
     setShowCompleted(task.completed),
   );
+
+  // Reported from the loaded rows rather than from `visible`, which is
+  // filtered by the Open/Completed toggle - the strip's number must not change
+  // because someone looked at the completed tab.
+  useEffect(() => {
+    if (tasks) onOpenCountChange?.(tasks.filter((task) => !task.completed).length);
+  }, [tasks, onOpenCountChange]);
 
   // Every per-task mutation (complete, edit, dismiss) lives in TaskRow and
   // reports back through this one callback, so the list has a single refetch

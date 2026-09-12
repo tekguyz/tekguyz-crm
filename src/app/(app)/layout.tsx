@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   // Sequential rather than inside the Promise.all above: it needs orgId, which
   // only exists once getCurrentOrg has resolved. One indexed RPC
   // (get_organization_members, served by unique_org_member), fetched here so
-  // the assignment picker inside EditLeadModal — mounted per card on four
+  // the assignment picker inside EditLeadDrawer — mounted per card on four
   // different pages — never has to fetch on open and never shows a loading
   // state inside a form.
   const members = await getTeamMembers(orgId);

@@ -7,7 +7,7 @@ import { FormBackdrop } from "@/app/(dev)/shell/form/preview/FormSurface";
 import type { LeadFormValues } from "@/app/(dev)/shell/form/preview/mock-form";
 
 // VARIANT MODAL — the shipped shape, restyled. A centred card over a dimmed
-// list, which is what CreateLeadModal and EditLeadModal both do today.
+// list, which is what CreateLeadDrawer and EditLeadDrawer both do today.
 //
 // Its bet is that creating or editing a lead is a short, total task: you do
 // not need the list while you are doing it, so covering the list costs

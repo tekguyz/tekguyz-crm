@@ -14,7 +14,7 @@ import { insertLeadWithSubmission } from "@/lib/leads/create";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
 // split out on 2026-07-28 to bring this file back under the 200-line cap.
-// Deliberately NOT re-exported from here — EditLeadModal was their only
+// Deliberately NOT re-exported from here — EditLeadDrawer was their only
 // caller, so importing them directly from the new module leaves one touch
 // point and no indirection to keep in sync.
 
@@ -43,7 +43,7 @@ export async function createLead(
 
   // Read once, then reused for both the leads row and its first submission —
   // so the two can never disagree about what was entered. Every name here has
-  // a rendered <input name="..."> in CreateLeadModal; nothing new is read from
+  // a rendered <input name="..."> in CreateLeadDrawer; nothing new is read from
   // formData by the submission write (CLAUDE.md § Form/Action Field Parity).
   const phone = optionalField(formData.get("phone"));
   const company = optionalField(formData.get("company"));
@@ -112,7 +112,7 @@ export async function updateLead(
   const actualRevenueRaw = formData.get("actual_revenue");
   const actualRevenue = actualRevenueRaw ? Number(actualRevenueRaw) : null;
 
-  // Submitted as a full ISO string by EditLeadModal, converted client-side
+  // Submitted as a full ISO string by EditLeadDrawer, converted client-side
   // from the datetime-local input's local-timezone value — the server never
   // has to guess a runtime timezone to interpret it correctly.
   const nextActionAtRaw = String(formData.get("next_action_at") ?? "");

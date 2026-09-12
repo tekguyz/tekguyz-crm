@@ -17,7 +17,7 @@ const taskSchema = z.object({
   title: z.string().trim().min(1, "Task title is required"),
   // Submitted as a full ISO string by TasksSection, converted client-side from
   // the datetime-local input's local-timezone value — same reasoning as
-  // EditLeadModal's next_action_at: the browser's Date object actually knows
+  // EditLeadDrawer's next_action_at: the browser's Date object actually knows
   // the user's offset, so the server never has to guess one.
   due_at: z
     .string()
@@ -38,7 +38,7 @@ const editTaskSchema = taskSchema.extend({
 //
 // Returns the org timezone alongside the rows because formatDueAt() needs one:
 // every other consumer gets it threaded down from a server page, but
-// ProfileSheet is mounted from inside EditLeadModal and never receives it.
+// ProfileSheet is mounted from inside EditLeadDrawer and never receives it.
 // Resolving it here keeps the tenant's real display timezone authoritative
 // without prop-drilling it through the whole modal chain.
 export async function fetchTasksForLead(

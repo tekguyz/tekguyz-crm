@@ -14,11 +14,28 @@ import { cn } from "@/lib/utils/cn";
 // modal in every sense that the ramp cares about, and Level 1 would make a
 // blocking surface read as light as a hint.
 //
-// Bottom edge only, deliberately. shadcn's version takes side="top|right|
-// bottom|left"; the live consumer here is the mobile "More" sheet, which is a
-// thumb-reachable bottom sheet, and the app's right-hand drawers are already
-// served by dialog.tsx and the Profile Sheet. Add a `side` prop when a real
-// caller needs another edge, not before.
+// TWO EDGES NOW, because a real caller arrived. This file used to say "bottom
+// edge only … add a `side` prop when a real caller needs another edge, not
+// before" — Shell/IA Stage 2 is that caller. The lead read panel (ProfileSheet)
+// and the lead edit drawer (EditLeadDrawer) are both right-edge panels sharing
+// one slot, and before this they were a hand-rolled createPortal + motion panel
+// and a native <dialog> respectively: two containers, two width caps, no focus
+// trap on one of them. They are one primitive now.
+//
+// `side` defaults to "bottom", so the pre-existing consumer — the mobile "More"
+// sheet — is byte-for-byte unchanged in behaviour.
+//
+// The two sides genuinely differ in more than a direction, which is why the
+// class sets are separate rather than one string with a variant appended:
+// the bottom sheet pads and scrolls itself (it holds a short list), while a
+// right panel owns its own header, scroller and pinned footer and must NOT be
+// given padding, a gap or an overflow of its own — its child is a flex column
+// that manages all three.
+//
+// `showClose` follows from that: the bottom sheet gets the primitive's own
+// floating close button, a right panel puts its close control in its header
+// row where it belongs, so the default is "bottom only". Two close buttons
+// would both be real and one would be unreachable behind the header.
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -48,32 +65,54 @@ function SheetOverlay({
   );
 }
 
+export type SheetSide = "bottom" | "right";
+
+const SIDES: Record<SheetSide, string> = {
+  // pb-[env(safe-area-inset-bottom)] keeps the last row clear of the iOS home
+  // indicator, which overlaps a flush-to-edge bottom sheet.
+  bottom:
+    "inset-x-0 bottom-0 max-h-[85svh] gap-4 overflow-y-auto rounded-t-xl border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+  // No padding, no gap, no overflow: a right panel's child is a flex column
+  // that owns its own header, scroller and pinned footer. `w-full` with no cap
+  // is the phone case; callers add their width ramp through className, which
+  // for the two lead panels is the shared LEAD_PANEL_WIDTH constant.
+  right:
+    "inset-y-0 right-0 w-full border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+};
+
 function SheetContent({
   className,
   children,
+  side = "bottom",
+  showClose = side === "bottom",
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Content>) {
+}: React.ComponentProps<typeof SheetPrimitive.Content> & {
+  side?: SheetSide;
+  showClose?: boolean;
+}) {
   return (
     <SheetPrimitive.Portal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        data-side={side}
         className={cn(
-          // pb-[env(safe-area-inset-bottom)] keeps the last row clear of the
-          // iOS home indicator, which overlaps a flush-to-edge bottom sheet.
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] flex-col gap-4 overflow-y-auto rounded-t-xl border-t border-hairline bg-canvas-pure p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-ink-main shadow-elevation-2 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "fixed z-50 flex flex-col border-hairline bg-canvas-pure text-ink-main shadow-elevation-2 data-[state=closed]:animate-out data-[state=open]:animate-in",
+          SIDES[side],
           className,
         )}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close
-          data-slot="sheet-close"
-          className="absolute top-4 right-4 flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
-        >
-          <IconX className="size-4" stroke={1.75} />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
+        {showClose ? (
+          <SheetPrimitive.Close
+            data-slot="sheet-close"
+            className="absolute top-4 right-4 flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
+          >
+            <IconX className="size-4" stroke={1.75} />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        ) : null}
       </SheetPrimitive.Content>
     </SheetPrimitive.Portal>
   );

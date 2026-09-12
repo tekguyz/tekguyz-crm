@@ -72,7 +72,7 @@ export function OrgDetailsPanel({
   const [rotating, setRotating] = useState(false);
 
   async function handleRotateConfirm(e: MouseEvent<HTMLButtonElement>) {
-    // Same "don't auto-close on click" override as EditLeadModal's archive
+    // Same "don't auto-close on click" override as EditLeadDrawer's archive
     // confirm — stay open through the async call, only close on success.
     e.preventDefault();
     setRotating(true);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { IconStar } from "@tabler/icons-react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
-import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils/cn";
@@ -82,7 +82,7 @@ export function KanbanCard({
         <AssigneeLabel assignedTo={lead.assigned_to} />
       </Card>
 
-      <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />
+      <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

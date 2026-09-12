@@ -19,12 +19,12 @@ import { canEditLeadLifecycle } from "@/lib/organizations/roles";
 import type { Lead } from "@/lib/leads/queries";
 
 // The archive/unarchive lifecycle control. Separated cleanly because it lives
-// entirely OUTSIDE EditLeadModal's <form> and shares nothing with it — no
+// entirely OUTSIDE EditLeadDrawer's <form> and shares nothing with it — no
 // FormData field, no useActionState, no submit path. So its three pieces of
 // state and both handlers moved down here with it rather than staying in the
 // shell; there is nothing left to prop-thread.
 //
-// Handlers are verbatim from the pre-split EditLeadModal, including the catch
+// Handlers are verbatim from the pre-split EditLeadDrawer, including the catch
 // blocks added in the Task/Calendar hardening pass — this split moved them,
 // it did not touch their logic.
 //

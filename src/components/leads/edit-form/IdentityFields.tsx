@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/Input";
 // the form looked untouched. That is the worst shape of this bug: there is no
 // visible sign anything was lost. See CLAUDE.md § Form/Action Field Parity.
 //
-// State is seeded from the lead once. EditLeadModal remounts this subtree when
+// State is seeded from the lead once. EditLeadDrawer remounts this subtree when
 // it opens, which is what picks up a lead edited elsewhere.
 //
 // Input owns its own <label> and generates the htmlFor/id pair, which the

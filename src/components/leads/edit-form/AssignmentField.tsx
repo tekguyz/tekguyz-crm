@@ -8,7 +8,7 @@ import type { Lead } from "@/lib/leads/queries";
 import { Select } from "@/components/ui/Select";
 import { memberLabel, useOrgMembers } from "@/components/shell/MembersContext";
 
-// Who owns this lead. Its own sibling under edit-modal/ rather than a field
+// Who owns this lead. Its own sibling under edit-form/ rather than a field
 // inside PipelineFields: ownership is a different question from where a lead
 // sits in the pipeline, and the split-by-responsibility rule is what keeps
 // each group's field set visible in one file.

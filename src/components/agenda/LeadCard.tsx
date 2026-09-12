@@ -3,16 +3,10 @@
 import { useState } from "react";
 import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
-import { EditLeadModal } from "@/components/leads/EditLeadModal";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { Card } from "@/components/ui/Card";
-import { Badge, type BadgeTone } from "@/components/ui/Badge";
-
-const STATUS_TONE: Record<string, BadgeTone> = {
-  NEW: "sky",
-  DISCOVERY: "purple",
-  QUOTED: "orange",
-  ACTIVE: "green",
-};
+import { Badge } from "@/components/ui/Badge";
+import { STATUS_TONE } from "@/lib/leads/status-tone";
 
 export function LeadCard({
   lead,
@@ -70,7 +64,7 @@ export function LeadCard({
         </Card>
       </button>
 
-      <EditLeadModal lead={lead} open={open} onClose={() => setOpen(false)} />
+      <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

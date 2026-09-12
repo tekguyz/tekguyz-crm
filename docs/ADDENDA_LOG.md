@@ -135,3 +135,4 @@ repo matches a title in this column.
 | 2026-09-11 — Shell/IA Stage 1, prompt 3 of 4: the pipeline card, and why Grouped won | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-11 — Shell/IA Stage 1, prompt 4 of 4: the form's container, the Settings layout, and a width check a unit test cannot be | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-12 — The lead form at real scale: what actually causes the scrolling, and why width was not it | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-12 — Shell/IA Stage 2: the lead read panel and edit drawer, wired at one width | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

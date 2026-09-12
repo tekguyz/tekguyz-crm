@@ -82,7 +82,7 @@ export function SectionedSidebar({
         </div>
 
         {/* Stands in for SidebarQuickAction. The shipped one renders
-            CreateLeadModal, which owns a real Server Action; a comp must not
+            CreateLeadDrawer, which owns a real Server Action; a comp must not
             mount that, so this is the same slot with an inert Button in it. */}
         <div className="shrink-0 border-t border-hairline p-2">
           <Button variant="primary" className={cn("w-full", collapsed && "px-0")}>

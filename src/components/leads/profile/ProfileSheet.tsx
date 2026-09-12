@@ -1,17 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "motion/react";
-import { IconX } from "@tabler/icons-react";
 import type { Lead } from "@/lib/leads/queries";
-import { ExecutiveBrief } from "@/components/leads/profile/ExecutiveBrief";
-import { ActivityTimeline, type PendingVoiceNote } from "@/components/leads/profile/ActivityTimeline";
-import { EnquiryHistory } from "@/components/leads/profile/EnquiryHistory";
-import { NoteCaptureForm } from "@/components/leads/profile/NoteCaptureForm";
-import { TasksSection } from "@/components/leads/profile/TasksSection";
-import { Button } from "@/components/ui/Button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils/cn";
+import { LEAD_PANEL_WIDTH } from "@/components/leads/panel-width";
+import { LeadProfilePanel } from "@/components/leads/profile/LeadProfilePanel";
 
+// The lead read view's CONTAINER, and nothing else. Its body is
+// LeadProfilePanel; everything about layout and content lives there.
+//
+// WHAT CHANGED IN STAGE 2, and why each part had to:
+//
+//  1. It is the `sheet` primitive now, side="right", not a hand-rolled
+//     createPortal + motion panel with its own Escape listener and its own
+//     body-scroll lock. Radix brings a focus trap, an aria-modal, Escape and
+//     outside-click for free; the old panel had none of the first two. The
+//     primitive also means the edit drawer and this share one container
+//     rather than two that happen to look alike.
+//
+//  2. The width is LEAD_PANEL_WIDTH, the one constant both lead panels read.
+//     This used to stop at 512px while the picked
+//     edit drawer ramps to 672px - and the two occupy the SAME slot, so a
+//     672px drawer next to a 512px panel makes the slot visibly resize when
+//     you move between reading and editing. See panel-width.ts.
+//
+//  3. The old `createPortal(..., document.body)` is gone because its reason
+//     is gone. It existed because this sheet was opened from inside
+//     the edit view back when it was a native <dialog> (EditLeadModal),
+//     and a closed <dialog> is display:none
+//     for its whole subtree. The edit view is a Radix sheet now, which
+//     portals its own content, so there is no <dialog> subtree to escape.
+//
+// p-0 overrides nothing the primitive sets for side="right" - that side ships
+// no padding on purpose - it is stated so a reader does not have to go and
+// check. The panel's own rows pad themselves, because their hairlines have to
+// reach both edges.
 export function ProfileSheet({
   lead,
   open,
@@ -24,108 +47,36 @@ export function ProfileSheet({
   // Set only when the sheet was opened from a task result in the command
   // palette. Passed straight through to TasksSection, which owns the tab
   // selection, the scroll and the temporary marker. Defaults to null so every
-  // existing caller (EditLeadModal, ProfileSheetController) is unchanged.
+  // other caller is unchanged.
   highlightTaskId?: string | null;
 }) {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [mounted, setMounted] = useState(false);
-  const [pendingVoiceNote, setPendingVoiceNote] = useState<PendingVoiceNote | null>(null);
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <SheetContent
+        side="right"
+        className={cn("p-0", LEAD_PANEL_WIDTH)}
+        // The panel's own header carries the close button, in the row with the
+        // name and the quick actions, so the primitive's floating one would be
+        // a second real close control sitting on top of it.
+        showClose={false}
+        // Radix warns when a Dialog has no Description. This panel genuinely
+        // has none to give - its content is five sections of records, not a
+        // sentence - so the association is explicitly cleared rather than
+        // filled with a restatement of the title.
+        aria-describedby={undefined}
+      >
+        {/* Radix requires a Title for the dialog's accessible name. The visible
+            name lives in the header row next to the avatar, so this is the
+            same string, visually hidden, rather than a second heading. */}
+        <SheetTitle className="sr-only">{lead.client_name}</SheetTitle>
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-
-    document.body.style.overflow = "hidden";
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose]);
-
-  if (!mounted) return null;
-
-  // Portalled to document.body — this sheet is triggered from inside
-  // EditLeadModal's <dialog>, and a closed <dialog> is display:none for its
-  // entire subtree regardless of this panel's own position:fixed, so it must
-  // render outside that DOM tree to stay visible once the edit modal closes.
-  return createPortal(
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-ink-main/40"
-          />
-          <motion.div
-            key="panel"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 320 }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-hairline bg-canvas-pure shadow-elevation-2 sm:max-w-lg"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-hairline p-6">
-              <div className="min-w-0">
-                <p className="text-h2 truncate">{lead.client_name}</p>
-                {lead.company && (
-                  <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                aria-label="Close"
-                className="size-7 shrink-0 px-0"
-              >
-                <IconX stroke={1.75} className="size-4" />
-              </Button>
-            </div>
-
-            <div className="flex-1 space-y-6 overflow-y-auto p-6">
-              <ExecutiveBrief brief={lead.ai_brief} />
-              <TasksSection leadId={lead.id} highlightTaskId={highlightTaskId} />
-              {/* Above Activity deliberately: what the customer sent comes
-                  before what we did about it, and the two stay separate
-                  columns rather than one interleaved stream. */}
-              <EnquiryHistory leadId={lead.id} />
-              <ActivityTimeline
-                leadId={lead.id}
-                refreshKey={refreshKey}
-                pendingEntry={pendingVoiceNote}
-                onDismissPending={() => setPendingVoiceNote(null)}
-              />
-            </div>
-
-            <div className="p-6 pt-0">
-              <NoteCaptureForm
-                leadId={lead.id}
-                onNoteAdded={() => setRefreshKey((k) => k + 1)}
-                onRecordingStart={() => setPendingVoiceNote({ status: "transcribing" })}
-                onRecordingSettled={(result) =>
-                  setPendingVoiceNote(
-                    result.ok ? null : { status: "error", message: result.message },
-                  )
-                }
-              />
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body,
+        <LeadProfilePanel lead={lead} onClose={onClose} highlightTaskId={highlightTaskId} />
+      </SheetContent>
+    </Sheet>
   );
 }

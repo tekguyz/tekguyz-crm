@@ -20,7 +20,15 @@ import { Badge } from "@/components/ui/Badge";
 // and INSERT only, with no UPDATE/DELETE policy at all, so there is no edit or
 // delete affordance here and none can be added without first weakening the
 // migration.
-export function EnquiryHistory({ leadId }: { leadId: string }) {
+export function EnquiryHistory({
+  leadId,
+  onCountChange,
+}: {
+  leadId: string;
+  // How many enquiries this lead has recorded, for the read panel's jump
+  // strip. Optional, and never called before the rows load.
+  onCountChange?: (count: number) => void;
+}) {
   const [submissions, setSubmissions] = useState<LeadSubmission[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +49,10 @@ export function EnquiryHistory({ leadId }: { leadId: string }) {
       cancelled = true;
     };
   }, [leadId]);
+
+  useEffect(() => {
+    if (submissions) onCountChange?.(submissions.length);
+  }, [submissions, onCountChange]);
 
   return (
     <section className="flex flex-col gap-3">
