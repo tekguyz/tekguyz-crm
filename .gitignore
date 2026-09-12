@@ -8,6 +8,9 @@ tsconfig.tsbuildinfo
 __pycache__/
 *.pyc
 .claude/settings.json
+# Hand-made backups of the above, e.g. settings.json.before-tsfix — same
+# machine-local content, so they are ignored for the same reason.
+.claude/settings.json.*
 
 # Local MCP server config — machine-specific, and a place credentials can land
 .mcp.json
