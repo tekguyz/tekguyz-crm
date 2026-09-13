@@ -22,11 +22,10 @@ import { Badge } from "@/components/ui/Badge";
 // a case-study link gets a lot of phone traffic. This signal has to hold at
 // every width, which is precisely what the sidebar cannot do.
 //
-// Header.tsx's own comment reserves that bar for two things and resists a
-// third. That objection is about duplicating WORKSPACE IDENTITY, which is a
-// per-tenant label the sidebar already owns. This is a session-mode indicator:
-// it is not shown to any real tenant at all, so for every non-demo user the
-// header still holds exactly two things.
+// Header.tsx's own comment keeps workspace identity out of that bar. That
+// objection is about duplicating WORKSPACE IDENTITY, which is a per-tenant
+// label the sidebar already owns. This is a session-mode indicator, shown to no
+// real tenant at all, and it sits beside the page title.
 // WHY IT SAYS "READ-ONLY" AND NOT "DEMO".
 // The sidebar's WorkspaceBlock already says "TEKGUYZ Demo", and the visitor
 // arrived through a link that called it a demo. The word adds nothing. What

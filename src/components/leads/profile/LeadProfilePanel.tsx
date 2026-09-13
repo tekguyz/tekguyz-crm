@@ -50,10 +50,13 @@ export function LeadProfilePanel({
   lead,
   onClose,
   highlightTaskId,
+  onEdit,
 }: {
   lead: Lead;
   onClose: () => void;
   highlightTaskId: string | null;
+  // Passed straight to the header's Edit control. See LeadPanelHeader.
+  onEdit?: () => void;
 }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [pendingVoiceNote, setPendingVoiceNote] = useState<PendingVoiceNote | null>(null);
@@ -137,7 +140,7 @@ export function LeadProfilePanel({
 
   return (
     <>
-      <LeadPanelHeader lead={lead} onClose={onClose} />
+      <LeadPanelHeader lead={lead} onClose={onClose} onEdit={onEdit} />
       <LeadMetaStrip
         lead={lead}
         timeZone={display.timeZone}

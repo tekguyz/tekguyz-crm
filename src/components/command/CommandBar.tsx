@@ -16,7 +16,7 @@ import { CommandResultItem } from "@/components/command/CommandResultItem";
 import { CommandTaskItem } from "@/components/command/CommandTaskItem";
 import { CommandProspectItem } from "@/components/command/CommandProspectItem";
 import { CommandGroupLabel } from "@/components/command/CommandGroupLabel";
-import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { Input } from "@/components/ui/Input";
 
 // Per group, not overall — otherwise a query matching many contacts could
@@ -366,11 +366,15 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
         )}
       </AnimatePresence>
 
+      {/* EditLeadDrawer opened on its READ view, rather than a bare
+          ProfileSheet: the drawer is the one host of both lead views, so the
+          panel's Edit control has somewhere to switch to. */}
       {selectedLead && (
-        <ProfileSheet
+        <EditLeadDrawer
           lead={selectedLead}
           open={!!selectedLead}
           onClose={handleSheetClose}
+          initialView="read"
           highlightTaskId={highlightTaskId}
         />
       )}

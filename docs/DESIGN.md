@@ -143,12 +143,34 @@ shortcut works from every route whether or not the affordance is on screen. The
 keycap hint is `hidden md:inline`: a phone has no ⌘, and printing a shortcut
 nobody can press is noise. **Search never moves into the sidebar.**
 
-### 2. The header holds exactly two things
+### 2. The header is the page's strip — title left, four controls right (revised 2026-09-13)
 
-Command entry on the left, the identity menu on the right. At every width.
+Shell/IA **Variant C — Quiet** (picked 2026-09-07, wired 2026-09-13) replaced
+"the header holds exactly two things". The header is **48px** (`h-12`; it was
+56px) and holds, left to right, at every width:
 
-Name, avatar, theme toggle, help and sign out were five controls doing one job.
-They are now one avatar-triggered `DropdownMenu`:
+- **The page title** (`PageTitle`) — the nav label of the current route, from
+  `pageTitleFor` in `src/components/shell/nav-items.ts`, so it can never
+  disagree with the sidebar. A nested route takes its parent destination's
+  label (`/prospects/import` reads "Prospects"); a path no destination owns
+  gets no title rather than a wrong one. It is a `<p>`, **not a heading**: four
+  pages already render their own `<h1>` and four render none, and a header
+  heading would change every page's outline. The demo `Read-only` badge sits
+  beside it, for the demo tenant only.
+- **Help** (`HelpTrigger`) — an icon button. It is the one control a first-week
+  user reaches for, and a menu hid it behind a click.
+- **Search** (`CommandTrigger`) — the glyph plus the `⌘K` keycap. "Search" is
+  the accessible name, not visible text, because it is the first thing that
+  would overflow a narrow bar. Decision 1 is otherwise unchanged.
+- A hairline seam, then **identity**, hard right.
+
+Four controls in a bar 8px shorter than the one that held two, because one of
+them is text and two of them are 32px glyphs.
+
+**The avatar menu is account-scoped only:** who you are signed in as, theme,
+sign out. Its trigger is the shipped `Avatar` (`size="sm"`) plus a chevron — no
+visible name; the name is the button's accessible name and the menu's first
+line.
 
 - The **theme control renders inline in the menu** as a `DropdownMenuRadioGroup`
   of three items (System / Light / Dark) — not the old cycle button. A cycle
@@ -156,36 +178,71 @@ They are now one avatar-triggered `DropdownMenu`:
   the same single interaction. Radio semantics are also what "one of three, this
   one is on" means to a screen reader, and menu items join the menu's roving
   focus, which loose buttons would not.
-- **Help and sign out are menu items.** Help stays a drawer; it does not need
-  permanent header real estate.
+- **Help left the menu, and Settings never enters it.** Settings is a real page
+  with org details, members, webhook rotation and API keys behind it; a
+  destination buried in an account popover cannot be found or linked, so it
+  stays in the sidebar.
 - Sign out submits a `<form action={signOut}>` that lives *outside* the portaled
   menu content, via `requestSubmit()`. A form nested inside the content would be
   racing its own removal when the menu closes.
-- Opening the Help drawer from a menu item focuses the menu trigger first, on
-  the next animation frame. `HelpContext` restores focus to whatever was focused
-  at open time, and a menu row is about to unmount.
+- The header Help button needs no focus workaround. `HelpContext` restores focus
+  to whatever was focused at open time, and a real click leaves focus on a
+  button that is still mounted when the drawer closes. (The mobile More sheet's
+  Help row still focuses its trigger first, because that row unmounts.)
 
 **Workspace identity is not a header concern.** On desktop it is the sidebar's
 `WorkspaceBlock`; on mobile it is the "More" sheet's title.
 
-### 3. Sidebar navigation is flat — permanently
+### 3. Sidebar navigation is grouped by position — no captions, no disclosure (revised 2026-09-13)
 
-No nesting, no groups, no disclosure triangles, at any width, ever. All five
-destinations render as one unbroken list. When Saved Views ships it belongs in
-the content area as a view switcher above the table, **not** as sidebar
-children. This is a deliberate divergence from Twenty CRM, which nests views in
-the sidebar and gets noisy.
+Variant C replaced "flat — permanently". Top to bottom the rail holds: the
+workspace row (carrying the collapse chevron), the **New Lead** CTA, two groups —
+**Work** (Today, Pipeline, Contacts) and **Prospecting** (Prospects, Import) — and
+a pinned footer pair, **Reports** and **Settings**.
 
-`PRIMARY_NAV` / `SECONDARY_NAV` in `src/components/shell/nav-items.ts` is *not*
-a hierarchy. The split exists only because the mobile tab bar has four slots and
-the fourth is "More".
+- **Position is the whole of the grouping.** A full-bleed hairline separates the
+  groups. There are no captions, no chevrons and no collapsible parents, at any
+  width. Each group is a `role="group"` carrying its name as `aria-label`, so a
+  screen reader is told in words what a sighted user is told by position. The
+  accepted cost: a new user sees that two clusters exist without being told what
+  either is for. The gain: no caption exists to go stale when a destination
+  moves.
+- **Still no nesting, ever.** A group is never a parent. When Saved Views ships
+  it belongs in the content area as a view switcher above the table, **not** as
+  sidebar children — a deliberate divergence from Twenty CRM, which nests views
+  in the sidebar and gets noisy.
+- The arrangement is `NAV_GROUPS` / `NAV_FOOTER` in
+  `src/components/shell/nav-items.ts`. Every entry is looked up from
+  `PRIMARY_NAV` / `SECONDARY_NAV` by href and throws on a miss, and
+  `nav-items.test.ts` pins that together they hold every destination exactly
+  once.
+- One `<nav aria-label="Main">` landmark holds both the scrolling groups and the
+  pinned footer.
+- Expanded rows are `py-1.5` (32px), one step denser than `NavItem`'s own `row`;
+  the rail keeps its square cell.
+- **New Lead leads the rail as a `primary` Button** — the one primary CTA in the
+  shell — instead of sitting in a footer band.
+- The workspace row is `h-12`, matching the header, so the two bottom hairlines
+  run as one line.
+
+`PRIMARY_NAV` / `SECONDARY_NAV` is still *not* the desktop arrangement. That
+split exists only because the mobile tab bar has four slots and the fourth is
+"More".
 
 ### 4. Collapse is manual, desktop-only, and cookie-persisted
 
-A toggle in the sidebar footer collapses it to a **56px icon rail** (expanded:
-**240px**). It never fires off a viewport query — below `md` the sidebar is not
-displayed in either state, so an automatic collapse would be a third state
-nobody asked for.
+A chevron at the sidebar's **top edge** collapses it to a **56px icon rail**
+(expanded: **240px**). It never fires off a viewport query — below `md` the
+sidebar is not displayed in either state, so an automatic collapse would be a
+third state nobody asked for.
+
+The control moved there from a footer strip on 2026-09-13 (Variant C). Expanded,
+it sits *inside* the right end of the workspace row — inside, not straddling the
+edge, because the `<aside>` is `overflow-hidden` for the collapse mechanism
+below and an overhang would be clipped. Collapsed, the 56px row has no second
+slot beside the centred mark, so the same control becomes the first row of the
+rail. It is a directional chevron, not a panel glyph: the position already says
+which panel it is about.
 
 **The state is a cookie (`tg_sidebar`), never localStorage.** localStorage
 cannot be read on the server and cannot be read before hydration, so a
@@ -234,8 +291,21 @@ would not do the second.
 
 Below it the sidebar is not displayed in either collapse state, and navigation
 is a fixed **bottom tab bar**: Today / Pipeline / Contacts / More. "More" opens
-a bottom `Sheet` holding the secondary items — Import, Settings, the theme
-choices, Help, sign out — plus the workspace name and the signed-in email.
+a bottom `Sheet` holding the secondary items — Reports, Import, Prospects,
+Settings, the theme choices, Help, sign out — plus the workspace name and the
+signed-in email.
+
+- **The bar is an inset floating card** (since 2026-09-13, Variant C): 12px from
+  both sides and from the bottom, `rounded-xl`, a hairline all round. The
+  safe-area inset is added to its bottom *offset*, not its padding, so it clears
+  the home indicator instead of growing under it. Content scrolling under a
+  full-bleed strip meets it with only a 1px line between, which reads as
+  clipping; a gap reads as a layer.
+- **It takes Level-1 elevation**, a deliberate exception to a ramp that
+  otherwise reserves Level 1 for dropdowns and tooltips. Accepted because the
+  ramp's rule is that elevation means "above the page", which is exactly true of
+  a bar content passes under. Do not cite it as precedent for elevating anything
+  that sits in the flow.
 
 - **Never both.** `hidden md:block` on the sidebar (and the same on its in-flow
   spacer, so neither occupies space below `md`) and `md:hidden` on the tab bar

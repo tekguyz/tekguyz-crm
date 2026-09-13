@@ -40,6 +40,7 @@ export function ProfileSheet({
   open,
   onClose,
   highlightTaskId = null,
+  onEdit,
 }: {
   lead: Lead;
   open: boolean;
@@ -49,6 +50,9 @@ export function ProfileSheet({
   // selection, the scroll and the temporary marker. Defaults to null so every
   // other caller is unchanged.
   highlightTaskId?: string | null;
+  // The header's Edit control. EditLeadDrawer is this sheet's only host and
+  // passes it; it switches the shared slot from reading to editing.
+  onEdit?: () => void;
 }) {
   return (
     <Sheet
@@ -75,7 +79,12 @@ export function ProfileSheet({
             same string, visually hidden, rather than a second heading. */}
         <SheetTitle className="sr-only">{lead.client_name}</SheetTitle>
 
-        <LeadProfilePanel lead={lead} onClose={onClose} highlightTaskId={highlightTaskId} />
+        <LeadProfilePanel
+          lead={lead}
+          onClose={onClose}
+          highlightTaskId={highlightTaskId}
+          onEdit={onEdit}
+        />
       </SheetContent>
     </Sheet>
   );

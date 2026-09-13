@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchLeadById } from "@/lib/leads/actions";
 import type { Lead } from "@/lib/leads/queries";
-import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
+import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 
 // Mounted once in AppShell — reads ?leadId= from the URL and opens the
 // profile sheet for it. This is what makes a Resend notification email's
 // deep link (https://.../?leadId=<id>) actually land on the right lead,
 // rather than just opening the app's homepage.
+//
+// It opens EditLeadDrawer on its READ view rather than a bare ProfileSheet
+// (2026-09-13). The drawer is the one host of both lead views, so the panel's
+// Edit control switches to the form in place. Closing either view — or a
+// successful save — clears ?leadId=, exactly as closing the panel always did.
 export function ProfileSheetController() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,5 +46,5 @@ export function ProfileSheetController() {
 
   if (!leadId || !lead) return null;
 
-  return <ProfileSheet lead={lead} open onClose={handleClose} />;
+  return <EditLeadDrawer lead={lead} open onClose={handleClose} initialView="read" />;
 }

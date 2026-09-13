@@ -14,18 +14,26 @@ import { cn } from "@/lib/utils/cn";
 // later is a matter of wrapping this in <DropdownMenuTrigger asChild> and
 // swapping the <div> for a Button — no restructuring of the sidebar around it.
 // Do not add switching behaviour, a route, a column or a query here first.
+//
+// `className` exists for one caller and one reason: the Quiet sidebar lays its
+// collapse chevron over this row's right edge, and only this element can give
+// its own name room to truncate before it slides under that button. It is
+// layout only — no switching, no behaviour.
 export function WorkspaceBlock({
   orgName,
   collapsed,
+  className,
 }: {
   orgName: string;
   collapsed: boolean;
+  className?: string;
 }) {
   return (
     <div
       className={cn(
         "flex h-14 shrink-0 items-center border-b border-hairline",
         collapsed ? "justify-center px-2" : "gap-2.5 px-4",
+        className,
       )}
     >
       <BrandMark height={22} />

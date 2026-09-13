@@ -9,7 +9,24 @@ vi.mock("@/lib/leads/actions", () => ({
 }));
 // The archive path and the profile sheet are separate surfaces with their own
 // suites; stubbed so this one stays about the edit form.
-vi.mock("@/components/leads/profile/ProfileSheet", () => ({ ProfileSheet: () => null }));
+//
+// The stub renders only while open and exposes the panel's Edit control, which
+// is all the view-switching suite at the bottom needs from it.
+vi.mock("@/components/leads/profile/ProfileSheet", () => ({
+  ProfileSheet: ({ open, onEdit, onClose }: { open: boolean; onEdit?: () => void; onClose: () => void }) =>
+    open ? (
+      <div data-testid="read-panel">
+        {onEdit ? (
+          <button type="button" onClick={onEdit}>
+            Edit
+          </button>
+        ) : null}
+        <button type="button" onClick={onClose}>
+          Close panel
+        </button>
+      </div>
+    ) : null,
+}));
 vi.mock("@/components/leads/edit-form/ArchiveControls", () => ({ ArchiveControls: () => null }));
 vi.mock("@/components/shell/RoleContext", () => ({ useOrgRole: () => "OWNER" }));
 vi.mock("@/components/shell/MembersContext", () => ({
@@ -260,5 +277,61 @@ describe("EditLeadDrawer — collapsed groups keep their fields", () => {
 
     expect(scroller).not.toBeNull();
     expect(scroller!.contains(save)).toBe(false);
+  });
+});
+
+describe("EditLeadDrawer — one host, two views (the read panel's Edit entry point)", () => {
+  it("opens on the read view when asked, and Edit switches to the form pre-filled from that lead", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<EditLeadDrawer lead={lead} open onClose={onClose} initialView="read" />);
+
+    expect(screen.getByTestId("read-panel")).toBeInTheDocument();
+    expect(document.querySelector("form")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Client name")).toHaveValue("Fake Falls Plumbing"));
+    expect(screen.getByLabelText("Physical address")).toHaveValue("101 Invented Way");
+    expect(screen.queryByTestId("read-panel")).toBeNull();
+    // Switching views is not closing the surface.
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // The switch unmounts and remounts the form, so parity is re-proven on the
+  // remounted form, with every group CLOSED — the state CLAUDE.md requires.
+  it("posts exactly updateLead's key set after arriving from the read view, every group closed", async () => {
+    const user = userEvent.setup();
+    render(<EditLeadDrawer lead={lead} open onClose={() => {}} initialView="read" />);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(await screen.findByRole("button", { name: "Identity, 7 fields" }));
+    await user.click(screen.getByRole("button", { name: "Pipeline, 5 fields" }));
+
+    for (const name of ALL_FIELD_NAMES) {
+      expect(document.querySelector(`[name="${name}"]`), `${name} unmounted`).not.toBeNull();
+    }
+    expect([...new FormData(document.querySelector("form")!).keys()].sort()).toEqual(POSTED_KEYS);
+  });
+
+  it("View full profile switches to the read view without closing the surface", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<EditLeadDrawer lead={lead} open onClose={onClose} />);
+
+    await user.click(screen.getByRole("button", { name: "View full profile" }));
+
+    expect(await screen.findByTestId("read-panel")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closing the read view closes the whole surface, once", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<EditLeadDrawer lead={lead} open onClose={onClose} initialView="read" />);
+
+    await user.click(screen.getByRole("button", { name: "Close panel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

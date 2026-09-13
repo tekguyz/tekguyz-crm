@@ -1,4 +1,12 @@
-import { IconMail, IconMapPin, IconMessage, IconPhone, IconStarFilled, IconX } from "@tabler/icons-react";
+import {
+  IconMail,
+  IconMapPin,
+  IconMessage,
+  IconPencil,
+  IconPhone,
+  IconStarFilled,
+  IconX,
+} from "@tabler/icons-react";
 
 import type { Lead } from "@/lib/leads/queries";
 import { Avatar } from "@/components/ui/Avatar";
@@ -59,7 +67,20 @@ function QuickActions({ lead }: { lead: Lead }) {
   );
 }
 
-export function LeadPanelHeader({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+// `onEdit` is the read panel's way INTO the edit drawer (added 2026-09-13 with
+// the Quiet shell wiring). It does not open anything itself: the host that owns
+// both views — EditLeadDrawer — switches which one is showing, so there is one
+// open-state for the lead surface, not a second path to the drawer. Optional so
+// a panel with no such host renders no dead control.
+export function LeadPanelHeader({
+  lead,
+  onClose,
+  onEdit,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
   return (
     <div className="flex shrink-0 items-center gap-3 border-b border-hairline px-4 py-3">
       {/* src/components/ui/Avatar.tsx as shipped, by `name` only. It is not a
@@ -91,6 +112,29 @@ export function LeadPanelHeader({ lead, onClose }: { lead: Lead; onClose: () => 
       </div>
 
       <QuickActions lead={lead} />
+
+      {onEdit ? (
+        // Secondary, not primary: --accent in this panel is not spent on a
+        // control that sits beside four other secondary actions. The word is
+        // visible from `sm` up; on a phone the header row is already carrying
+        // an avatar, a name and four shortcuts, so the label drops to sr-only
+        // and the pencil carries it, with the accessible name intact.
+        //
+        // "Edit lead", not "Edit": the bare word rendered 21.8px wide, under
+        // `npm run check:widths`' 24px floor. It was intact, not squeezed, but
+        // the floor is not lowered for one label, and the two-word version is
+        // also the clearer name for a control beside four other actions.
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onEdit}
+          className="shrink-0 max-sm:size-7 max-sm:px-0"
+        >
+          <IconPencil stroke={1.75} aria-hidden className="size-4" />
+          <span className="sr-only sm:not-sr-only">Edit lead</span>
+        </Button>
+      ) : null}
 
       <Button
         type="button"

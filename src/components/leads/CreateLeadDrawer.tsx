@@ -43,9 +43,12 @@ export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}
 
   return (
     <>
+      {/* primary, not secondary, since Shell/IA Variant C: this is the one
+          primary CTA in the shell, which is one of --accent's four sanctioned
+          uses. It is the only trigger of this drawer anywhere. */}
       <Button
         type="button"
-        variant="secondary"
+        variant="primary"
         onClick={() => setOpen(true)}
         title={compact ? "New Lead" : undefined}
         className={compact ? "w-full px-0" : "w-full"}

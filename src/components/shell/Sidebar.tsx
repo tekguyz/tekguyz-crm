@@ -70,10 +70,24 @@ export function Sidebar({ orgName }: { orgName: string }) {
             collapsed ? "w-14 translate-x-[184px]" : "w-60",
           )}
         >
-          <WorkspaceBlock orgName={orgName} collapsed={collapsed} />
+          {/* Shell/IA Variant C, "Quiet". Top to bottom: the workspace row
+              (carrying the collapse chevron while expanded), the New Lead CTA
+              (preceded by the expand chevron while collapsed), the grouped
+              destinations, and the pinned Reports/Settings pair. h-12 matches
+              the header so the two bottom hairlines run as one line. */}
+          <div className="relative shrink-0">
+            <WorkspaceBlock
+              orgName={orgName}
+              collapsed={collapsed}
+              className={cn("h-12", !collapsed && "pr-11")}
+            />
+            {collapsed ? null : <SidebarCollapseToggle />}
+          </div>
+          <div className="shrink-0 space-y-1 px-2 pt-2">
+            {collapsed ? <SidebarCollapseToggle /> : null}
+            <SidebarQuickAction />
+          </div>
           <SidebarNav collapsed={collapsed} />
-          <SidebarQuickAction />
-          <SidebarCollapseToggle />
         </div>
       </aside>
     </TooltipProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { IconX } from "@tabler/icons-react";
 
 import { updateLead, type LeadFormState } from "@/lib/leads/actions";
@@ -46,20 +46,46 @@ const initialState: LeadFormState = null;
 // are what an operator touches on most edits; Address & social profiles is
 // captured once and rarely corrected, and Outcome only means anything when a
 // lead closes. A closed group keeps every input MOUNTED - see FormSection.
+//
+// THIS IS THE ONE HOST OF BOTH LEAD VIEWS (2026-09-13). Reading and editing a
+// lead share one slot on screen, so the drawer owns which of the two is
+// showing: `view` is "edit" (the form) or "read" (ProfileSheet), and the
+// caller's `open` says whether the slot is showing anything at all. "View full
+// profile" and the read panel's Edit control only flip `view` — neither closes
+// the surface — and every close path (X, Cancel, Escape, outside click, the
+// read panel's own close, a successful save) closes the whole slot and resets
+// `view` for next time. Cards open it on "edit", as they always have; the
+// ?leadId= deep link and the command palette open it on "read". There is no
+// second way to open this drawer: every caller still passes `lead`/`open`/
+// `onClose`, and `lead` still reaches the field groups exactly as before.
 export function EditLeadDrawer({
   lead,
   open,
   onClose,
+  initialView = "edit",
+  highlightTaskId = null,
 }: {
   lead: Lead;
   open: boolean;
   onClose: () => void;
+  initialView?: "edit" | "read";
+  // Read view only — passed straight to ProfileSheet for a command-palette
+  // task result. See ProfileSheet.
+  highlightTaskId?: string | null;
 }) {
   const role = useOrgRole();
   const updateLeadWithId = updateLead.bind(null, lead.id);
   const [state, formAction, isPending] = useActionState(updateLeadWithId, initialState);
   const wasPending = useRef(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [view, setView] = useState<"edit" | "read">(initialView);
+
+  // Reset in the close handler rather than in an effect watching `open`: the
+  // view and the slot close in the same commit, so neither sheet flashes the
+  // other view on its way out, and the next open starts where its caller asked.
+  const close = useCallback(() => {
+    setView(initialView);
+    onClose();
+  }, [initialView, onClose]);
   const [openSections, setOpenSections] = useState({
     identity: true,
     pipeline: true,
@@ -72,10 +98,10 @@ export function EditLeadDrawer({
 
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) {
-      onClose();
+      close();
     }
     wasPending.current = isPending;
-  }, [isPending, state, onClose]);
+  }, [isPending, state, close]);
 
   // OutcomeFields renders two HIDDEN inputs carrying the current values for a
   // MEMBER instead of two controls - `updateLead` writes outcome,
@@ -89,9 +115,9 @@ export function EditLeadDrawer({
   return (
     <>
       <Sheet
-        open={open}
+        open={open && view === "edit"}
         onOpenChange={(next) => {
-          if (!next) onClose();
+          if (!next) close();
         }}
       >
         <SheetContent
@@ -110,10 +136,7 @@ export function EditLeadDrawer({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setProfileOpen(true);
-                onClose();
-              }}
+              onClick={() => setView("read")}
               className="shrink-0 text-accent hover:text-accent"
             >
               View full profile
@@ -122,7 +145,7 @@ export function EditLeadDrawer({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={onClose}
+              onClick={close}
               aria-label="Close"
               className="size-7 shrink-0 px-0"
             >
@@ -210,7 +233,7 @@ export function EditLeadDrawer({
                 <Button type="submit" variant="primary" loading={isPending}>
                   {isPending ? "Saving…" : "Save changes"}
                 </Button>
-                <Button type="button" variant="ghost" onClick={onClose}>
+                <Button type="button" variant="ghost" onClick={close}>
                   Cancel
                 </Button>
               </div>
@@ -220,10 +243,16 @@ export function EditLeadDrawer({
       </Sheet>
 
       {/* OUTSIDE the Sheet, not inside it. Radix unmounts a Sheet's content
-          when it closes, and the handoff above closes this drawer in the same
-          click that opens the profile panel - nested, the panel would be torn
-          down the instant it was asked for. */}
-      <ProfileSheet lead={lead} open={profileOpen} onClose={() => setProfileOpen(false)} />
+          when it closes, and switching to the read view closes the form sheet
+          in the same click that opens this one - nested, the panel would be
+          torn down the instant it was asked for. */}
+      <ProfileSheet
+        lead={lead}
+        open={open && view === "read"}
+        onClose={close}
+        onEdit={() => setView("edit")}
+        highlightTaskId={highlightTaskId}
+      />
     </>
   );
 }

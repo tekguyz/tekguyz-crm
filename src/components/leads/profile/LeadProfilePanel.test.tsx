@@ -160,6 +160,20 @@ describe("LeadProfilePanel — header and metadata", () => {
     });
   });
 
+  it("offers an Edit control only when a host passes onEdit, and calls it", async () => {
+    const onEdit = vi.fn();
+    const { unmount } = render(
+      <LeadProfilePanel lead={lead} onClose={() => {}} highlightTaskId={null} onEdit={onEdit} />,
+    );
+
+    screen.getByRole("button", { name: "Edit lead" }).click();
+    expect(onEdit).toHaveBeenCalledTimes(1);
+
+    unmount();
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Edit lead" })).toBeNull();
+  });
+
   it("shows a date rather than the Going Cold badge when the lead is not overdue", () => {
     renderPanel();
 

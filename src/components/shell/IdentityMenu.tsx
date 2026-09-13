@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import { IconHelpCircle, IconLogout, IconChevronDown } from "@tabler/icons-react";
+import { IconLogout, IconChevronDown } from "@tabler/icons-react";
 
 import { signOut } from "@/lib/auth/actions";
-import { useHelp } from "@/components/help/HelpContext";
 import { ThemeMenuChoices } from "@/components/shell/ThemeMenuChoices";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
@@ -16,9 +16,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// One control where the header used to hold five: name, avatar, theme toggle,
-// help and sign out were all doing the same job — identity and account
-// actions — and each was paying for its own slot.
+// The avatar menu, holding ACCOUNT-SCOPED things only: who you are signed in
+// as, theme, sign out. Since Shell/IA Variant C, Help is a header icon of its
+// own (HelpTrigger) and Settings stays a sidebar destination — a real page
+// buried in an account popover cannot be found or linked.
+//
+// The trigger is the avatar and a chevron, no name. The name is the button's
+// accessible name and the first line of the menu it opens; on a 48px header it
+// is the first thing that would push the bar wider. The avatar is the shipped
+// src/components/ui/Avatar.tsx by `name` — never a second implementation.
 //
 // The sign-out <form> is rendered OUTSIDE DropdownMenuContent and submitted by
 // requestSubmit() from the menu item. Radix portals the menu and unmounts it on
@@ -35,23 +41,9 @@ export function IdentityMenu({
   userEmail: string;
   displayName: string | null;
 }) {
-  const { openHelp } = useHelp();
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const signOutRef = useRef<HTMLFormElement>(null);
 
   const name = displayName || userEmail;
-
-  function handleHelp() {
-    // HelpContext captures document.activeElement when the drawer opens, and
-    // restores it on close. Selecting a menu item leaves focus on a row that
-    // is about to unmount, so the trigger is focused explicitly first — it
-    // outlives the menu and is where focus belongs when the drawer closes.
-    const trigger = triggerRef.current;
-    requestAnimationFrame(() => {
-      trigger?.focus();
-      openHelp();
-    });
-  }
 
   function handleSignOut() {
     signOutRef.current?.requestSubmit();
@@ -62,21 +54,12 @@ export function IdentityMenu({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            ref={triggerRef}
             type="button"
             variant="ghost"
             aria-label={`Account menu for ${name}`}
-            className="gap-2 pr-1.5 pl-1.5"
+            className="gap-1.5 pr-1.5 pl-1.5"
           >
-            <span
-              aria-hidden="true"
-              className="text-label flex size-6 shrink-0 items-center justify-center rounded-full border border-hairline bg-canvas-soft text-ink-main uppercase"
-            >
-              {name.slice(0, 1) || "?"}
-            </span>
-            {/* The name is a comfort, not the control. It goes first when the
-                header gets tight; the avatar and the affordance stay. */}
-            <span className="hidden max-w-32 truncate sm:inline">{name}</span>
+            <Avatar size="sm" name={name} />
             <IconChevronDown className="size-4 text-ink-muted" stroke={1.75} />
           </Button>
         </DropdownMenuTrigger>
@@ -91,10 +74,6 @@ export function IdentityMenu({
           <ThemeMenuChoices />
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={handleHelp}>
-            <IconHelpCircle className="size-4" stroke={1.75} />
-            Help
-          </DropdownMenuItem>
           <DropdownMenuItem variant="danger" onSelect={handleSignOut}>
             <IconLogout className="size-4" stroke={1.75} />
             Sign out

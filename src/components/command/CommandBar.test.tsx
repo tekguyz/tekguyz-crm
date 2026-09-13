@@ -88,11 +88,12 @@ vi.mock("@/lib/actions/prospect-actions", () => ({
   fetchSearchableProspects: () => fetchSearchableProspects(),
 }));
 
-// ProfileSheet pulls in the whole profile module tree (server-action
-// boundaries included), so it is stubbed at its own boundary. What this suite
-// cares about is which props CommandBar hands it.
-vi.mock("@/components/leads/profile/ProfileSheet", () => ({
-  ProfileSheet: (props: Record<string, unknown>) => {
+// The lead surface (EditLeadDrawer, opened on its read view) pulls in the
+// whole profile and edit-form module trees (server-action boundaries
+// included), so it is stubbed at its own boundary. What this suite cares about
+// is which props CommandBar hands it.
+vi.mock("@/components/leads/EditLeadDrawer", () => ({
+  EditLeadDrawer: (props: Record<string, unknown>) => {
     profileSheetProps(props);
     return <div data-testid="profile-sheet" />;
   },
@@ -254,5 +255,7 @@ describe("CommandBar — grouped results", () => {
     const props = profileSheetProps.mock.lastCall![0];
     expect(props.lead.id).toBe("lead-1");
     expect(props.highlightTaskId).toBeNull();
+    // Opens on the READ view, so the panel — not the form — is what arrives.
+    expect(props.initialView).toBe("read");
   });
 });
