@@ -150,6 +150,11 @@ const ROUTES = [
   { path: "/contacts", label: "real lead EDIT drawer", open: OPEN_EDIT_DRAWER },
   { path: "/contacts", label: "real lead READ panel", open: OPEN_READ_PANEL },
   { path: "/contacts", label: "real lead CREATE drawer", open: OPEN_CREATE_DRAWER },
+  // The real Kanban board, since the Grouped card was wired 2026-09-13. Both
+  // viewports here are `lg` and up, so this measures KanbanCard; FocusListCard
+  // only renders below `lg`. Its meta line is where prompt 3's two rejected
+  // drafts collapsed a real field, so this is the one that matters.
+  "/pipeline",
   "/shell/form/modal?long=1",
   "/shell/form/drawer?long=1",
   "/shell/form/inline?long=1",

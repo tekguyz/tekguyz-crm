@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { IconStar } from "@tabler/icons-react";
-import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
+import { isOverdue } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { PIPELINE_STATUSES, PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipeline";
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
-import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
+import { PipelineCardFields } from "@/components/pipeline/PipelineCardFields";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
-import { cn } from "@/lib/utils/cn";
 
 // No drag surface on touch — the status <select> is the mobile equivalent of
 // a cross-column Kanban drop. Selecting the lead's own current status is a
@@ -41,38 +39,20 @@ export function FocusListCard({
         }}
         className="w-full cursor-pointer p-3 text-left transition-colors hover:bg-canvas-soft"
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-body-md truncate font-medium">{lead.client_name}</p>
-            {lead.company && (
-              <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
-            )}
-          </div>
-          {lead.is_starred && (
-            <IconStar
-              stroke={1.75}
-              className={cn(
-                "size-5 shrink-0",
-                overdue
-                  ? "fill-ink-muted text-ink-muted"
-                  : "fill-pill-orange-fg text-pill-orange-fg",
-              )}
-            />
-          )}
-        </div>
+        {/* The same two Grouped rows KanbanCard renders — this is that card's
+            mobile twin, so the two must never show different fields. */}
+        <PipelineCardFields
+          lead={lead}
+          cold={overdue}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+        />
 
-        <div className="text-body-sm mt-2 flex items-center justify-between text-ink-muted">
-          <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
-          <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
-        </div>
-
-        {/* Same position as on KanbanCard — this is that card's mobile twin,
-            and ownership should not appear on one breakpoint only. Renders
-            nothing when unassigned. */}
-        <AssigneeLabel assignedTo={lead.assigned_to} />
-
-        {/* Still name-less and still controlled: this select drives a Server
-            Action argument directly, never a form post, so there is no
+        {/* Row three, FocusListCard only. Grouped has no status badge because
+            a Kanban column already says the status; this list has no drag, so
+            the select is the only way to change status here and needs a row
+            of its own. Still name-less and still controlled: it drives a
+            Server Action argument directly, never a form post, so there is no
             formData key for it to silently drop. */}
         <div className="mt-2">
           <Select

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { IconStar } from "@tabler/icons-react";
-import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
+import { isOverdue } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
-import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
+import { PipelineCardFields } from "@/components/pipeline/PipelineCardFields";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils/cn";
 
@@ -53,33 +52,12 @@ export function KanbanCard({
           dragging && "opacity-40",
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-body-md truncate font-medium">{lead.client_name}</p>
-            {lead.company && (
-              <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
-            )}
-          </div>
-          {lead.is_starred && (
-            <IconStar
-              stroke={1.75}
-              className={cn(
-                "size-5 shrink-0",
-                overdue
-                  ? "fill-ink-muted text-ink-muted"
-                  : "fill-pill-orange-fg text-pill-orange-fg",
-              )}
-            />
-          )}
-        </div>
-        <div className="text-body-sm mt-2 flex items-center justify-between text-ink-muted">
-          <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
-          <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
-        </div>
-        {/* Below the money/SLA row, and rendering nothing when unassigned, so
-            an unowned card is byte-for-byte the card that shipped before
-            ownership existed — no new empty row on a young board. */}
-        <AssigneeLabel assignedTo={lead.assigned_to} />
+        <PipelineCardFields
+          lead={lead}
+          cold={overdue}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+        />
       </Card>
 
       <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
