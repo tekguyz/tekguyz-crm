@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getOrgSigningKey } from "@/lib/webhooks/resolve-tenant";
-import { WEBHOOK_SIGNATURE_HEADER, verifyWebhookSignature } from "@/lib/webhooks/signature";
+import {
+  isWebhookTimestampFresh,
+  verifyWebhookSignature,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+} from "@/lib/webhooks/signature";
+import { isReplayedWebhook } from "@/lib/webhooks/replay-guard";
 import { isRateLimited, WEBHOOK_RATE_LIMIT_PER_MINUTE } from "@/lib/webhooks/rate-limit";
 import { webhookPayloadSchema } from "@/lib/validation/webhook-payload-schema";
 import { ingestWebhookLead } from "@/lib/webhooks/ingest-lead";
@@ -9,6 +15,7 @@ import {
   logWebhookFailure,
   toWebhookFailure,
   WEBHOOK_ERROR_CODES,
+  type WebhookErrorCode,
   type WebhookFailure,
 } from "@/lib/webhooks/ingestion-failure";
 import { sendIngestionFailureAlert } from "@/lib/email/alert-ingestion-failure";
@@ -26,13 +33,15 @@ export async function OPTIONS() {
 }
 
 // One shared rejection for every authentication failure — unknown org id,
-// missing header, malformed signature, wrong signature. THE ORGANIZATION ID IN
+// missing header, malformed signature, wrong signature, and since 2026-09-14 a
+// stale or future timestamp and a replayed signature. THE ORGANIZATION ID IN
 // THE URL GRANTS NO ACCESS ON ITS OWN. A request carrying a perfectly valid
 // org id with no valid signature is rejected identically to one carrying an
 // org id that does not exist: same status, same body, no hint about which half
-// failed. That is the whole reason it was safe to move the id into the URL in
-// place of the secret.
-function unauthorized(organizationId: string, stage: string) {
+// failed. The same holds for "expired" and "replayed" — telling a prober that a
+// signature was valid but late would confirm they hold a real signed request.
+// The distinct reason goes to the server log only, as the code.
+function unauthorized(organizationId: string, code: WebhookErrorCode, stage: string) {
   // WARN, never ERROR, and never an alert (2026-09-05). This endpoint is
   // public and is scanned constantly, so a bad or missing signature is
   // expected background noise. Paging a human on it would make the whole
@@ -41,11 +50,11 @@ function unauthorized(organizationId: string, stage: string) {
   // volume is measurable if it ever needs to be.
   logWebhookFailure(
     {
-      code: WEBHOOK_ERROR_CODES.AUTH_FAILED,
+      code,
       organizationId,
       stage,
-      // No signature value, no secret, not even a length — nothing about the
-      // credential travels into a log line on this path.
+      // No signature value, no timestamp, no secret, not even a length —
+      // nothing about the credential travels into a log line on this path.
     },
     "warn",
   );
@@ -78,22 +87,47 @@ export async function POST(
 
   const signingKey = await getOrgSigningKey(organization_id);
   if (!signingKey) {
-    return unauthorized(organization_id, "tenant resolution");
+    return unauthorized(organization_id, WEBHOOK_ERROR_CODES.AUTH_FAILED, "tenant resolution");
   }
 
+  // THE ORDER BELOW IS LOAD-BEARING: signature → timestamp → replay → rate
+  // limit. Each check assumes the one before it passed. The timestamp is only
+  // meaningful once the signature proves it was not edited in transit; a
+  // signature is only worth recording as "seen" once it is proven genuine AND
+  // fresh (recording unverified ones would let anyone fill the store); and
+  // rate-limit budget is only spent by a request that is none of those. Do not
+  // reorder for speed — the HMAC compare is the cheapest step here, and it is
+  // what keeps an unauthenticated caller from making the route spend a Redis
+  // round-trip at all.
   const signature = request.headers.get(WEBHOOK_SIGNATURE_HEADER);
-  if (!verifyWebhookSignature(rawBody, signingKey, signature)) {
-    return unauthorized(organization_id, "signature verification");
+  const timestamp = request.headers.get(WEBHOOK_TIMESTAMP_HEADER);
+  if (signature === null || !verifyWebhookSignature(rawBody, signingKey, timestamp, signature)) {
+    return unauthorized(
+      organization_id,
+      WEBHOOK_ERROR_CODES.AUTH_FAILED,
+      "signature verification",
+    );
   }
 
-  // Everything below this line runs only for a request proven to come from a
-  // holder of this tenant's signing key. Rate limiting sits AFTER verification
-  // on purpose: an unauthenticated caller must not be able to make the route
-  // spend a database round-trip.
+  if (!isWebhookTimestampFresh(timestamp)) {
+    return unauthorized(
+      organization_id,
+      WEBHOOK_ERROR_CODES.TIMESTAMP_REJECTED,
+      "timestamp tolerance",
+    );
+  }
+
+  if (await isReplayedWebhook(organization_id, signature)) {
+    return unauthorized(organization_id, WEBHOOK_ERROR_CODES.REPLAY_REJECTED, "replay check");
+  }
+
+  // Everything below this line runs only for a fresh, first-seen request proven
+  // to come from a holder of this tenant's signing key.
   if (await isRateLimited(organization_id)) {
     // Logged, not alerted: the caller is authenticated, but this is a caller
     // behaviour problem with an explicit 429 telling them so — nothing was
-    // lost that a retry cannot recover.
+    // lost that a retry cannot recover. A distinct 429, never folded into the
+    // 401 above: this caller IS authenticated, and needs to know to back off.
     logWebhookFailure(
       {
         code: WEBHOOK_ERROR_CODES.RATE_LIMITED,

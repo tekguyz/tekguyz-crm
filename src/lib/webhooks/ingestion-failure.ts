@@ -27,6 +27,18 @@
 export const WEBHOOK_ERROR_CODES = {
   /** Unknown org id, or a missing/malformed/wrong signature. Expected noise. */
   AUTH_FAILED: "WEBHOOK_AUTH_FAILED",
+  /**
+   * Signature valid, timestamp outside the tolerance window. Still a 401 with
+   * the same body as AUTH_FAILED — the distinct code exists only in the log.
+   */
+  TIMESTAMP_REJECTED: "WEBHOOK_TIMESTAMP_REJECTED",
+  /** Signature valid and fresh, but already seen. Same 401, same body. */
+  REPLAY_REJECTED: "WEBHOOK_REPLAY_REJECTED",
+  /**
+   * Redis unreachable or unconfigured. The request was let through (fail
+   * open), so replay protection or rate limiting was OFF for it.
+   */
+  STORE_UNAVAILABLE: "WEBHOOK_STORE_UNAVAILABLE",
   RATE_LIMITED: "WEBHOOK_RATE_LIMITED",
   INVALID_JSON: "WEBHOOK_INVALID_JSON",
   INVALID_PAYLOAD: "WEBHOOK_INVALID_PAYLOAD",
