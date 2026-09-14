@@ -169,11 +169,13 @@ export function OrgDetailsPanel({
             />
           </div>
           <p className="text-caption mb-3 text-ink-muted">
-            POST inbound leads to this endpoint. Every request must carry an{" "}
-            <code className="text-ink-main">X-TekGuyz-Signature</code> header holding the
-            hex-encoded HMAC-SHA256 of the exact request body, keyed by the signing secret
-            below. Requests without a valid signature are rejected — the URL alone grants
-            nothing.
+            POST inbound leads to this endpoint. Every request must carry two headers:{" "}
+            <code className="text-ink-main">X-TekGuyz-Timestamp</code>, the current Unix time
+            in seconds, and <code className="text-ink-main">X-TekGuyz-Signature</code>, the
+            hex-encoded HMAC-SHA256 of the timestamp, a period, then the exact request body,
+            keyed by the signing secret below. A request with a wrong signature, a timestamp
+            more than five minutes off, or a signature already used is rejected — the URL
+            alone grants nothing.
           </p>
 
           <div className="text-label mb-1 text-ink-muted">Endpoint URL</div>

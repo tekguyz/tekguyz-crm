@@ -25,10 +25,11 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "webhook-setup",
     title: "Setting up the inbound lead webhook",
-    keywords: ["webhook", "inbound", "zapier", "url", "secret", "rotate", "integration", "form", "signature", "hmac"],
+    keywords: ["webhook", "inbound", "zapier", "url", "secret", "rotate", "integration", "form", "signature", "hmac", "timestamp", "replay"],
     body: [
       "Your webhook endpoint and signing secret live on the Settings page, under Organization. Owners and admins only — the secret isn't fetched at all for members.",
-      "The endpoint URL identifies your organization but grants no access on its own, so it's safe to paste into a config file or a ticket. Every POST to it must also carry an X-TekGuyz-Signature header: the hex-encoded HMAC-SHA256 of the exact request body, keyed by your signing secret. A request without a valid signature is rejected with a 401 and nothing is saved.",
+      "The endpoint URL identifies your organization but grants no access on its own, so it's safe to paste into a config file or a ticket. Every POST to it must also carry two headers. X-TekGuyz-Timestamp is the current Unix time in whole seconds. X-TekGuyz-Signature is the hex-encoded HMAC-SHA256, keyed by your signing secret, of that timestamp, a period, and then the exact request body — for example 1757808000.{\"client_name\":…}. Sign the exact bytes you send, never a re-serialized copy.",
+      "A request is rejected with a 401, and nothing is saved, if its signature is missing or wrong, if its timestamp is more than five minutes from the server's clock in either direction, or if that same signature was already accepted. So sign every request fresh: a retry must use a new timestamp and a new signature, not resend the old one.",
       "The signing secret is the credential — treat it like a password. It is never sent with a request, so it never appears in a URL or a server log; it only ever keys the signature.",
       "This needs somewhere that can run code, so a browser-side form cannot call the endpoint directly — it would have to ship the secret to every visitor. Post your form to your own backend, and have that backend sign and forward.",
       "If the secret leaks, use \"Rotate signing secret\" on the same panel. It asks you to confirm first, because rotating takes effect immediately — every integration still signing with the old secret starts failing the moment you confirm, and keeps failing until you update it. The endpoint URL does not change when you rotate.",
