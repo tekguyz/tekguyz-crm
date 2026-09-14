@@ -140,3 +140,4 @@ repo matches a title in this column.
 | 2026-09-13 — Shell/IA Stage 2: the pipeline card wired, one field block, and a row for the status select | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-13 — Shell/IA Stage 2: Settings wired, Variant Split, and the pass closes | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — Webhook replay protection and a Redis-backed rate limiter | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| sr-only page headings: closing the duplicate-title gap (2026-09-14) | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

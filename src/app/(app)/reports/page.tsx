@@ -42,7 +42,7 @@ export default async function ReportsPage({
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4">
       <div>
-        <h1 className="text-h1">Reports</h1>
+        <h1 className="sr-only">Reports</h1>
         <p className="text-body-sm text-ink-muted">
           {period === "all"
             ? `Every lead ${orgName} has ever recorded.`

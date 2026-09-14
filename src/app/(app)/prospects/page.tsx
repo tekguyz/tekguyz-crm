@@ -32,7 +32,7 @@ export default async function ProspectsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-h1">Prospects</h1>
+          <h1 className="sr-only">Prospects</h1>
           <p className="text-body-md text-ink-muted">
             Cold outreach from the leadgen scrape. Ring one, learn an email address, then
             promote it into a real lead.

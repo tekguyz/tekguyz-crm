@@ -36,7 +36,7 @@ export function ImportWizardLayout() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-h1">Import leads</h1>
+        <h1 className="sr-only">Import leads</h1>
         <p className="text-body-md text-ink-muted">
           Bring an existing list of leads in from a spreadsheet.
         </p>

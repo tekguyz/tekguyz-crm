@@ -9,7 +9,7 @@ export default function ProspectImportPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-h1">Import prospects</h1>
+        <h1 className="sr-only">Import prospects</h1>
         <p className="text-body-md text-ink-muted">
           Load a Google Business Profile scrape from the leadgen pipeline. Prospects are cold
           outreach — they have no email address and stay out of your pipeline until a call turns
