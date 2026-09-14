@@ -72,23 +72,29 @@ describe("EditLeadDrawer — surviving a failed submit across every sibling", ()
   // <form action={...}> after the action returns, failure included, and the
   // reset does not respect file boundaries: fixing one sibling leaves the same
   // data loss in the other four. This asserts the whole form at once, which is
-  // the only level at which the property is真 meaningful.
+  // the only level at which the property is meaningful.
   it("keeps every edited value in every field group when the form is reset", async () => {
     const user = userEvent.setup();
     renderModal();
 
-    await user.clear(screen.getByLabelText("Client name"));
-    await user.type(screen.getByLabelText("Client name"), "Dana Rivers");
-    await user.clear(screen.getByLabelText("Physical address"));
-    await user.type(screen.getByLabelText("Physical address"), "202 Corrected Road");
-    await user.type(screen.getByLabelText("Facebook URL"), "facebook.example/dana");
+    // PASTE, not user.type — see the same test in CreateLeadDrawer.test.tsx.
+    // user.type re-renders the whole five-file form once per character, which
+    // put this test at ~3.8s alone and past its 10s budget under full-suite
+    // load. user.clear leaves focus in the field, so the paste lands there and
+    // still goes through the real onChange.
+    const replace = async (label: string, value: string) => {
+      await user.clear(screen.getByLabelText(label));
+      await user.paste(value);
+    };
+    await replace("Client name", "Dana Rivers");
+    await replace("Physical address", "202 Corrected Road");
+    await replace("Facebook URL", "facebook.example/dana");
     await user.selectOptions(screen.getByLabelText("Status"), "QUOTED");
-    await user.clear(screen.getByLabelText("Estimated revenue"));
-    await user.type(screen.getByLabelText("Estimated revenue"), "2500");
+    await replace("Estimated revenue", "2500");
     await user.click(screen.getByLabelText("Starred"));
     await user.selectOptions(screen.getByLabelText("Assigned to"), "user-1");
     await user.selectOptions(screen.getByLabelText("Outcome"), "WON");
-    await user.type(screen.getByLabelText("Actual revenue (if closed)"), "2400");
+    await replace("Actual revenue (if closed)", "2400");
 
     // React 19's real sequence is form.reset() — and NOT necessarily a
     // re-render, since the component's props have not changed. Calling

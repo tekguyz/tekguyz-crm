@@ -35,14 +35,27 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
     render(<CreateLeadDrawer />);
     await openForm(user);
 
-    await user.type(screen.getByLabelText("Client name"), "Dana Rivers");
-    await user.type(screen.getByLabelText("Email"), "dana@example.invalid");
-    await user.type(screen.getByLabelText("Phone"), "8175550101");
-    await user.type(screen.getByLabelText("Company"), "Rivers Roofing");
-    await user.type(screen.getByLabelText("Website"), "rivers.example");
-    await user.type(screen.getByLabelText("Lead source"), "Referral");
-    await user.type(screen.getByLabelText("Service category"), "Roofing");
-    await user.type(screen.getByLabelText("Estimated revenue"), "1200");
+    // PASTE, not user.type. What this pins is surviving form.reset(); it does
+    // not care how the value got in. user.type fires one controlled-state
+    // re-render per CHARACTER — 88 of them here, measured at ~1.6s of this
+    // test's ~2.4s alone — and under full-suite load that pushed it past the
+    // 10s budget. Paste is one change per field and still goes through the
+    // real onChange, so the state being restored is genuinely the state the
+    // user produced. Raising the timeout instead is the fix vitest.config.mts
+    // says not to repeat.
+    for (const [label, value] of [
+      ["Client name", "Dana Rivers"],
+      ["Email", "dana@example.invalid"],
+      ["Phone", "8175550101"],
+      ["Company", "Rivers Roofing"],
+      ["Website", "rivers.example"],
+      ["Lead source", "Referral"],
+      ["Service category", "Roofing"],
+      ["Estimated revenue", "1200"],
+    ]) {
+      await user.click(screen.getByLabelText(label));
+      await user.paste(value);
+    }
 
     // React 19's real sequence is form.reset() — and NOT necessarily a
     // re-render, since the component's props have not changed. Calling
