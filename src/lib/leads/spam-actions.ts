@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { demoAwareError } from "@/lib/demo/demo-aware-error";
 import { SPAM_DISMISS_PREFIX } from "@/lib/leads/spam-review";
 
 // One-action false-positive dismissal for the Needs Review queue.
@@ -24,7 +25,7 @@ export async function dismissSpamFlag(leadId: string): Promise<void> {
     .eq("id", leadId)
     .single();
 
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   const { error: logError } = await supabase.from("activity_logs").insert({
     lead_id: leadId,
@@ -33,7 +34,7 @@ export async function dismissSpamFlag(leadId: string): Promise<void> {
     content: `${SPAM_DISMISS_PREFIX} — reviewed and kept as a genuine lead.`,
   });
 
-  if (logError) throw logError;
+  if (logError) throw await demoAwareError(logError);
 
   revalidatePath("/", "layout");
 }

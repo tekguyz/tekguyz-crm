@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { demoAwareError } from "@/lib/demo/demo-aware-error";
 import { closeTasksForArchivedLead } from "@/lib/tasks/actions";
 import { isLeadRoleDenied, LEAD_ROLE_DENIED_MESSAGE } from "@/lib/leads/role-errors";
 
@@ -42,7 +43,7 @@ export async function archiveLead(leadId: string): Promise<LeadArchiveResult> {
     .single();
 
   if (isLeadRoleDenied(error)) return { error: LEAD_ROLE_DENIED_MESSAGE };
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   // Never throws by construction — cleanup must not roll back the archive.
   await closeTasksForArchivedLead(leadId, lead.organization_id);
@@ -67,7 +68,7 @@ export async function unarchiveLead(leadId: string): Promise<LeadArchiveResult> 
     .single();
 
   if (isLeadRoleDenied(error)) return { error: LEAD_ROLE_DENIED_MESSAGE };
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   await supabase.from("activity_logs").insert({
     lead_id: leadId,

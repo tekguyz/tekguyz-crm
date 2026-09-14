@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DemoReadOnlyNotice } from "@/components/shell/DemoReadOnlyNotice";
+import { isDemoReadOnlyRefusal } from "@/lib/demo/read-only-refusal";
 
 // Pipeline gets its own error.tsx rather than relying on (app)/error.tsx's
 // generic copy: a failed getPipelineLeads() call would otherwise leave the
@@ -13,11 +15,22 @@ import { Card } from "@/components/ui/Card";
 // is worse here than almost anywhere else in the app, per the standing
 // design note in CLAUDE.md.
 export default function PipelineError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Same demo read-only case as (app)/error.tsx. Without it a refused write on
+  // this page would claim the pipeline failed to load, which is false twice.
+  if (isDemoReadOnlyRefusal(error)) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <DemoReadOnlyNotice reset={reset} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full items-center justify-center p-6">
       {/* Level 0, same as the root boundary — see the note there. */}

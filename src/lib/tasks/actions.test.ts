@@ -26,6 +26,10 @@ async function loadActions(mock: ReturnType<typeof mockSupabase>) {
     createClient: () => Promise.resolve(mock.client),
   }));
   vi.doMock("next/cache", () => ({ revalidatePath: vi.fn() }));
+  // demoAwareError (which every thrown write error now passes through) is
+  // server-only. None of these errors carries 42501, so it never looks the
+  // tenant up and returns each error unchanged.
+  vi.doMock("server-only", () => ({}));
   vi.resetModules();
   return import("@/lib/tasks/actions");
 }

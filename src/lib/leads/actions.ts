@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { demoAwareError } from "@/lib/demo/demo-aware-error";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
 import {
@@ -203,7 +204,7 @@ export async function updateLeadStatus(leadId: string, status: string): Promise<
   const supabase = await createClient();
   const { error } = await supabase.from("leads").update({ status }).eq("id", leadId);
 
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   revalidatePath("/", "layout");
 }

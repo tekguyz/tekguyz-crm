@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { demoAwareError } from "@/lib/demo/demo-aware-error";
 import { getActivityLogs, type ActivityLog } from "@/lib/activity/queries";
 import { transcribeAndSaveAudioNote } from "@/lib/activity/audio-transcription";
 
@@ -44,7 +45,7 @@ export async function addManualNote(leadId: string, content: string): Promise<Ac
     .select("id, lead_id, log_type, content, audio_url, created_at")
     .single();
 
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
   return data;
 }
 

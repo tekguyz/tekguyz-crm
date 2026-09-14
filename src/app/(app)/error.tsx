@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DemoReadOnlyNotice } from "@/components/shell/DemoReadOnlyNotice";
+import { isDemoReadOnlyRefusal } from "@/lib/demo/read-only-refusal";
 
 // This is the real "main app tree" boundary the design called for — placed
 // inside the (app) route group (confirmed live during this prompt: the app
@@ -14,11 +16,23 @@ import { Card } from "@/components/ui/Card";
 // Renders inside AppShell (Sidebar/Header stay mounted), since this segment
 // is nested under (app)/layout.tsx.
 export default function AppError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // A write the demo_readonly role refused, in the demo tenant only. Every
+  // other error — including any other error in the demo — falls through to the
+  // generic card below. See src/lib/demo/read-only-refusal.ts.
+  if (isDemoReadOnlyRefusal(error)) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <DemoReadOnlyNotice reset={reset} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full items-center justify-center p-6">
       {/* Level 0, same as the root boundary — see the note there. */}

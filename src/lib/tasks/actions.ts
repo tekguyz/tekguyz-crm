@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { demoAwareError } from "@/lib/demo/demo-aware-error";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import {
   getTasksForLead,
@@ -228,7 +229,7 @@ export async function dismissTask(taskId: string): Promise<void> {
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   revalidatePath("/", "layout");
 }
@@ -250,7 +251,7 @@ export async function toggleTaskComplete(taskId: string, completed: boolean): Pr
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) throw await demoAwareError(error);
 
   revalidatePath("/", "layout");
 }
