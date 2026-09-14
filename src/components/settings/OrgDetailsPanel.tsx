@@ -13,7 +13,6 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { TIMEZONES, CURRENCIES, timezoneLabel } from "@/lib/organizations/org-options";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import {
@@ -30,11 +29,10 @@ import {
 
 const initialState: OrgSettingsFormState = null;
 
-// All four Settings panels keep p-6 rather than Card's stock p-4: these are
-// page-width containers holding whole forms, not the dense list cards Card was
-// tuned for. Padding is layout, not a token — same reasoning as ThemeToggle's
-// `w-8 px-0`. What Card brings is the Level 0 surface: v1 gave these panels a
-// shadow-elevation-1, which v2 reserves for popovers.
+// No Card and no heading of its own. Since the Settings Split wiring
+// (2026-09-13) the page supplies both: SettingsSplit is the one surface, and
+// SettingsSection renders this panel's name and explanation to its left. A
+// heading here would say the section's name twice.
 export function OrgDetailsPanel({
   orgName,
   orgTimezone,
@@ -91,9 +89,7 @@ export function OrgDetailsPanel({
   }
 
   return (
-    <Card className="p-6">
-      <h2 className="text-h2 mb-4">Organization</h2>
-
+    <div>
       {canEdit ? (
         <form
           key={`${orgName}-${orgTimezone}-${currencyFormat}`}
@@ -233,6 +229,6 @@ export function OrgDetailsPanel({
           </AlertDialog>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

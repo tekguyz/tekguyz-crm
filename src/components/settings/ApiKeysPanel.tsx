@@ -20,9 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 
 const initialState: CredentialsFormState = null;
@@ -85,19 +83,9 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <Card className="p-6">
-      <h2 className="text-h2 mb-1 flex items-center gap-1.5">
-        API Keys
-        <HelpTooltip
-          topicId="api-keys"
-          blurb="Bring your own Gemini or Anthropic key. Keys are stored server-side, never shown back to you, and can be removed with Clear."
-        />
-      </h2>
-      <p className="text-caption mb-4 text-ink-muted">
-        Bring your own Gemini and Anthropic keys for AI features. Leaving a field blank keeps
-        the existing key unchanged.
-      </p>
-
+    // No Card, heading, caption or help tooltip of its own — all four moved to
+    // the settings page's SettingsSection with the Split wiring (2026-09-13).
+    <div>
       {!canEdit ? (
         <p className="text-body-md text-ink-muted">Only owners and admins can manage API keys.</p>
       ) : (
@@ -191,6 +179,6 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
           </AlertDialog>
         </>
       )}
-    </Card>
+    </div>
   );
 }

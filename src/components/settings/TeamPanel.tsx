@@ -4,8 +4,9 @@ import { CopyInviteLinkButton } from "@/components/settings/CopyInviteLinkButton
 import { RevokeInviteButton } from "@/components/settings/RevokeInviteButton";
 import { MemberRow } from "@/components/settings/MemberRow";
 import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
 
+// No Card and no heading of its own — the settings page's SettingsSection
+// supplies both. See OrgDetailsPanel.
 export async function TeamPanel({
   orgId,
   canManage,
@@ -26,9 +27,7 @@ export async function TeamPanel({
   ]);
 
   return (
-    <Card className="p-6">
-      <h2 className="text-h2 mb-4">Team</h2>
-
+    <div>
       <div className="mb-6 space-y-2">
         {members.map((member) => (
           <MemberRow
@@ -98,6 +97,6 @@ export async function TeamPanel({
           <InviteMemberForm />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

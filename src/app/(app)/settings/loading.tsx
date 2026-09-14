@@ -1,29 +1,39 @@
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-function PanelSkeleton({ children }: { children: React.ReactNode }) {
+// Same shape as the wired page (Variant Split): one surface, four rows split by
+// hairlines, a heading and explanation on the left of each row's controls.
+// Row contents follow each panel's real shape — form-field rows vs. list rows.
+function RowSkeleton({ children }: { children: React.ReactNode }) {
   return (
-    <Card className="p-6">
-      <Skeleton className="mb-4 h-4 w-32" />
-      {children}
-    </Card>
+    <div className="flex flex-col gap-4 border-b border-hairline px-4 py-6 last:border-b-0 md:flex-row md:gap-8 md:px-6">
+      <div className="space-y-2 md:w-64 md:shrink-0">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
   );
 }
 
-// Three stacked panels, matching OrgDetailsPanel / TeamPanel / ApiKeysPanel's
-// real shapes (form-field rows vs. list rows) rather than one repeated block.
+function FieldRows({ count }: { count: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="h-9 w-full" />
+      ))}
+    </div>
+  );
+}
+
 export default function SettingsLoading() {
   return (
-    <div className="space-y-6">
-      <PanelSkeleton>
-        <div className="space-y-3">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-1/2" />
-        </div>
-      </PanelSkeleton>
-
-      <PanelSkeleton>
+    <Card className="mx-auto w-full max-w-5xl p-0">
+      <RowSkeleton>
+        <FieldRows count={2} />
+      </RowSkeleton>
+      <RowSkeleton>
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-center justify-between">
@@ -32,14 +42,13 @@ export default function SettingsLoading() {
             </div>
           ))}
         </div>
-      </PanelSkeleton>
-
-      <PanelSkeleton>
-        <div className="space-y-3">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-      </PanelSkeleton>
-    </div>
+      </RowSkeleton>
+      <RowSkeleton>
+        <FieldRows count={2} />
+      </RowSkeleton>
+      <RowSkeleton>
+        <FieldRows count={2} />
+      </RowSkeleton>
+    </Card>
   );
 }

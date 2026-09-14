@@ -155,6 +155,11 @@ const ROUTES = [
   // only renders below `lg`. Its meta line is where prompt 3's two rejected
   // drafts collapsed a real field, so this is the one that matters.
   "/pipeline",
+  // The real Settings page, since Variant Split was wired 2026-09-13. The comp
+  // was only ever picked against Org Profile; this is the check that Split's
+  // fixed 16rem explanation column does not squeeze Team's member rows or API
+  // keys' Clear buttons to nothing at 1024px.
+  "/settings",
   "/shell/form/modal?long=1",
   "/shell/form/drawer?long=1",
   "/shell/form/inline?long=1",

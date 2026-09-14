@@ -1,11 +1,15 @@
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getWebhookSecret } from "@/lib/organizations/queries";
 import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
+import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { OrgDetailsPanel } from "@/components/settings/OrgDetailsPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { AccountPanel } from "@/components/settings/AccountPanel";
+import { SettingsSection, SettingsSplit } from "@/components/settings/SettingsSection";
+import { SETTINGS_SECTIONS } from "@/components/settings/sections";
 
+// No <h1> here: the Quiet shell header already renders the page title.
 export default async function SettingsPage() {
   const { orgId, orgName, orgTimezone, currencyFormat, role, userId, userEmail, displayName, notifyNewLead, notifyWeeklyReport } =
     await getCurrentOrg();
@@ -25,28 +29,44 @@ export default async function SettingsPage() {
   const webhookUrl = canManageOrg ? `${appUrl}/api/v1/triage/${orgId}` : null;
 
   return (
-    <div className="space-y-6">
-      <OrgDetailsPanel
-        orgName={orgName}
-        orgTimezone={orgTimezone}
-        currencyFormat={currencyFormat}
-        webhookUrl={webhookUrl}
-        signingSecret={signingSecret}
-        canEdit={canManageOrg}
-      />
-      <TeamPanel
-        orgId={orgId}
-        canManage={canManageOrg}
-        currentUserId={userId}
-        currentUserRole={role}
-      />
-      <ApiKeysPanel canEdit={canManageOrg} />
-      <AccountPanel
-        userEmail={userEmail}
-        displayName={displayName}
-        notifyNewLead={notifyNewLead}
-        notifyWeeklyReport={notifyWeeklyReport}
-      />
-    </div>
+    <SettingsSplit>
+      <SettingsSection {...SETTINGS_SECTIONS.organization}>
+        <OrgDetailsPanel
+          orgName={orgName}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+          webhookUrl={webhookUrl}
+          signingSecret={signingSecret}
+          canEdit={canManageOrg}
+        />
+      </SettingsSection>
+      <SettingsSection {...SETTINGS_SECTIONS.team}>
+        <TeamPanel
+          orgId={orgId}
+          canManage={canManageOrg}
+          currentUserId={userId}
+          currentUserRole={role}
+        />
+      </SettingsSection>
+      <SettingsSection
+        {...SETTINGS_SECTIONS.apiKeys}
+        help={
+          <HelpTooltip
+            topicId="api-keys"
+            blurb="Bring your own Gemini or Anthropic key. Keys are stored server-side, never shown back to you, and can be removed with Clear."
+          />
+        }
+      >
+        <ApiKeysPanel canEdit={canManageOrg} />
+      </SettingsSection>
+      <SettingsSection {...SETTINGS_SECTIONS.account}>
+        <AccountPanel
+          userEmail={userEmail}
+          displayName={displayName}
+          notifyNewLead={notifyNewLead}
+          notifyWeeklyReport={notifyWeeklyReport}
+        />
+      </SettingsSection>
+    </SettingsSplit>
   );
 }

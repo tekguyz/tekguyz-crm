@@ -10,7 +10,6 @@ import {
   type AccountFormState,
 } from "@/lib/account/actions";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 
@@ -59,9 +58,9 @@ export function AccountPanel({
   // onClick only ever fires for a real pointer or keyboard interaction.
 
   return (
-    <Card className="p-6">
-      <h2 className="text-h2 mb-4">Account</h2>
-
+    // No Card and no heading of its own — the settings page's SettingsSection
+    // supplies both. See OrgDetailsPanel.
+    <div>
       <div className="space-y-2">
         <p className="text-label text-ink-muted">Email</p>
         <p className="text-body-md text-ink-main">{userEmail}</p>
@@ -152,6 +151,6 @@ export function AccountPanel({
           {prefsIsPending ? "Saving…" : "Save preferences"}
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }

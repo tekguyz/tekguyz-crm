@@ -138,3 +138,4 @@ repo matches a title in this column.
 | 2026-09-12 — Shell/IA Stage 2: the lead read panel and edit drawer, wired at one width | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-13 — Shell/IA Stage 2: the Quiet shell wired, and the read panel's way into the edit drawer | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-13 — Shell/IA Stage 2: the pipeline card wired, one field block, and a row for the status select | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-13 — Shell/IA Stage 2: Settings wired, Variant Split, and the pass closes | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
