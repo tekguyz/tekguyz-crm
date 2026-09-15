@@ -58,8 +58,13 @@ sessions had no home this repo's tooling reads.
 Previously informal, formalised here 2026-08-27. Order is intent, not a
 commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
 
-- **P1 — Login/landing redesign.** *Partially shipped 2026-09-04, narrowed
-  2026-09-05.* The public entry route now exists as `/demo`, a read-only demo
+- **P1 — Login/landing redesign.** *Closed 2026-09-15.* Partially shipped
+  2026-09-04 and narrowed 2026-09-05; its last open piece, the redesigned
+  `/login`, shipped 2026-09-15 as Variant Split (`docs/addenda/2026-09.md`
+  § 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that
+  remounts the page). Nothing in this item is open now; the three deferred
+  pieces below stay recorded here as decisions with their own revisit
+  triggers. The public entry route now exists as `/demo`, a read-only demo
   identity linked from tekguyz.com — that closes the "no genuinely public
   route" half of this item. `/login` now also carries its own **View demo**
   link, so a visitor arriving at the production URL directly is no longer stuck
@@ -85,8 +90,6 @@ commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
   - **Onboarding** — *deferred* (2026-09-05). The `/onboarding` route exists
     and was never designed. Deferred until an actual invite is imminent, so it
     is designed against a real first user rather than an imagined one.
-
-  **Still open and unspecced:** the redesigned `/login` itself.
 - **P5 — Lead enrichment** via an append-only `lead_enrichments` table, with a
   mandatory human-apply step.
 - **P6 — PWA** with push notifications only; offline explicitly declined.

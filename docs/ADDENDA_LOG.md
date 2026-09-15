@@ -149,3 +149,4 @@ repo matches a title in this column.
 | 2026-09-14 — `/prospects` column resize and reorder, session-only | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-08 — The Avatar primitive, and the second copy that was deleted | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-15 — `/login` redesign Stage 1: three comps, and Split picked | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that remounts the page | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

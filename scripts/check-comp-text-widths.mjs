@@ -186,6 +186,35 @@ const ROUTES = [
   "/shell/login/masthead?long=1",
 ];
 
+// THE REAL /login, wired from Variant Split on 2026-09-15. Measured SIGNED
+// OUT, before the dev-login below, because the middleware sends a signed-in
+// visitor from /login to / and the check would then measure the dashboard.
+// There is no `?long=1` on a production page: the long banner is a real
+// `?error=` string, and the long address is typed into the real controlled
+// field the way a person would, so the measurement also proves it held.
+const LONG_LOGIN_ERROR =
+  "Email not confirmed. Open the confirmation link sent to operations.coordinator@northwood-facilities-management-group.example before you sign in.";
+const TYPE_LONG_EMAIL = `(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const value = "operations.coordinator@northwood-facilities-management-group.example";
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+  for (let i = 0; i < 60; i += 1) {
+    const field = document.querySelector('input[name="email"]');
+    if (field) {
+      setter.call(field, value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      await sleep(250);
+      if (field.value === value) return "ok";
+    }
+    await sleep(250);
+  }
+  return "email never held the typed value";
+})()`;
+
+const SIGNED_OUT_ROUTES = [
+  { path: `/login?error=${encodeURIComponent(LONG_LOGIN_ERROR)}`, label: "real /login, long values", open: TYPE_LONG_EMAIL },
+];
+
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -340,6 +369,51 @@ function connect(wsUrl) {
   };
 }
 
+// Opens the route's overlay if it has one, optionally screenshots, runs the
+// probe, prints, and returns the number of failures it counted.
+async function measure(cdp, viewport, name, { label, open, route = name }) {
+  if (open) {
+    const opened = await cdp.send("Runtime.evaluate", {
+      expression: open,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (opened.result.value !== "ok") {
+      console.log(
+        `  FAIL ${viewport.width}x${viewport.height} ${name} — could not open it: ${opened.result.value}`,
+      );
+      return 1;
+    }
+  }
+
+  if (SHOT_DIR) {
+    const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
+    const file = `${SHOT_DIR}/${viewport.width}-${route.slice(0, 60).replace(/[^a-z0-9]+/gi, "_")}${
+      open && label ? `-${label.replace(/[^a-z0-9]+/gi, "_")}` : ""
+    }.png`;
+    writeFileSync(file, Buffer.from(shot.data, "base64"));
+    console.log(`  shot ${file}`);
+  }
+
+  const evaluated = await cdp.send("Runtime.evaluate", {
+    expression: PROBE,
+    returnByValue: true,
+  });
+  const { probed, findings } = evaluated.result.value;
+  const line = `${viewport.width}x${viewport.height} ${label && !name.includes(label) ? `${name} (${label})` : name}`;
+
+  if (findings.length === 0) {
+    console.log(`  ok   ${line} — ${probed} text boxes, none under ${MIN_WIDTH_PX}px`);
+    return 0;
+  }
+  console.log(`  FAIL ${line} — ${findings.length} of ${probed} text boxes under ${MIN_WIDTH_PX}px`);
+  for (const finding of findings) {
+    console.log(`         ${finding.width}px  <${finding.tag}> "${finding.text}"`);
+    if (finding.className) console.log(`                 class="${finding.className}"`);
+  }
+  return findings.length;
+}
+
 async function main() {
   const chrome = findChrome();
   if (!chrome) {
@@ -384,6 +458,32 @@ async function main() {
     await cdp.ready;
     await cdp.send("Page.enable");
     await cdp.send("Runtime.enable");
+    await cdp.send("Network.enable");
+
+    // The user-data-dir persists between runs, so a previous run's session
+    // cookie would bounce /login to /. Start from no cookies at all.
+    await cdp.send("Network.clearBrowserCookies");
+    for (const viewport of VIEWPORTS) {
+      await cdp.send("Emulation.setDeviceMetricsOverride", {
+        width: viewport.width,
+        height: viewport.height,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      for (const entry of SIGNED_OUT_ROUTES) {
+        const done = cdp.once("Page.loadEventFired");
+        await cdp.send("Page.navigate", { url: `${BASE}${entry.path}` });
+        await done;
+        await delay(600);
+        const at = await cdp.send("Runtime.evaluate", { expression: "location.pathname", returnByValue: true });
+        if (at.result.value !== "/login") {
+          failures += 1;
+          console.log(`  FAIL ${viewport.width}x${viewport.height} ${entry.label} — landed on ${at.result.value}`);
+          continue;
+        }
+        failures += await measure(cdp, viewport, "/login?error=<long>", { ...entry, route: "/login" });
+      }
+    }
 
     // A real sign-in first, so the comp routes are reachable at all. Without
     // it every navigation below lands on /login and the check would pass by
@@ -423,47 +523,7 @@ async function main() {
         // Two frames plus a beat is enough and is cheap.
         await delay(600);
 
-        if (opener) {
-          const opened = await cdp.send("Runtime.evaluate", {
-            expression: opener,
-            awaitPromise: true,
-            returnByValue: true,
-          });
-          if (opened.result.value !== "ok") {
-            failures += 1;
-            console.log(
-              `  FAIL ${viewport.width}x${viewport.height} ${name} — could not open it: ${opened.result.value}`,
-            );
-            continue;
-          }
-        }
-
-        if (SHOT_DIR) {
-          const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
-          const file = `${SHOT_DIR}/${viewport.width}-${route.replace(/[^a-z0-9]+/gi, "_")}${
-            opener ? `-${(typeof entry === "string" ? "" : entry.label).replace(/[^a-z0-9]+/gi, "_")}` : ""
-          }.png`;
-          writeFileSync(file, Buffer.from(shot.data, "base64"));
-          console.log(`  shot ${file}`);
-        }
-
-        const evaluated = await cdp.send("Runtime.evaluate", {
-          expression: PROBE,
-          returnByValue: true,
-        });
-        const { probed, findings } = evaluated.result.value;
-        const label = `${viewport.width}x${viewport.height} ${name}`;
-
-        if (findings.length === 0) {
-          console.log(`  ok   ${label} — ${probed} text boxes, none under ${MIN_WIDTH_PX}px`);
-        } else {
-          failures += findings.length;
-          console.log(`  FAIL ${label} — ${findings.length} of ${probed} text boxes under ${MIN_WIDTH_PX}px`);
-          for (const finding of findings) {
-            console.log(`         ${finding.width}px  <${finding.tag}> "${finding.text}"`);
-            if (finding.className) console.log(`                 class="${finding.className}"`);
-          }
-        }
+        failures += await measure(cdp, viewport, name, { label: opener ? entry.label : "", open: opener, route });
       }
     }
   } finally {
