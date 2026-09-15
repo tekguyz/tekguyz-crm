@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 
@@ -42,7 +43,7 @@ export async function createInvite(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: await demoAwareMessage(error, error.message) };
   }
 
   revalidatePath("/settings");
@@ -71,7 +72,7 @@ export async function acceptInvite(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: await demoAwareMessage(error, error.message) };
   }
 
   redirect("/");

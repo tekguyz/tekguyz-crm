@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DEMO_READ_ONLY_BODY, DEMO_READ_ONLY_TITLE } from "@/lib/demo/read-only-refusal";
 
 // What an error boundary shows instead of "Something went wrong" when the
 // thrown error is a refused write in the public demo (isDemoReadOnlyRefusal).
@@ -19,11 +20,8 @@ import { Card } from "@/components/ui/Card";
 export function DemoReadOnlyNotice({ reset }: { reset: () => void }) {
   return (
     <Card className="w-full max-w-sm p-6 text-center">
-      <p className="text-base font-semibold">This demo is read-only</p>
-      <p className="mt-2 text-sm text-ink-muted">
-        You can look around, but changes are not saved here. Nothing is broken — that change was
-        blocked on purpose.
-      </p>
+      <p className="text-base font-semibold">{DEMO_READ_ONLY_TITLE}</p>
+      <p className="mt-2 text-sm text-ink-muted">{DEMO_READ_ONLY_BODY}</p>
       <div className="mt-6 flex flex-col gap-2">
         <Button type="button" variant="secondary" onClick={reset} className="w-full">
           Back to the demo

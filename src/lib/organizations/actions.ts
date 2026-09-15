@@ -2,6 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
@@ -54,7 +55,7 @@ export async function updateOrgSettings(
       error:
         error.code === "PGRST116"
           ? "Couldn't save those settings — only owners and admins can update the organization."
-          : error.message,
+          : await demoAwareMessage(error, error.message),
     };
   }
 
@@ -99,7 +100,12 @@ export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> 
     .single();
 
   if (error) {
-    return { error: "Failed to rotate the webhook secret — no organization row was updated." };
+    return {
+      error: await demoAwareMessage(
+        error,
+        "Failed to rotate the webhook secret — no organization row was updated.",
+      ),
+    };
   }
 
   revalidatePath("/", "layout");

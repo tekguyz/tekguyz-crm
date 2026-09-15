@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
-import { teamErrorMessage } from "@/lib/organizations/team-errors";
+import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
+import { TEAM_FALLBACK_MESSAGE, teamErrorMessage } from "@/lib/organizations/team-errors";
 
 // Client-callable boundary for the two team-management RPCs.
 //
@@ -48,7 +49,7 @@ export async function changeMemberRole(
     // outside the enumerated set is a bug, and this console line is where it
     // gets found.
     console.error("[changeMemberRole]", error);
-    return { error: teamErrorMessage(error) };
+    return { error: await teamActionMessage(error) };
   }
 
   revalidatePath("/settings");
@@ -66,7 +67,7 @@ export async function removeMember(targetUserId: string): Promise<TeamActionResu
 
   if (error) {
     console.error("[removeMember]", error);
-    return { error: teamErrorMessage(error) };
+    return { error: await teamActionMessage(error) };
   }
 
   revalidatePath("/settings");
@@ -78,4 +79,13 @@ export async function removeMember(targetUserId: string): Promise<TeamActionResu
   // instead, once it has shown the outcome. getCurrentOrg() then finds no
   // membership and sends the user to /onboarding on its own.
   return userId === targetUserId ? { leftOrganization: true } : null;
+}
+
+// A TEAM_* sentinel keeps its own explanation, even in the demo tenant — those
+// RAISEs use 42501 too. Only an error teamErrorMessage does not recognise (the
+// demo_readonly role's "permission denied for function") can become the demo
+// read-only message.
+async function teamActionMessage(error: unknown): Promise<string> {
+  const translated = teamErrorMessage(error);
+  return translated === TEAM_FALLBACK_MESSAGE ? demoAwareMessage(error, translated) : translated;
 }

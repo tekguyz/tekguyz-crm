@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { demoAwareError } from "@/lib/demo/demo-aware-error";
+import { demoAwareError, demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import {
   getTasksForLead,
@@ -95,7 +95,7 @@ export async function createTask(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: await demoAwareMessage(error, error.message) };
   }
 
   revalidatePath("/", "layout");
@@ -206,7 +206,7 @@ export async function updateTask(
     .single();
 
   if (error) {
-    return { error: error.message };
+    return { error: await demoAwareMessage(error, error.message) };
   }
 
   revalidatePath("/", "layout");

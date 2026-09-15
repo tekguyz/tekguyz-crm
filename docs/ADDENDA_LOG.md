@@ -144,3 +144,4 @@ repo matches a title in this column.
 | 2026-09-14 — The demo explains a refused write | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — Per-route loading skeletons for the two importers | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — Prospect promotion becomes one transaction | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-14 — The demo explains a refused write inside a form | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

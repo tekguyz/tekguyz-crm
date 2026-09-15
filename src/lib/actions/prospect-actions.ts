@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { isOperatorStatus } from "@/lib/prospects/statuses";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import {
@@ -48,7 +49,7 @@ export async function setProspectStatus(
     .eq("id", prospectId)
     .is("promoted_lead_id", null);
 
-  if (error) return { error: error.message };
+  if (error) return { error: await demoAwareMessage(error, error.message) };
 
   revalidatePath("/prospects");
   return null;
@@ -68,7 +69,7 @@ export async function setProspectNotes(
     .update({ notes: trimmed || null })
     .eq("id", prospectId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: await demoAwareMessage(error, error.message) };
 
   revalidatePath("/prospects");
   return null;
@@ -88,7 +89,7 @@ export async function setProspectArchived(
     .update({ archived })
     .eq("id", prospectId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: await demoAwareMessage(error, error.message) };
 
   revalidatePath("/prospects");
   return null;

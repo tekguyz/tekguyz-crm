@@ -16,6 +16,14 @@
 // known. Neither fact alone is enough — see demo-aware-error.ts.
 export const DEMO_READ_ONLY_DIGEST = "TEKGUYZ_DEMO_READ_ONLY";
 
+// The copy, shared by the boundary card (DemoReadOnlyNotice) and by every
+// action that returns its error inline into a form (demoAwareMessage), so the
+// two ways a refusal can surface can never say different things.
+export const DEMO_READ_ONLY_TITLE = "This demo is read-only";
+export const DEMO_READ_ONLY_BODY =
+  "You can look around, but changes are not saved here. Nothing is broken — that change was blocked on purpose.";
+export const DEMO_READ_ONLY_MESSAGE = `${DEMO_READ_ONLY_TITLE}. ${DEMO_READ_ONLY_BODY}`;
+
 export function isDemoReadOnlyRefusal(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   return (error as { digest?: unknown }).digest === DEMO_READ_ONLY_DIGEST;

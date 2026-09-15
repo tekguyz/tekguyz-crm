@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { demoAwareError } from "@/lib/demo/demo-aware-error";
+import { demoAwareError, demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts, getLeadById, type ContactLead, type Lead } from "@/lib/leads/queries";
 import {
@@ -74,7 +74,7 @@ export async function createLead(
   });
 
   if (!result.ok) {
-    return { error: result.error.message };
+    return { error: await demoAwareMessage(result.error, result.error.message) };
   }
 
   revalidatePath("/", "layout");
@@ -178,17 +178,20 @@ export async function updateLead(
   // opening and the save landing — rare, but the raw "LEAD_ASSIGNEE_NOT_MEMBER:"
   // string is not something a user should ever read.
   if (error) {
-    return { error: translateLeadWriteError(error) };
+    return { error: await translateLeadWriteError(error) };
   }
 
   revalidatePath("/", "layout");
   return null;
 }
 
-function translateLeadWriteError(error: { message: string }): string {
+// The two trigger sentinels are matched first, so a deliberate RAISE keeps its
+// own explanation even inside the demo tenant; only an unrecognised error can
+// become the demo read-only message.
+async function translateLeadWriteError(error: { message: string }): Promise<string> {
   if (isLeadRoleDenied(error)) return LEAD_ROLE_DENIED_MESSAGE;
   if (isLeadAssigneeNotMember(error)) return LEAD_ASSIGNEE_NOT_MEMBER_MESSAGE;
-  return error.message;
+  return demoAwareMessage(error, error.message);
 }
 
 const VALID_STATUSES = new Set(["NEW", "DISCOVERY", "QUOTED", "ACTIVE"]);

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEMO_READ_ONLY_DIGEST, isDemoReadOnlyRefusal } from "@/lib/demo/read-only-refusal";
+import {
+  DEMO_READ_ONLY_DIGEST,
+  DEMO_READ_ONLY_MESSAGE,
+  isDemoReadOnlyRefusal,
+} from "@/lib/demo/read-only-refusal";
 
 // The scoping rule under test: a refusal is re-labelled as "the demo is
 // read-only" only when BOTH hold — Postgres said 42501 AND the tenant is the
@@ -58,6 +62,47 @@ describe("demoAwareError", () => {
     expect(isDemoReadOnlyRefusal(thrown)).toBe(false);
     // Not a 42501, so the tenant is never even looked up.
     expect(getCurrentOrg).not.toHaveBeenCalled();
+  });
+});
+
+// The return-path twin. Actions that hand their error back into a form never
+// reach a boundary, so the same decision has to produce a message instead of a
+// digest. Same two conditions, same pass-through for everything else.
+describe("demoAwareMessage", () => {
+  beforeEach(() => {
+    getCurrentOrg.mockReset();
+  });
+
+  it("replaces the message for a 42501 in the demo tenant", async () => {
+    getCurrentOrg.mockResolvedValue({ isDemo: true });
+    const { demoAwareMessage } = await load();
+
+    const message = await demoAwareMessage(REFUSAL, REFUSAL.message);
+
+    expect(message).toBe(DEMO_READ_ONLY_MESSAGE);
+    expect(message).not.toContain("permission denied");
+  });
+
+  it("keeps the real message for a 42501 in a real tenant", async () => {
+    getCurrentOrg.mockResolvedValue({ isDemo: false });
+    const { demoAwareMessage } = await load();
+
+    expect(await demoAwareMessage(REFUSAL, REFUSAL.message)).toBe(REFUSAL.message);
+  });
+
+  it("keeps the real message for any other error in the demo tenant", async () => {
+    getCurrentOrg.mockResolvedValue({ isDemo: true });
+    const { demoAwareMessage } = await load();
+    const other = { code: "23505", message: "duplicate key value", details: null, hint: null };
+
+    expect(await demoAwareMessage(other, other.message)).toBe(other.message);
+    expect(getCurrentOrg).not.toHaveBeenCalled();
+  });
+
+  it("keeps a caller's own translated message when there is no refusal", async () => {
+    const { demoAwareMessage } = await load();
+
+    expect(await demoAwareMessage(null, "Something went wrong.")).toBe("Something went wrong.");
   });
 });
 

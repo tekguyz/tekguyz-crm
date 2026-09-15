@@ -1,5 +1,6 @@
 "use server";
 
+import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
@@ -83,7 +84,7 @@ export async function saveOrganizationCredentials(
     });
 
     if (error) {
-      return { error: error.message };
+      return { error: await demoAwareMessage(error, error.message) };
     }
   }
 
@@ -126,7 +127,7 @@ export async function clearOrganizationCredential(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: await demoAwareMessage(error, error.message) };
   }
 
   return null;
