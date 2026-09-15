@@ -13,6 +13,9 @@ import {
   resolvePeriodRange,
 } from "@/lib/reports/periods";
 import { timezoneLabel } from "@/lib/organizations/org-options";
+import { formatPercent } from "@/lib/reports/percent";
+import { Button } from "@/components/ui/Button";
+import { IconDownload } from "@tabler/icons-react";
 
 // Read-only, whole-tenant. No role gate: every MEMBER already sees every lead
 // in the org (see CLAUDE.md § Multi-Tenant Security Model), so an aggregate of
@@ -52,13 +55,29 @@ export default async function ReportsPage({
         </p>
       </div>
 
-      <FilterTabs
-        tabs={REPORT_PERIODS.map((value) => ({
-          label: REPORT_PERIOD_LABELS[value],
-          href: value === "all" ? "/reports" : `/reports?period=${value}`,
-          active: value === period,
-        }))}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterTabs
+          tabs={REPORT_PERIODS.map((value) => ({
+            label: REPORT_PERIOD_LABELS[value],
+            href: value === "all" ? "/reports" : `/reports?period=${value}`,
+            active: value === period,
+          }))}
+        />
+
+        {/* A plain <a>, not a Link, for the same reason as the Contacts export:
+            it navigates to a file. Unlike that export, this one DOES follow the
+            active period — it is the figures on this screen, so the period the
+            reader chose is the period the file holds. */}
+        <Button asChild size="sm" variant="secondary" className="ml-auto">
+          <a
+            href={period === "all" ? "/api/reports/export" : `/api/reports/export?period=${period}`}
+            download
+          >
+            <IconDownload size={16} stroke={1.5} aria-hidden="true" />
+            Export CSV
+          </a>
+        </Button>
+      </div>
 
       {hasAnyLeads ? (
         <>
@@ -75,7 +94,7 @@ export default async function ReportsPage({
             />
             <Figure
               label="Win rate"
-              value={report.winRate === null ? "—" : `${Math.round(report.winRate * 100)}%`}
+              value={report.winRate === null ? "—" : formatPercent(report.winRate)}
               note={
                 report.winRate === null
                   ? "No leads decided yet"

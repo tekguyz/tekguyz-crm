@@ -21,7 +21,7 @@ export const LEAD_EXPORT_COLUMNS: string[] = LEAD_COLUMNS.split(",").map((c) => 
 // through the public webhook becomes a live formula the moment an operator
 // opens the file in Excel or Sheets. The values here are attacker-supplied by
 // definition, so this is not optional.
-function escapeCsvValue(value: unknown): string {
+export function escapeCsvValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   let text = typeof value === "boolean" ? String(value) : String(value);
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;

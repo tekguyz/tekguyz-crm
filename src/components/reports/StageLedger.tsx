@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/format";
+import { formatPercent } from "@/lib/reports/percent";
 import type { StageRow } from "@/lib/leads/report-queries";
 import { Badge } from "@/components/ui/Badge";
 import { STATUS_TONE } from "@/lib/leads/status-tone";
@@ -75,11 +76,11 @@ export function StageLedger({
                   >
                     <div
                       className={`h-1 rounded-full ${BAR_COLOR[stage.status] ?? "bg-ink-muted"}`}
-                      style={{ width: `${Math.round(stage.share * 100)}%` }}
+                      style={{ width: formatPercent(stage.share) }}
                     />
                   </div>
                   <span className="text-body-sm w-10 shrink-0 text-right tabular-nums text-ink-muted">
-                    {Math.round(stage.share * 100)}%
+                    {formatPercent(stage.share)}
                   </span>
                 </div>
               </TableCell>
