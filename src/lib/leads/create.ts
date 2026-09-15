@@ -5,11 +5,12 @@ import { recordLeadSubmission } from "@/lib/submissions/record";
 // THE one write path that creates a lead from inside the app.
 //
 // Lifted verbatim out of createLead() in @/lib/leads/actions.ts on 2026-08-26,
-// when prospect promotion became a second in-app origin for a lead. It is a
-// plain library function rather than a Server Action so both callers can use
-// it: createLead needs a LeadFormState back, promoteProspect needs the new
-// lead's id, and a Server Action cannot serve both without one of them
-// pretending to be a form submission.
+// when prospect promotion became a second in-app origin for a lead. Since
+// 2026-09-14 promoteProspect no longer calls it: promotion writes the lead, its
+// submission and the prospect claim in ONE transaction inside the
+// public.promote_prospect RPC, which mirrors this function's two inserts in SQL.
+// A change to what a lead or submission row carries here must be made there
+// too.
 //
 // Splitting it out is what keeps "every lead carries at least one submission
 // from day one" a property of a module instead of a convention two call sites
@@ -36,10 +37,10 @@ export type NewLeadInput = {
   leadSource?: string | null;
   serviceCategory?: string | null;
   estimatedRevenue?: number;
-  // Only prospect promotion has anything to say here — the operator's call
-  // notes, which ARE a real thing somebody said. createLead passes nothing and
-  // stores NULL, because its form has no message field and inventing one would
-  // be a fake record of an enquiry that never happened.
+  // createLead passes nothing and stores NULL, because its form has no message
+  // field and inventing one would be a fake record of an enquiry that never
+  // happened. (Prospect promotion, the one origin with real call notes, now
+  // writes its message through the promote_prospect RPC instead.)
   message?: string | null;
 };
 

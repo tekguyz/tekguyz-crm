@@ -667,6 +667,7 @@ Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`n
 | `private.caller_role_in_org` (2026-08-18) | n/a — reads `auth.uid()` for the `p_org_id` it is given and returns a role or NULL; it makes no decision. **No grant to any client role at all**, and it lives in `private`, so it is reachable only from the two functions below, which run as their owner. |
 | `change_member_role` (2026-08-18) | ✅ raises on NULL `auth.uid()`; re-resolves the caller's own role for `p_org_id` and requires OWNER/ADMIN; then enforces ADMIN-cannot-manage-an-OWNER, ADMIN-cannot-grant-OWNER, and the last-OWNER invariant. Locks the org's membership rows before counting owners, so the invariant is not a race. |
 | `remove_organization_member` (2026-08-18) | ✅ raises on NULL `auth.uid()`; requires the caller to be OWNER/ADMIN **or** to be the target (self-removal is the one MEMBER-permitted write); then ADMIN-cannot-remove-an-OWNER and the last-OWNER invariant. Same lock-before-count. Releases the leaver's `leads.assigned_to` in the same transaction as the delete. |
+| `promote_prospect` (2026-09-14) | ✅ raises on NULL `auth.uid()`; raises unless the caller has an `organization_members` row for `p_org_id`; locks the prospect `FOR UPDATE` scoped to that org, then writes the lead, its submission and the guarded claim in one transaction. See § `promote_prospect` RPC (2026-09-14) at the end of this file. |
 
 `import_leads_chunk`'s check is **membership, not role** — `leads` INSERT keeps full MEMBER parity by design, so any member of the org may import. `search_path` is pinned to `''` (verified live: `proconfig = {search_path=""}`), `EXECUTE` is revoked from `PUBLIC`/`anon` and granted to `authenticated` only (verified live: `proacl` is `postgres=X | service_role=X | authenticated=X`, with no `anon` entry and no `=X/` PUBLIC grant). Because `SECURITY DEFINER` bypasses RLS, that internal membership check — not the `"Members create tenant leads"` policy — is the tenant boundary on this one path. Proven live: a signed-in member of a different org calling it with TEKGUYZ Demo's `organization_id` gets `IMPORT_NOT_AUTHORIZED: caller is not a member of the requested organization.` and writes zero rows.
 
@@ -1024,3 +1025,43 @@ break the demo** — it would silently stop applying to this role.
 tenant. Read by `/api/cron/weekly-report`'s org sweep and by
 `src/lib/demo/is-demo-org.ts`. **Not part of `LEAD_COLUMNS` and read by no lead
 query.**
+
+---
+
+## `promote_prospect` RPC (2026-09-14)
+
+`supabase/migrations/20260914120000_promote_prospect_rpc.sql`, applied by the
+human per the standing DDL rule. Adds one function and nothing else — no table,
+column, index, trigger or policy. Every RLS policy on `leads`, `prospects` and
+`lead_submissions` is unchanged.
+
+```sql
+-- Abbreviated; full body with its reasoning comments is in the migration file.
+CREATE OR REPLACE FUNCTION public.promote_prospect(
+    p_org_id UUID, p_prospect_id UUID, p_client_name TEXT, p_email TEXT,
+    p_phone TEXT DEFAULT NULL, p_company TEXT DEFAULT NULL, p_website TEXT DEFAULT NULL,
+    p_physical_address TEXT DEFAULT NULL, p_service_category TEXT DEFAULT NULL,
+    p_lead_source TEXT DEFAULT NULL, p_estimated_revenue NUMERIC DEFAULT 0,
+    p_message TEXT DEFAULT NULL)
+RETURNS TABLE (outcome TEXT, promoted_lead UUID)   -- 'PROMOTED' | 'ALREADY_PROMOTED'
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+-- 1. auth.uid() NULL                       -> 42501 PROMOTE_NOT_AUTHORIZED
+-- 2. no organization_members row for p_org_id -> 42501 PROMOTE_NOT_AUTHORIZED
+-- 3. SELECT … FROM prospects WHERE id = p_prospect_id AND organization_id = p_org_id FOR UPDATE
+--    not found -> P0002; promoted_lead_id NOT NULL -> return ALREADY_PROMOTED
+-- 4. INSERT leads; INSERT lead_submissions (record.ts toRow() shape, raw_payload NULL)
+-- 5. UPDATE prospects SET status='CONVERTED', promoted_lead_id=<lead>
+--      WHERE id=… AND organization_id=p_org_id AND promoted_lead_id IS NULL
+--    row_count <> 1 -> 40001 raise (rolls back step 4)
+REVOKE ALL ON FUNCTION public.promote_prospect(…) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.promote_prospect(…) TO authenticated;
+```
+
+**Self-check inside the body:** ✅ raises on NULL `auth.uid()`; raises unless the
+caller has an `organization_members` row for `p_org_id` (membership, not role);
+every read and write is scoped to that org id, so another tenant's prospect id
+reads as not found. `SECURITY DEFINER` bypasses RLS, so that check is the tenant
+boundary on this path. Verified live: `anon` EXECUTE false, `authenticated`
+true, `demo_readonly` false, `proconfig = {search_path=""}`. Proven by
+`src/lib/prospects/promote-prospect-rpc.rls.test.ts`. Narrative:
+`docs/ADDENDA_LOG.md` § 2026-09-14 — Prospect promotion becomes one transaction.

@@ -2,21 +2,26 @@
 
 import { revalidatePath } from "next/cache";
 
-import { insertLeadWithSubmission, isEmailCollision } from "@/lib/leads/create";
+import { isEmailCollision } from "@/lib/leads/create";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { buildPromotePayload } from "@/lib/prospects/promote-payload";
 import { createClient } from "@/lib/supabase/server";
 
 // Promote a prospect into a real lead.
 //
-// A NEW file. Nothing in src/lib/actions/ was edited to add it.
+// ONE database call. The leads INSERT, its paired lead_submissions row and the
+// guarded prospect claim all happen inside public.promote_prospect
+// (supabase/migrations/20260914120000_promote_prospect_rpc.sql), which runs
+// them as a single transaction with the prospect row locked FOR UPDATE first.
 //
-// THE WRITE PATH IS NOT REIMPLEMENTED HERE. The leads INSERT and its paired
-// lead_submissions row both happen inside insertLeadWithSubmission
-// (@/lib/leads/create.ts) — the exact function createLead calls. There is no
-// second lead-insertion path, no second submission-recording path, and no
-// second place that has to remember RLS write handling. That was the single
-// non-negotiable of this unit.
+// Until 2026-09-14 this action did those writes as separate round trips, so a
+// concurrent promotion winning the race between the lead insert and the claim
+// left a real, unreferenced lead behind. That path no longer exists: either all
+// three rows commit, or none do, and a second promotion of the same prospect
+// gets ALREADY_PROMOTED without inserting anything.
+//
+// The RPC re-checks the caller's membership for orgId itself, because SECURITY
+// DEFINER bypasses RLS. orgId still comes from getCurrentOrg(), never the form.
 
 export type PromoteState =
   | null
@@ -25,9 +30,14 @@ export type PromoteState =
       ok: false;
       error: string;
       // Set when the failure is something the operator can go look at: the lead
-      // that already owns this email, or the lead a concurrent promotion made.
+      // that already owns this email, or the lead an earlier promotion made.
       existingLeadId?: string;
     };
+
+type PromoteRow = { outcome: "PROMOTED" | "ALREADY_PROMOTED"; promoted_lead: string };
+
+// The RPC's "prospect not found, or not in your org" SQLSTATE.
+const NOT_FOUND = "P0002";
 
 export async function promoteProspect(
   _prevState: PromoteState,
@@ -42,37 +52,25 @@ export async function promoteProspect(
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 
-  // Cheap pre-check, purely so the common double-click gets a clean message
-  // without creating a lead first. It is NOT the guard — the guarded UPDATE
-  // below is. Reading promoted_lead_id, never status: status is a label an
-  // operator can set by hand and cannot carry the lead's identity.
-  const { data: prospect, error: lookupError } = await supabase
-    .from("prospects")
-    .select("id, promoted_lead_id")
-    .eq("id", prospectId)
-    .maybeSingle();
+  const { data, error } = await supabase
+    .rpc("promote_prospect", {
+      p_org_id: orgId,
+      p_prospect_id: prospectId,
+      p_client_name: lead.clientName,
+      p_email: lead.email,
+      p_phone: lead.phone ?? null,
+      p_company: lead.company ?? null,
+      p_website: lead.website ?? null,
+      p_physical_address: lead.physicalAddress ?? null,
+      p_service_category: lead.serviceCategory ?? null,
+      p_lead_source: lead.leadSource ?? null,
+      p_estimated_revenue: lead.estimatedRevenue ?? 0,
+      p_message: lead.message ?? null,
+    })
+    .single<PromoteRow>();
 
-  if (lookupError) {
-    return { ok: false, error: lookupError.message };
-  }
-  // RLS turns a cross-tenant id into zero rows rather than an error, so "not
-  // found" and "not yours" are the same answer here, which is the correct
-  // amount to reveal.
-  if (!prospect) {
-    return { ok: false, error: "That prospect no longer exists." };
-  }
-  if (prospect.promoted_lead_id) {
-    return {
-      ok: false,
-      error: "This prospect has already been promoted.",
-      existingLeadId: prospect.promoted_lead_id as string,
-    };
-  }
-
-  const created = await insertLeadWithSubmission(supabase, orgId, lead);
-
-  if (!created.ok) {
-    if (isEmailCollision(created.error)) {
+  if (error) {
+    if (isEmailCollision(error)) {
       const existingLeadId = await findLeadIdByEmail(supabase, orgId, lead.email);
       return {
         ok: false,
@@ -80,54 +78,27 @@ export async function promoteProspect(
         existingLeadId: existingLeadId ?? undefined,
       };
     }
-    return { ok: false, error: created.error.message };
+    // Another tenant's prospect id and a prospect that is gone are the same
+    // answer, which is the correct amount to reveal.
+    if (error.code === NOT_FOUND) {
+      return { ok: false, error: "That prospect no longer exists." };
+    }
+    return { ok: false, error: error.message };
   }
 
-  // THE guard, and the atomic write, in one statement.
-  //
-  // One statement is one transaction, so status and promoted_lead_id can never
-  // disagree. `.is("promoted_lead_id", null)` is what makes promoting twice
-  // impossible: a second promotion matches zero rows instead of overwriting the
-  // first one's lead id. This is the only place status becomes 'CONVERTED'.
-  const { data: claimed, error: claimError } = await supabase
-    .from("prospects")
-    .update({ status: "CONVERTED", promoted_lead_id: created.leadId })
-    .eq("id", prospectId)
-    .is("promoted_lead_id", null)
-    .select("id, promoted_lead_id");
-
-  if (claimError) {
-    return { ok: false, error: claimError.message };
-  }
-
-  // Zero rows affected. Another promotion of the same prospect won the race
-  // between the pre-check above and this statement. The lead we just created is
-  // real and is now orphaned, so it is named rather than hidden — silently
-  // succeeding would leave a duplicate lead nobody knows about, and a generic
-  // throw would leave the operator with no idea which lead is the good one.
-  if (!claimed || claimed.length === 0) {
-    const { data: winner } = await supabase
-      .from("prospects")
-      .select("promoted_lead_id")
-      .eq("id", prospectId)
-      .maybeSingle();
-
-    console.error(
-      `[promoteProspect] lost the race on prospect ${prospectId}; ` +
-        `orphaned lead ${created.leadId} was created and left in place.`,
-    );
-
+  // The double-click and the lost race both land here. Nothing was written,
+  // so there is no duplicate to warn about — only the original to link to.
+  if (data.outcome === "ALREADY_PROMOTED") {
     revalidatePath("/", "layout");
     return {
       ok: false,
-      error:
-        "This prospect was already promoted a moment ago. A duplicate lead was created — open the original below and archive the duplicate.",
-      existingLeadId: (winner?.promoted_lead_id as string | null) ?? undefined,
+      error: "This prospect has already been promoted.",
+      existingLeadId: data.promoted_lead,
     };
   }
 
   revalidatePath("/", "layout");
-  return { ok: true, leadId: created.leadId };
+  return { ok: true, leadId: data.promoted_lead };
 }
 
 // Only ever called after a confirmed unique_tenant_client_email_ci violation, to
