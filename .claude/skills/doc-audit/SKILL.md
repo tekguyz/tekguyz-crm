@@ -331,6 +331,8 @@ maintenance convention** — do not invent a new format:
 - **CLAUDE.md § 3**: update an initiative's one-line disposition, or add a new
   initiative entry, following the existing `**Name (N prompts).** ✅/⬜
   <status>.` pattern. Full narrative never goes here — see the next bullet.
+  The Status cell stays one or two sentences; check 11 fails on one over 350
+  characters. Carry test counts and measurements into the addendum instead.
 - **`docs/addenda/<month>.md`**: append a new dated `## <Title> (YYYY-MM-DD)`
   section for anything shipped that has no narrative yet, to the month file that
   matches its date (`docs/addenda/2026-08.md` and so on). Match the existing

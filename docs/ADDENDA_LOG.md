@@ -27,7 +27,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 | Build-era addenda (Prompts 11–15b) and the closed 15-phase roadmap | [`docs/addenda/prompts-1-15.md`](addenda/prompts-1-15.md) | 8 |
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
 | Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 47 |
-| Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 10 |
+| Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 26 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---
@@ -147,3 +147,5 @@ repo matches a title in this column.
 | 2026-09-14 — The demo explains a refused write inside a form | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — `/reports` aggregate CSV export | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — `/prospects` column resize and reorder, session-only | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-08 — The Avatar primitive, and the second copy that was deleted | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-15 — `/login` redesign Stage 1: three comps, and Split picked | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

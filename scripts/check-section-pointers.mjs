@@ -14,10 +14,11 @@
 // and decays on every new addendum — a section appended to a month file without
 // an index row is unreachable by every cross-reference in the repo.
 //
-// Three checks, all deterministic:
+// Four checks, all deterministic:
 //   A. every `§` pointer resolves to a real heading or index title
 //   B. every index row in ADDENDA_LOG.md points at a section that exists
 //   C. every `##` section in docs/addenda/*.md has an index row
+//   D. every CLAUDE.md § 3 Status cell stays within STATUS_CELL_MAX chars
 //
 // Repo-only. No browser, no dev server, no database — same fence as checks 9-10.
 // Exit 0 clean · 1 drift · 2 could not read something (NOT a pass).
@@ -246,6 +247,46 @@ for (const f of addendaFiles) {
   }
 }
 if (sectionCount && !orphans) notes.push(`${sectionCount} addenda sections all indexed`);
+
+// ---------------------------------------------------------------------------
+// D. Every CLAUDE.md § 3 Status cell stays status, not narrative.
+//
+// § 3 calls itself "status only", and CLAUDE.md is loaded into every Claude
+// Code session. Prompt packs still wrote their whole report into their row:
+// by 2026-09-15 § 3 was 36 KB of an 88 KB file and one row alone was 17.6 KB.
+// Nothing measured it, so nothing stopped it. The narrative belongs in a dated
+// addendum; the row carries the state and the one fact a reader must not miss.
+// ---------------------------------------------------------------------------
+const STATUS_CELL_MAX = 350;
+const claudeText = fileText.get("CLAUDE.md");
+if (claudeText) {
+  const start = claudeText.search(/^## 3\. /m);
+  const rest = start === -1 ? "" : claudeText.slice(start + 1);
+  const end = rest.search(/^## /m);
+  const section = end === -1 ? rest : rest.slice(0, end);
+  let rows = 0;
+  let longRows = 0;
+  for (const line of section.split(/\r?\n/)) {
+    if (!line.startsWith("| **")) continue;
+    rows++;
+    const cells = line.split("|").map((c) => c.trim());
+    const name = cells[1];
+    const status = cells[2] ?? "";
+    if (status.length > STATUS_CELL_MAX) {
+      longRows++;
+      findings.push(
+        `LONG STATUS ROW: CLAUDE.md § 3 ${name} — Status cell is ${status.length} chars ` +
+          `(max ${STATUS_CELL_MAX}). Move the narrative into a dated addendum.`,
+      );
+    }
+  }
+  if (rows === 0) {
+    hardFail = true;
+    findings.push("CANNOT PARSE CLAUDE.md § 3 — no initiative rows found. Update this script; not a pass.");
+  } else if (!longRows) {
+    notes.push(`${rows} § 3 status rows all within ${STATUS_CELL_MAX} chars`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 if (hardFail) {
