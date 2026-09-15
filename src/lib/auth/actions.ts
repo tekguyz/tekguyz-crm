@@ -4,17 +4,24 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resetPasswordSchema } from "@/lib/validation/reset-password-schema";
 import { checkInviteToken } from "@/lib/invites/signup-gate";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/");
+  // Same-origin paths only — see safe-next.ts for why a prefix check is not
+  // enough.
+  const next = safeNextPath(formData.get("next"));
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    // Carry `next` through the error redirect. Without it, one mistyped
+    // password silently dropped the deep link and the user landed on `/`.
+    const params = new URLSearchParams({ error: error.message });
+    if (next !== "/") params.set("next", next);
+    redirect(`/login?${params.toString()}`);
   }
 
   redirect(next);
