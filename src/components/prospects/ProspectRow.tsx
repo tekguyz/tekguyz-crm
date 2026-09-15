@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
   IconAlertTriangle,
   IconArchive,
@@ -24,12 +24,36 @@ import type { Prospect } from "@/lib/prospects/queries";
 import { cn } from "@/lib/utils/cn";
 import { OPERATOR_PROSPECT_STATUSES, prospectStatusLabel } from "@/lib/prospects/statuses";
 
+export type ProspectColumnId =
+  | "name"
+  | "city"
+  | "phone"
+  | "rating"
+  | "status"
+  | "notes"
+  | "actions";
+
+const DEFAULT_COLUMN_ORDER: readonly ProspectColumnId[] = [
+  "name",
+  "city",
+  "phone",
+  "rating",
+  "status",
+  "notes",
+  "actions",
+];
+
 export function ProspectRow({
   prospect,
+  columnOrder = DEFAULT_COLUMN_ORDER,
   onPromote,
   highlighted = false,
 }: {
   prospect: Prospect;
+  // The header's current column order, owned by ProspectsTable's
+  // useColumnLayout. Each cell is built once below and placed by this list, so
+  // a reordered header and its body cells can never disagree.
+  columnOrder?: readonly ProspectColumnId[];
   onPromote: (prospect: Prospect) => void;
   // True for the one row the command palette navigated to, for a couple of
   // seconds after arrival. ProspectsTable owns the timer and the filter reset;
@@ -61,21 +85,8 @@ export function ProspectRow({
     });
   }
 
-  return (
-    // The arrival marker is TaskRow's idiom, not new visual language: an
-    // --accent bar down the leading edge over a --canvas-soft tint. Drawn as an
-    // inset box-shadow on the first cell rather than a border or a
-    // pseudo-element, because a <tr> is a poor containing block and a real
-    // border would shift every cell in the row by its own width.
-    <TableRow
-      ref={rowRef}
-      className={cn(
-        "align-top transition-colors",
-        highlighted &&
-          "bg-canvas-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--accent)]",
-      )}
-      data-highlighted={highlighted ? "true" : undefined}
-    >
+  const cells: Record<ProspectColumnId, ReactNode> = {
+    name: (
       <TableCell>
         <div className="flex flex-col gap-0.5">
           <span className="flex items-center gap-1">
@@ -115,11 +126,13 @@ export function ProspectRow({
           ) : null}
         </div>
       </TableCell>
-
+    ),
+    city: (
       <TableCell className="whitespace-nowrap">
         <span className="text-body-sm">{prospect.city ?? "—"}</span>
       </TableCell>
-
+    ),
+    phone: (
       <TableCell>
         {/* CLAUDE.md's click-to-action rule: a number on screen is a number you
             can ring from the device you are holding. */}
@@ -134,7 +147,8 @@ export function ProspectRow({
           <span className="text-body-sm text-ink-muted">No number</span>
         )}
       </TableCell>
-
+    ),
+    rating: (
       <TableCell className="whitespace-nowrap">
         {prospect.rating !== null ? (
           <span className="text-body-sm">
@@ -145,7 +159,8 @@ export function ProspectRow({
           <span className="text-body-sm text-ink-muted">—</span>
         )}
       </TableCell>
-
+    ),
+    status: (
       <TableCell>
         {promoted ? (
           <ProspectStatusBadge status={prospect.status} />
@@ -164,7 +179,11 @@ export function ProspectRow({
           </Select>
         )}
       </TableCell>
-
+    ),
+    // min-w-56 floors this column only under auto layout. Once a header is
+    // resized the table switches to fixed layout and the column's own
+    // minWidth in ProspectsTable is the floor instead.
+    notes: (
       <TableCell className="min-w-56">
         {/* Saves on blur rather than behind an edit button: this is what gets
             typed one-handed between calls, and a second click to commit is a
@@ -185,7 +204,8 @@ export function ProspectRow({
           </p>
         ) : null}
       </TableCell>
-
+    ),
+    actions: (
       <TableCell>
         <div className="flex items-center justify-end gap-1">
           {promoted ? (
@@ -225,6 +245,28 @@ export function ProspectRow({
           </Button>
         </div>
       </TableCell>
+    ),
+  };
+
+  return (
+    // The arrival marker is TaskRow's idiom, not new visual language: an
+    // --accent bar down the leading edge over a --canvas-soft tint. Drawn as an
+    // inset box-shadow on the first cell rather than a border or a
+    // pseudo-element, because a <tr> is a poor containing block and a real
+    // border would shift every cell in the row by its own width. `first-child`
+    // is whichever column is currently leftmost, which is still the leading edge.
+    <TableRow
+      ref={rowRef}
+      className={cn(
+        "align-top transition-colors",
+        highlighted &&
+          "bg-canvas-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--accent)]",
+      )}
+      data-highlighted={highlighted ? "true" : undefined}
+    >
+      {columnOrder.map((id) => (
+        <Fragment key={id}>{cells[id]}</Fragment>
+      ))}
     </TableRow>
   );
 }

@@ -2,9 +2,10 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-// Bare structural shell only. No sorting, selection, resizing or data prop —
-// nothing consumes this yet, and DESIGN.md v2 explicitly puts Table View out of
-// scope. Build those with the feature, not ahead of it.
+// Bare structural shell. No sorting, selection or data prop — build those with
+// the feature, not ahead of it. Column resize and reorder are opt-in and live
+// in the sibling `table-columns.tsx` (first caller: ProspectsTable); a table
+// that does not use them renders exactly this shell and nothing more.
 //
 // The horizontal scroll wrapper is here rather than at call sites so a wide
 // table can never make the page body scroll sideways.

@@ -146,3 +146,4 @@ repo matches a title in this column.
 | 2026-09-14 — Prospect promotion becomes one transaction | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — The demo explains a refused write inside a form | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-14 — `/reports` aggregate CSV export | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-14 — `/prospects` column resize and reorder, session-only | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

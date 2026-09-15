@@ -160,6 +160,11 @@ const ROUTES = [
   // fixed 16rem explanation column does not squeeze Team's member rows or API
   // keys' Clear buttons to nothing at 1024px.
   "/settings",
+  // The real prospects call list, since column resize and reorder landed
+  // 2026-09-14. The header row now carries a grip, the sort button and a
+  // resize separator per column; this is the check that none of it squeezes a
+  // label to nothing at 1024px.
+  "/prospects",
   "/shell/form/modal?long=1",
   "/shell/form/drawer?long=1",
   "/shell/form/inline?long=1",

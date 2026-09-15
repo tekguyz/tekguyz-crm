@@ -131,3 +131,42 @@ describe("ProspectsTable — command-palette arrival highlight", () => {
     expect(container.querySelector("[data-highlighted]")).toBeNull();
   });
 });
+
+// Pointer drags need a layout engine and are proven in a real browser. The
+// keyboard path runs the same order state, so it is what jsdom can pin: a
+// moved header must carry its body cells with it, or a reordered table shows
+// one column's values under another column's name.
+describe("ProspectsTable — column reorder and resize", () => {
+  function headerIds(container: HTMLElement) {
+    return [...container.querySelectorAll("thead th")].map((th) => th.getAttribute("data-column-id"));
+  }
+
+  it("moves a header and its body cells together from the keyboard", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ProspectsTable prospects={[REDWOOD]} />);
+
+    expect(headerIds(container).slice(0, 2)).toEqual(["name", "city"]);
+    screen.getByRole("button", { name: /Move Business column/ }).focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(headerIds(container).slice(0, 2)).toEqual(["city", "name"]);
+    const cells = container.querySelectorAll("tbody tr:first-child td");
+    expect(cells[0]).toHaveTextContent("Gisborne");
+    expect(cells[1]).toHaveTextContent("Redwood Plumbing");
+  });
+
+  it("leaves sorting on its own button, untouched by the move handle", async () => {
+    const user = userEvent.setup();
+    render(<ProspectsTable prospects={[REDWOOD, ASHFIELD]} />);
+    await user.click(screen.getByRole("button", { name: "Sort by Business" }));
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("Redwood Plumbing");
+  });
+
+  it("offers a resize separator on every column except actions", () => {
+    render(<ProspectsTable prospects={[REDWOOD]} />);
+    const separators = screen.getAllByRole("separator", { name: /Resize .* column/ });
+    expect(separators).toHaveLength(6);
+    expect(screen.queryByRole("separator", { name: "Resize Actions column" })).toBeNull();
+  });
+});

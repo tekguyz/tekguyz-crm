@@ -3,12 +3,22 @@
 import { useMemo, useState } from "react";
 import { IconArrowDown, IconArrowUp, IconArrowsSort } from "@tabler/icons-react";
 
-import { ProspectRow } from "@/components/prospects/ProspectRow";
+import { ProspectRow, type ProspectColumnId } from "@/components/prospects/ProspectRow";
 import { PromoteProspectModal } from "@/components/prospects/PromoteProspectModal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Table, TableBody, TableHead, TableHeaderCell, TableRow } from "@/components/ui/TableRow";
+import {
+  ColumnReorderHandle,
+  ColumnResizeHandle,
+  TableColumnGroup,
+  columnHeaderProps,
+  columnTableProps,
+  useColumnLayout,
+  type ColumnSpec,
+} from "@/components/ui/table-columns";
+import { cn } from "@/lib/utils/cn";
 import type { Prospect } from "@/lib/prospects/queries";
 import { useArrivalHighlight } from "@/lib/hooks/use-arrival-highlight";
 import { OPERATOR_PROSPECT_STATUSES, prospectStatusLabel } from "@/lib/prospects/statuses";
@@ -19,21 +29,26 @@ import {
   type SortDirection,
 } from "@/lib/prospects/sort";
 
-type Column = {
+type Column = ColumnSpec<ProspectColumnId> & {
   key: ProspectSortKey | null;
   label: string;
   className?: string;
 };
 
+// Minimum widths are what each column's content needs to stay usable: a phone
+// button with its icon, a status <select>, the Promote + archive pair. The
+// actions column is not resizable — it only ever holds those two buttons.
 const COLUMNS: Column[] = [
-  { key: "name", label: "Business" },
-  { key: "city", label: "City" },
-  { key: null, label: "Phone" },
-  { key: "rating", label: "Rating" },
-  { key: "status", label: "Status" },
-  { key: null, label: "Notes" },
-  { key: null, label: "", className: "text-right" },
+  { id: "name", key: "name", label: "Business", minWidth: 140 },
+  { id: "city", key: "city", label: "City", minWidth: 88 },
+  { id: "phone", key: null, label: "Phone", minWidth: 150 },
+  { id: "rating", key: "rating", label: "Rating", minWidth: 96 },
+  { id: "status", key: "status", label: "Status", minWidth: 136 },
+  { id: "notes", key: null, label: "Notes", minWidth: 160 },
+  { id: "actions", key: null, label: "", className: "text-right", resizable: false },
 ];
+
+const COLUMN_BY_ID = new Map(COLUMNS.map((column) => [column.id, column]));
 
 // Sorting and filtering are client state over an already-fetched array, not
 // URL state. Deliberate: this list is worked through while making calls, and a
@@ -54,6 +69,8 @@ export function ProspectsTable({
   const [sortKey, setSortKey] = useState<ProspectSortKey>("name");
   const [direction, setDirection] = useState<SortDirection>("asc");
   const [promoting, setPromoting] = useState<Prospect | null>(null);
+  // Width and order are session-only: they reset on reload by design.
+  const layout = useColumnLayout(COLUMNS);
 
   const visible = useMemo(
     () => sortProspects(filterProspects(prospects, { query, status }), sortKey, direction),
@@ -117,32 +134,50 @@ export function ProspectsTable({
           No prospects match this view.
         </p>
       ) : (
-        <Table>
+        <Table {...columnTableProps(layout)}>
+          <TableColumnGroup layout={layout} />
           <TableHead>
-            <TableRow>
-              {COLUMNS.map((column) => (
-                <TableHeaderCell key={column.label} className={column.className}>
-                  {column.key ? (
-                    // A real <button>, so the header is reachable and operable
-                    // from the keyboard and announces its own sort state.
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-2"
-                      aria-label={`Sort by ${column.label}`}
-                      onClick={() => toggleSort(column.key as ProspectSortKey)}
+            <TableRow ref={layout.headerRowRef}>
+              {layout.order.map((id) => {
+                const column = COLUMN_BY_ID.get(id)!;
+                const name = column.label || "Actions";
+                const header = columnHeaderProps(layout, id);
+                return (
+                  <TableHeaderCell
+                    key={id}
+                    {...header}
+                    className={cn(header.className, column.className)}
+                  >
+                    <div
+                      className={cn(
+                        "flex items-center gap-0.5",
+                        column.className === "text-right" && "justify-end",
+                      )}
                     >
-                      {column.label}
-                      <SortIcon active={sortKey === column.key} direction={direction} />
-                    </Button>
-                  ) : (
-                    <span className={column.label ? undefined : "sr-only"}>
-                      {column.label || "Actions"}
-                    </span>
-                  )}
-                </TableHeaderCell>
-              ))}
+                      <ColumnReorderHandle layout={layout} id={id} label={name} />
+                      {column.key ? (
+                        // A real <button>, so the header is reachable and operable
+                        // from the keyboard and announces its own sort state.
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Sort by ${column.label}`}
+                          onClick={() => toggleSort(column.key as ProspectSortKey)}
+                        >
+                          {column.label}
+                          <SortIcon active={sortKey === column.key} direction={direction} />
+                        </Button>
+                      ) : (
+                        <span className={column.label ? undefined : "sr-only"}>{name}</span>
+                      )}
+                    </div>
+                    {column.resizable === false ? null : (
+                      <ColumnResizeHandle layout={layout} id={id} label={name} />
+                    )}
+                  </TableHeaderCell>
+                );
+              })}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -150,6 +185,7 @@ export function ProspectsTable({
               <ProspectRow
                 key={prospect.id}
                 prospect={prospect}
+                columnOrder={layout.order}
                 onPromote={setPromoting}
                 highlighted={prospect.id === highlightedId}
               />
