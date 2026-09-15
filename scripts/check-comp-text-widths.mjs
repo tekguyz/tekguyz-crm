@@ -178,6 +178,12 @@ const ROUTES = [
   "/shell/settings/stacked?long=1",
   "/shell/settings/rail?long=1",
   "/shell/settings/split?long=1",
+  // The /login redesign comps (P1, Stage 1). `?long=1` puts a long address in
+  // the field and a long error banner above it, which is what squeezes the
+  // narrowest column — Masthead's max-w-xs.
+  "/shell/login/centered?long=1",
+  "/shell/login/split?long=1",
+  "/shell/login/masthead?long=1",
 ];
 
 const CHROME_CANDIDATES = [

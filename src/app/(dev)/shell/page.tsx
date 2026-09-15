@@ -89,6 +89,10 @@ export default function ShellVariantsIndex() {
         <Link href="/shell/settings" className="text-accent underline underline-offset-2">
           Prompt 4 of 4 — Settings (Org Profile &amp; Branding) variants →
         </Link>
+        <br />
+        <Link href="/shell/login" className="text-accent underline underline-offset-2">
+          P1 — /login redesign variants →
+        </Link>
       </p>
 
       <div className="grid gap-3 md:grid-cols-3">
