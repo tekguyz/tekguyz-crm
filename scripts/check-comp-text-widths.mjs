@@ -143,6 +143,59 @@ const OPEN_CREATE_DRAWER = `(async () => {
   return document.querySelector('[data-slot="sheet-content"]') ? "ok" : "no drawer";
 })()`;
 
+// THE TODAY COMPS (Today redesign, Stage 1). Their lead lanes are a three-up
+// grid, so at 1024px each lane is only ~232px wide and both variants put two
+// values on one row there - the narrowest thing either comp does, and exactly
+// the shape of collapse this check exists to find.
+//
+// THEME IS FORCED, NOT INHERITED. next-themes defaults to `system`, and this
+// headless Chrome reports a dark system preference, so an unforced run
+// screenshots dark twice and never proves the light canvas at all. Both themes
+// are therefore driven explicitly: set localStorage and swap the class on
+// <html>, which is the whole of next-themes' mechanism - there is no UI to
+// click. Carried by the Today routes rather than globally because dark mode
+// changes colour, not layout, so paying for it everywhere would double the run
+// to re-measure identical boxes.
+//
+// The expression also MEASURES and returns the numbers, which is what keeps
+// the figures on /shell/today honest: the index page quotes a card height and
+// a used-height per variant, and those have to come from the browser rather
+// than from arithmetic in a comment.
+function themed(mode) {
+  return `(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    try { localStorage.setItem("theme", "${mode}"); } catch {}
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add("${mode}");
+    document.documentElement.style.colorScheme = "${mode}";
+    await sleep(400);
+    if (!document.documentElement.classList.contains("${mode}")) return "theme never applied";
+
+    const main = document.querySelector("main");
+    const card = document.querySelector("[data-lead-card]");
+    if (!main || !card) return "ok";
+    // main.scrollHeight FLOORS at clientHeight, so it can never show how much
+    // room is left - it reads "744 of 744" on a page using half the box. The
+    // content wrapper's own box is the honest number, plus main's padding.
+    const content = main.firstElementChild;
+    const pad = parseFloat(getComputedStyle(main).paddingTop) * 2;
+    const used = Math.round(content.getBoundingClientRect().height + pad);
+    const box = Math.round(main.clientHeight);
+    const cardH = Math.round(card.getBoundingClientRect().height);
+    // Stashed, not returned. The runner's contract is that an open
+    // expression returns exactly ok or the route FAILS, and that guard is
+    // what stops a check silently measuring a page whose overlay never
+    // opened. The numbers ride in the document title instead, so they can be
+    // read without weakening it. NOTE: no backticks in this comment - it
+    // lives inside a template literal and one would end the string.
+    document.title = \`card \${cardH}px · used \${used}px of \${box}px\`;
+    return "ok";
+  })()`;
+}
+
+const GO_LIGHT = themed("light");
+const GO_DARK = themed("dark");
+
 const ROUTES = [
   // THE REAL ROUTES, added with Shell/IA Stage 2. The comps below are still
   // checked because they are still the record of the comparison, but the
@@ -184,6 +237,17 @@ const ROUTES = [
   "/shell/login/centered?long=1",
   "/shell/login/split?long=1",
   "/shell/login/masthead?long=1",
+  // The Today comps, both variants, at both ends of the data scale. The sparse
+  // pass is not a formality: an empty section prints copy instead of cards, and
+  // a lane that only looks right when full fails there first.
+  { path: "/shell/today/ledger", label: "Today Ledger, demo scale" },
+  { path: "/shell/today/brief", label: "Today Brief, demo scale" },
+  { path: "/shell/today/ledger?scale=sparse", label: "Today Ledger, near-empty org" },
+  { path: "/shell/today/brief?scale=sparse", label: "Today Brief, near-empty org" },
+  { path: "/shell/today/ledger", label: "Today Ledger, light", open: GO_LIGHT },
+  { path: "/shell/today/brief", label: "Today Brief, light", open: GO_LIGHT },
+  { path: "/shell/today/ledger", label: "Today Ledger, dark", open: GO_DARK },
+  { path: "/shell/today/brief", label: "Today Brief, dark", open: GO_DARK },
 ];
 
 // THE REAL /login, wired from Variant Split on 2026-09-15. Measured SIGNED
