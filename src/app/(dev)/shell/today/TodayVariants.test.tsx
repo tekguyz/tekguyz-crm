@@ -81,10 +81,11 @@ describe("the fixture", () => {
     expect(lanes.starred.length).toBeGreaterThan(LANE_CARD_CAP);
   });
 
-  // SLA Critical's membership test is the Going Cold test — the fork laid out
-  // on the index page. Pinned so that if the query's meaning is ever changed
-  // in Stage 2, this test is what says so out loud.
-  it("makes every SLA Critical lead cold by construction", () => {
+  // SLA Critical's membership test is the Going Cold test. FORK A was chosen
+  // on 2026-09-15: the lane stays "every overdue lead" and getSlaCriticalLeads
+  // is not touched. This pins that meaning out loud, so moving to Fork B — a
+  // stricter slice — has to break a named test rather than happen quietly.
+  it("makes every SLA Critical lead cold by construction (Fork A)", () => {
     expect(lanes.sla.length).toBeGreaterThan(0);
     expect(lanes.sla.every((l) => isOverdue(l.next_action_at))).toBe(true);
   });

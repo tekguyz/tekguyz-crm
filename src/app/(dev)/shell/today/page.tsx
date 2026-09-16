@@ -82,6 +82,16 @@ export default function TodayVariantsIndex() {
           <code className="text-body-sm">TasksDueQueue</code> are untouched, and
           so is <code className="text-body-sm">LEAD_COLUMNS</code>.
         </p>
+        <p className="text-caption mt-2 max-w-[75ch] text-ink-muted">
+          <strong className="text-ink-main">Picked on 2026-09-15: Variant Brief.</strong>{" "}
+          It is the only one of the two that renders the longest real name and
+          the longest real company in full, and its right-aligned revenue column
+          is the thing a triage page is actually scanned for. Its cost is real
+          and is not waved away: 26px more per card, which leaves 16px of slack
+          at 1024px — so Stage 2 owns two follow-ups before it can add anything
+          above the fold, listed below. Ledger is kept as the record of what
+          Brief was chosen over; it is not maintained past this date.
+        </p>
       </header>
 
       <div className="flex flex-wrap gap-5">
@@ -103,6 +113,7 @@ export default function TodayVariantsIndex() {
           frameWidth={CONTENT_WIDTH}
           tileWidth={620}
           tileHeight={400}
+          picked
         >
           <BriefToday />
         </VariantThumb>
@@ -207,11 +218,46 @@ export default function TodayVariantsIndex() {
         </div>
 
         <p className="text-body-sm mt-3 text-ink-muted">
-          <strong className="text-ink-main">Not decided here.</strong> Both comps
-          render Fork A, because it is what the code does today and Stage 1 is
-          not allowed to change a query. Picking B is a Stage 2 data change with
-          a threshold decision attached.
+          <strong className="text-ink-main">Decided on 2026-09-15: Fork A.</strong>{" "}
+          SLA Critical stays every overdue lead, and{" "}
+          <code>getSlaCriticalLeads</code> is not touched. One meaning of
+          &ldquo;overdue&rdquo; survives across the whole app, no threshold has
+          to be invented, and the redundant dashed border inside the lane is
+          judged cheaper than a second definition of urgency to keep true. B
+          stays available and costs nothing to revisit — it is a query change
+          plus a number, not a redesign.
         </p>
+      </section>
+
+      {/* WHAT THE PICK OWES. Brief wins on legibility and pays in height, and
+          both debts are specific rather than general — recorded here so Stage 2
+          starts from them rather than rediscovering them. */}
+      <section className="mt-8 max-w-[85ch]">
+        <h2 className="text-h2">What Stage 2 inherits from picking Brief</h2>
+        <ol className="text-body-sm mt-2 flex list-decimal flex-col gap-2 pl-5 text-ink-muted">
+          <li>
+            <strong className="text-ink-main">
+              The task card promotes the wrong field.
+            </strong>{" "}
+            Brief&apos;s rule is &ldquo;promote the value to row one&rdquo;, and
+            applied to a task that put the date beside the title — so titles
+            truncate harder here than in Ledger (&ldquo;Confirm site
+            measu…&rdquo;). A task&apos;s most important field is its title, not
+            its date. Wiring should keep the title alone on row one and drop the
+            date to row two, which is Ledger&apos;s treatment and costs nothing.
+          </li>
+          <li>
+            <strong className="text-ink-main">
+              There is only 16px of slack at 1024px.
+            </strong>{" "}
+            Brief finishes 728px into a 744px box. Anything added above the
+            fold — most obviously <code>NeedsReviewQueue</code>, the fifth
+            section — puts the page over. The cheap lever is the cap: dropping
+            it from {LANE_CARD_CAP} to 3 buys back a full card of height in
+            every lane at once, because it is one number in{" "}
+            <code>preview/mock-today.ts</code>.
+          </li>
+        </ol>
       </section>
 
       {/* Two more things a human should know before picking, both found by

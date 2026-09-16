@@ -139,6 +139,7 @@ written into these rows took this file to 89 KB (history: `docs/ADDENDA_LOG.md`
 | **`/prospects` column resize + reorder** (1 prompt) | ✅ Complete, verified with a real pointer. Opt-in beside the Table shell. **Session-only** — persistence is open in `docs/KNOWN_GAPS.md` | 2026-09-14 | 2026-09-14 — `/prospects` column resize and reorder, session-only |
 | **`/login` redesign** (P1's last piece; 2 stages) | ✅ Complete, live-verified with a real wrong password and a real sign-in. Split is the real `/login`, in its own `(login)` route group; the typed email lives in that group's layout because `signIn`'s error redirect remounts the page. `login-fence.test.ts` deleted; P1 closed | 2026-09-15 | 2026-09-15 — `/login` redesign Stage 1: three comps, and Split picked, § 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that remounts the page |
 | **Idle-based session timeout** (1 prompt) | ✅ Complete — client-side idle timer only; Supabase JWT/refresh-token config deliberately untouched. Warns at 28 min, signs out at 30, synced by `BroadcastChannel`. The demo tenant is exempt | 2026-09-15 | 2026-09-15 — Idle-based session timeout |
+| **Today redesign** (Stage 1 of 2) | 🟡 Stage 1 comps built; **Variant Brief picked 2026-09-15, not yet wired**, and SLA Critical left as **Fork A** — the lane stays every overdue lead and `getSlaCriticalLeads` is untouched. Ledger kept as the record | 2026-09-15 (comps) | 2026-09-15 — Today redesign Stage 1: two comps, Variant Brief picked, SLA Critical left as Fork A |
 
 ---
 

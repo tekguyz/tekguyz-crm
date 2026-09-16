@@ -152,3 +152,4 @@ repo matches a title in this column.
 | 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that remounts the page | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-15 — `signIn` keeps `next`, and only on this origin | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-15 — Idle-based session timeout | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-15 — Today redesign Stage 1: two comps, Variant Brief picked, SLA Critical left as Fork A | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
