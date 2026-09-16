@@ -10,6 +10,7 @@ import { ProfileSheetController } from "@/components/leads/profile/ProfileSheetC
 import { ProfileSheetSkeleton } from "@/components/leads/profile/ProfileSheetSkeleton";
 import { HelpProvider } from "@/components/help/HelpContext";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
+import { IdleTimeoutController } from "@/components/shell/IdleTimeoutController";
 import type { SidebarState } from "@/lib/shell/sidebar-cookie";
 import type { TeamMember } from "@/lib/invites/queries";
 
@@ -97,6 +98,11 @@ export function AppShell({
               </Suspense>
               <HelpDrawer />
               <ShellCommandBar />
+              {/* The idle-timeout clock. Mounted here, at the one place every
+                  authenticated route passes through, so it survives navigation
+                  instead of restarting on each page. It renders nothing until
+                  the warning fires. */}
+              <IdleTimeoutController isDemo={isDemo} />
             </div>
           </ShellProvider>
         </MembersProvider>

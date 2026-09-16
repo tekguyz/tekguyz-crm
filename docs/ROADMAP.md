@@ -17,17 +17,13 @@ sessions had no home this repo's tooling reads.
   becomes a CLAUDE.md § 3 initiative at that point. Nothing here is a permanent
   resident.
 - No design decisions are embedded in an entry beyond what is already decided.
-  A known fork (e.g. session timeout) is a constraint, not a decision.
+  A known fork (two different builds for one goal) is a constraint, not a decision.
 - An item with no date is stale. Re-triage it before relying on it.
 
 ## Open items
 
 - **Two-factor authentication (2FA)** — *idea* (2026-08-27). No urgency, not
   started.
-- **Session timeout management** — *decision pending* (2026-08-27). It forks
-  into Supabase JWT-expiry config vs. an app-side idle timer, and those are
-  different builds. The fork must be decided before it can even be scoped for
-  discovery.
 - **Notification center** — *idea* (2026-08-27). Not started.
 - **RESTful API** — *rejected — revisit trigger* (2026-08-27). No second
   external consumer exists beyond the one real webhook caller
