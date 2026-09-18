@@ -211,3 +211,17 @@ Whenever a form or its action changes, diff the form's `name=` set against the a
 - **Supabase MCP tool-access rule:** read-only MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT only) may be used freely for self-verification. Anything that writes schema (`apply_migration`, any DDL) must never be called directly — write the migration SQL file and hand it to the human. The one standing exception is the `vault` schema, which has no client-facing surface at all (see `docs/ADDENDA_LOG.md` § Prompt 13a addendum); it does **not** extend to any `public`-schema table, which must go through the app's own service-role key per Prompt 11's pattern. **This has been broken once already** (§ Lead Field Completion addendum, 2026-07-27) — before reaching for `execute_sql` to write or restore any `public`-schema row, stop and use a disposable script instead.
 - **Claude Code skills in use on this repo (2026-09-06):** `impeccable` (design guidance, product-mode), `vercel-react-best-practices` (Next.js/React performance rules), and `web-design-guidelines` (a Vercel Interface Guidelines audit). They replace the personal `frontend-design` skill this project used until 2026-09-06, which no longer exists on this machine — a prompt naming it is stale. **`web-design-guidelines` is used standalone, never in the same pass as `impeccable`**, because both give design direction and running them together produces overlapping and sometimes contradictory guidance. None of them overrides this file: where a skill's generic advice conflicts with a rule here — the design system in § 1, the primitive-first three steps, `--accent`'s limits — this file wins.
 - **Any script that needs `.env` must be run through the PowerShell tool, not the Bash tool (found 2026-09-07).** The Bash tool runs sandboxed and `.env` is outside what it can see: `ls -a` does not list it, and `node --env-file=.env` fails with a bare `node: .env: not found` — which reads exactly like a missing file and is not one. PowerShell sees the real filesystem and the same command succeeds. This affects all three env-dependent npm scripts — `check:residue`, `seed:demo`, `seed:demo:reset`. **Confirm a file's absence with `Get-ChildItem -Force` before reporting it missing**; a Bash `ls` is not evidence here. Mis-reported once as "there is no `.env` in this checkout" during a handoff audit, which turned a passing residue check into a false "needs the user" item.
+
+## Agent skills
+
+### Issue tracker
+
+New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and `docs/ADDENDA_LOG.md` keep governing existing/deferred items per the rule above — this doesn't replace that. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, created lazily as terms/decisions resolve. See `docs/agents/domain.md`.
