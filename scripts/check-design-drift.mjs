@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * DESIGN.md <-> globals.css drift check (handoff skill, Job 1 check 9).
+ * DESIGN.md <-> globals.css drift check (status-sync skill, Job 1 check 9).
  *
  * Cheap and mechanical on purpose. It compares ONLY the values DESIGN.md
  * states in its three token tables against src/app/globals.css, which
@@ -14,7 +14,7 @@
  * contrast, accessibility, spacing prose, or anything DESIGN.md describes in
  * words rather than in a table row. It never edits either file.
  *
- * Usage:  node .claude/skills/handoff/check-design-drift.mjs
+ * Usage:  node scripts/check-design-drift.mjs
  * Exit 0 = no drift. Exit 1 = drift found (details on stdout). Exit 2 = the
  * check itself could not run (file missing / table shape changed).
  */

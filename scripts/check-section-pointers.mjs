@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Handoff audit, check 12 — reference integrity of `§ <Section Title>` pointers.
+// Status-sync audit, check 12 — reference integrity of `§ <Section Title>` pointers.
 //
 // This repo navigates entirely by section pointer. CLAUDE.md, KNOWN_GAPS.md,
-// SCHEMA_REFERENCE.md, DESIGN.md, the addenda themselves and the handoff skill
+// SCHEMA_REFERENCE.md, DESIGN.md, the addenda themselves and the status-sync skill
 // all cite work as ``docs/ADDENDA_LOG.md § <Section Title>`` (or `§ <Title>`
 // against their own file). Nothing renders those into links, so a pointer that
 // no longer resolves fails silently: the reader sees an authoritative-looking
@@ -62,7 +62,7 @@ const SOURCES = [
   "docs/SCHEMA_REFERENCE.md",
   "docs/DESIGN.md",
   INDEX,
-  ".claude/skills/handoff/SKILL.md",
+  ".claude/skills/status-sync/SKILL.md",
 ];
 
 let addendaFiles = [];

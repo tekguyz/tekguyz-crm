@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Handoff audit, check 13 — live test residue.
+// Status-sync audit, check 13 — live test residue.
 //
 // CLAUDE.md § Test-Data Cleanup is a permanent rule: anything created to verify
 // something is part of that unit of work, and a unit is not finished while its

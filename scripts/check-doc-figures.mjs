@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Handoff audit, check 10 — assertion drift.
+// Status-sync audit, check 10 — assertion drift.
 //
 // Checks 1-8 are CHANGE-driven: they start from a commit, a session's work, or
 // a doc entry and ask "is anything downstream stale?" That leaves a hole. A doc
@@ -8,7 +8,7 @@
 //
 // That hole is not hypothetical. `docs/KNOWN_GAPS.md` carried "92 tests, 15
 // suites" for two sessions after 94de14b made it 100/17 — through a full
-// handoff audit that ran `vitest` and saw 100/17 on screen without ever
+// status audit that ran `vitest` and saw 100/17 on screen without ever
 // comparing the two numbers. It was caught by an outside reader, not by us.
 //
 // Check 9 (check-design-drift.mjs) already proves the fix: a scripted,
@@ -54,8 +54,8 @@ if (gaps !== null) {
     const [, claimedTests, claimedSuites] = [m[0], Number(m[1]), Number(m[2])];
 
     // Counting the tests means running them, and running them is ~60s. That is
-    // paid on EVERY `npm run check:docs`, which the handoff skill runs every
-    // time — so a normal day of handoffs spent ten minutes re-deriving a number
+    // paid on EVERY `npm run check:docs`, which the status-sync skill runs every
+    // time — so a normal day of status syncs spent ten minutes re-deriving a number
     // that changes maybe twice a week. The count is a pure function of the test
     // files and the vitest config, so it is cached against a hash of exactly
     // those inputs: touch a test and the suite runs, touch anything else and it

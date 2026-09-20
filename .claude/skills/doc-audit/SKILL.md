@@ -1,22 +1,23 @@
 ---
 name: doc-audit
-description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the handoff skill reports a check finding it could not resolve. This is the heavy pass — the handoff skill does not run it.
+description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the status-sync skill reports a check finding it could not resolve. This is the heavy pass — the status-sync skill does not run it.
 ---
 
 # Doc audit — measure the docs against the repo, repair what drifted
 
-This is the expensive half of what used to be one `handoff` skill. It was split
+This is the expensive half of what used to be one `handoff` skill (renamed
+`status-sync` on 2026-09-20). It was split
 on 2026-09-08 because the cheap half ran several times a day and paid for this
 half every time.
 
-**Run this when a doc is actually suspect**, not on every handoff:
+**Run this when a doc is actually suspect**, not on every status sync:
 
 - `npm run check:docs` or `npm run check:residue` reported a finding the
-  `handoff` skill could not resolve from script output alone
+  `status-sync` skill could not resolve from script output alone
 - a session shipped work that needs a new addendum or a § 3 status row
 - the user asks for a doc audit, or says something in the docs looks wrong
 
-The `handoff` skill runs the same scripts but reads only their **output**. It
+The `status-sync` skill runs the same scripts but reads only their **output**. It
 never opens a whole doc. That is the whole point of the split — do not
 reintroduce doc reading there.
 
@@ -64,7 +65,7 @@ Check, in this order:
    initiative there is marked complete or in-progress with a one-line
    disposition. Spot-check the ones that matter for the upcoming planning
    session against the actual code — don't re-verify the whole section on
-   every handoff, that defeats the point of the file being short.
+   every status sync, that defeats the point of the file being short.
 
 3. **What `docs/KNOWN_GAPS.md` claims that is no longer true.** Grep its Open
    items for anything the current session's work has touched or closed. A gap
@@ -103,7 +104,7 @@ Check, in this order:
 
 5. **Uncommitted work.** `git status --short` and `git diff --stat`. Anything
    sitting in the tree is not shipped — say "uncommitted in the working tree"
-   explicitly in the handoff block, never fold it into "shipped."
+   explicitly in this audit's findings, never fold it into "shipped."
 
 6. **Unpushed commits.** `git status -sb`. A commit not on the remote has not
    deployed if this repo deploys off pushes (Vercel-style). Confirm the actual
@@ -111,7 +112,7 @@ Check, in this order:
    checked.
 
 7. **Whether the gates in CLAUDE.md's own verification discipline actually
-   pass**, if the handoff will claim anything is "done": `npm run build`,
+   pass**, if the audit will claim anything is "done": `npm run build`,
    `npm run lint`, `npx tsc --noEmit`, `npm test`. A doc saying something is
    complete is not evidence; a green gate is closer to it, and CLAUDE.md itself
    says "verified" means the thing was actually run, not that it compiled.
@@ -153,13 +154,13 @@ Check, in this order:
    what the app actually paints, but a mismatch can equally mean someone edited
    CSS without updating the spec, or that DESIGN.md records a decision the CSS
    never received. Read both, decide which matches the intended decision, fix
-   that one, and **list every mismatch under `### Open now` in the handoff block
+   that one, and **list every mismatch as open work in this audit's findings
    below even if you repaired it in this session** — with what drifted and which
    way it was resolved. Never let the check pass silently into the block.
 
    Keep it to stated values. Do **not** widen this into contrast checking,
    accessibility auditing, or reviewing components against the spec — that is a
-   design QA pass, it is not cheap, and it does not belong in a handoff. No
+   design QA pass, it is not cheap, and it does not belong in a status sync. No
    browser, no dev server, no database.
 
 10. **Assertion drift — figures the docs state, against the same figures
@@ -171,8 +172,8 @@ Check, in this order:
 
     That hole is not hypothetical. `docs/KNOWN_GAPS.md` carried "92 tests, 15
     suites" for two sessions after `94de14b` made it 100/17 — **through a full
-    handoff audit that ran `vitest`, saw `100/17` on screen, and never compared
-    the two numbers.** It was caught by an outside reader of the handoff block,
+    status audit that ran `vitest`, saw `100/17` on screen, and never compared
+    the two numbers.** It was caught by an outside reader of the reported status,
     not by this skill. Check 9 already proves the remedy: a script, run every
     time, that cannot be reasoned past under context pressure. Run:
 
@@ -211,7 +212,7 @@ Check, in this order:
     it is edited in place with no "superseded" clause. Refresh the *whole*
     claim, not just the digits: carry the previous mark into the bullet's
     history chain so the trail stays readable. **List every finding under
-    `### Open now` in the handoff block even when you repaired it this
+    this audit's open-work findings even when you repaired it this
     session**, same rule as check 9.
 
     **This check is not a substitute for thinking.** It covers the three
@@ -320,7 +321,7 @@ Check, in this order:
     before drafting.
 
     A rejected item is never "resolved," so it never moves to the Resolved
-    Items Archive, and it never gets re-litigated in a handoff. If the owner
+    Items Archive, and it never gets re-litigated in a status sync. If the owner
     changes their mind, they say so and the entry is deleted — that is the only
     way it comes back.
 
@@ -366,6 +367,6 @@ stage or commit unrelated dirty files even if the working tree has other
 changes in progress. Rationale: CLAUDE.md's own Known Gaps rule already treats
 an unrecorded disposition change as a bug; an audit that ends without
 committing the fix reintroduces exactly the drift it exists to close, and the
-handoff block below would be citing a doc state that isn't actually in the repo.
+findings below would be citing a doc state that isn't actually in the repo.
 
 ---
