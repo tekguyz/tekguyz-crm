@@ -1,6 +1,6 @@
 // Dry-runs a migration's table DDL against a session-local temp replica of the
 // real table, so an agent's migration is verified before a human applies it.
-// CLAUDE.md § Session & Verification Discipline makes this a standing rule:
+// docs/VERIFICATION.md makes this a standing rule:
 // tsc/eslint/next build cannot see SQL at all, so without this a migration is
 // unverified until it fails in the human's hands.
 //

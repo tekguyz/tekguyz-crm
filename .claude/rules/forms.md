@@ -1,0 +1,19 @@
+---
+paths:
+  - "src/lib/actions/**"
+  - "src/lib/forms/**"
+  - "src/components/leads/**"
+  - "src/components/prospects/**"
+  - "src/components/settings/**"
+  - "src/components/invites/**"
+  - "src/components/auth/**"
+---
+
+# Form / Action Field Parity (permanent rule)
+
+**Every column a Server Action writes from `formData.get("x")` must have a rendered `<input name="x">` in the form posting to it.** An absent field yields `null`, so a written-but-unrendered column is silently NULLed on every save — no error, invisible until the data is gone. Hit five `leads` columns across two incidents (2026-07-27, 2026-07-30). Defaults are worse than `|| null`, not better: `?? "UTC"` / `?? "NEW"` silently *reset* a column and pass validation, since the default is itself valid.
+**A form posting to a Server Action must use controlled fields, not `defaultValue`.** React 19 resets a `<form action={…}>` after the action returns, **failure included**, by calling `form.reset()` — so an uncontrolled form wipes whatever the user typed at exactly the moment the error is telling them to fix it. Green build, passing tests, found only in a browser (2026-08-26, the Promote modal; the other seven surfaces fixed the same day).
+**Controlling the field is only half of it, and the other half is invisible in a unit test that re-renders.** React restores a controlled `<input>` after that reset by itself. It does **not** restore a controlled `<select>` — `form.reset()` moves the DOM selection behind React's back, state is unchanged, so nothing re-renders and nothing writes it back; measured live with React's props reading `"WON"` while the DOM read `""`, which also means the *next* submit posts the wrong value, since `FormData` reads the DOM. And Radix's `Checkbox` actively drags itself back: it registers its own `reset` listener and calls `setChecked(<value at mount>)`. Any group owning a `<select>` or a `Checkbox` must therefore re-assert itself after a reset — use `src/lib/forms/use-form-reset-restore.ts`, never a second copy of the mechanism. A checkbox's intent is recorded from `onClick`, never `onCheckedChange`, because Radix's restore drives `onCheckedChange` too and would overwrite the value being restored.
+**Test it with `form.reset()`, never with `rerender()`.** RTL's `rerender` forces a render that re-applies the controlled value, which the real app does not necessarily do — that masked the whole `<select>` failure above while nine tests stayed green. Note also that `hasAttribute("defaultValue")` proves nothing: React never emits that attribute, so it reads `false` for controlled and uncontrolled alike.
+**A form inside a Radix overlay must own its own component, or its reset machinery silently does nothing (found 2026-09-12).** Radix mounts a `Dialog`/`Sheet`'s content only while it is OPEN, so a `useFormResetRestore` called in the component that renders the overlay runs its effect with `anchor.current === null` and registers no `reset` listener at all — `tsc`, `eslint` and the build are all clean, and the only symptom is that one field comes back empty after a failed save while every other field survives. Put the `<form>` and its hook in a child component rendered INSIDE the overlay's content, so the two mount together (`CreateLeadForm`, `LeadProfilePanel` are the worked examples). The `edit-form/` field groups were never exposed to this, because they already live inside the content. Same class applies to any effect that needs the overlay's DOM.
+Whenever a form or its action changes, diff the form's `name=` set against the action's `formData.get()` set (both directions empty). For a form split across siblings, diff the shell **plus every sibling** — no single file shows the field set. Full audit + exact commands: `docs/ADDENDA_LOG.md` § Server Action field-parity audit.

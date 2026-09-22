@@ -1,12 +1,12 @@
 ---
 name: status-sync
-description: Audit this repo's status documents — CLAUDE.md § 3, docs/KNOWN_GAPS.md — and its git state against the real repo, cheaply, from check-script output rather than whole documents. Use when the user asks for a status sync, "where are we", or is about to plan or write against this repo.
+description: Audit this repo's status documents — docs/INITIATIVES.md, docs/KNOWN_GAPS.md — and its git state against the real repo, cheaply, from check-script output rather than whole documents. Use when the user asks for a status sync, "where are we", or is about to plan or write against this repo.
 ---
 
 # Status sync for TEKGUYZ CRM
 
 This repo's status is split by responsibility: current initiative status in
-`CLAUDE.md` § 3, dated narrative in `docs/ADDENDA_LOG.md`, open work in
+`docs/INITIATIVES.md`, dated narrative in `docs/ADDENDA_LOG.md`, open work in
 `docs/KNOWN_GAPS.md`. When any of them is stale, anything planned against them
 works from work that already closed — or worse, treats a rejected item as open.
 
@@ -33,8 +33,9 @@ times a day.
   Check 10 in `doc-audit` verifies its inventories; this skill does not.
 - **Never open `docs/DESIGN.md` or `docs/ADDENDA_LOG.md`.** `check-design-drift`
   covers the first; the second is history, and history does not change.
-- **`CLAUDE.md` is already in context** — it loads every session. Read § 3 from
-  what you already have. Do not re-read the file.
+- **`CLAUDE.md` is already in context** — it loads every session. Do not re-read
+  it. `docs/INITIATIVES.md` does **not** load with it: read that file for the
+  initiative status table.
 - **For open work, grep the *titles*, not the bullets.** Use:
 
   ```bash
@@ -76,7 +77,7 @@ treat silence as clean.
    **behind origin** — say "behind origin/main by N commits — run `git pull`
    before working here", and do not describe the tree as current.
 5. `docs/KNOWN_GAPS.md` open bullets, by grep.
-6. `CLAUDE.md` § 3, from context.
+6. `docs/INITIATIVES.md`, the initiative status table.
 
 Gates (`npm run build`, `npm run lint`, `npx tsc --noEmit`, `npm test`) only if
 the audit will claim something is done. Otherwise report them as not run.

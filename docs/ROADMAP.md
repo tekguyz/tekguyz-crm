@@ -7,14 +7,14 @@ sessions had no home this repo's tooling reads.
 ## How to maintain this file
 
 - This file holds ideas that have **never been started**. `docs/KNOWN_GAPS.md`
-  holds deferred edges of *shipped* work; CLAUDE.md § 3 holds initiatives
+  holds deferred edges of *shipped* work; `docs/INITIATIVES.md` holds initiatives
   already started or complete. An idea that fits either of those does not
   belong here.
 - Every entry is one to three sentences, dated, and carries a status tag:
   **idea** / **needs discovery** / **decision pending** / **rejected — revisit
   trigger**. This file must not become a second `KNOWN_GAPS.md`.
 - An item leaves this file the moment a prompt pack starts work on it — it
-  becomes a CLAUDE.md § 3 initiative at that point. Nothing here is a permanent
+  becomes a `docs/INITIATIVES.md` initiative at that point. Nothing here is a permanent
   resident.
 - No design decisions are embedded in an entry beyond what is already decided.
   A known fork (two different builds for one goal) is a constraint, not a decision.
@@ -46,7 +46,7 @@ sessions had no home this repo's tooling reads.
 ## Phase queue
 
 Previously informal, formalised here 2026-08-27. Order is intent, not a
-commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
+commitment; an item moves to `docs/INITIATIVES.md` when its prompt pack starts.
 
 - **P1 — Login/landing redesign.** *Closed 2026-09-15.* Partially shipped
   2026-09-04 and narrowed 2026-09-05; its last open piece, the redesigned
@@ -59,7 +59,7 @@ commitment; an item moves to CLAUDE.md § 3 when its prompt pack starts.
   route" half of this item. `/login` now also carries its own **View demo**
   link, so a visitor arriving at the production URL directly is no longer stuck
   at a wall. Full history: `docs/addenda/2026-09.md` § 2026-09-04 and
-  § 2026-09-05, status row in CLAUDE.md § 3. Note the `robots: noindex` revisit
+  § 2026-09-05, status row in `docs/INITIATIVES.md`. Note the `robots: noindex` revisit
   trigger recorded in `docs/KNOWN_GAPS.md` has now fired — `/demo` is a public
   route — and was deliberately not acted on; see that file.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Status-sync audit, check 13 — live test residue.
 //
-// CLAUDE.md § Test-Data Cleanup is a permanent rule: anything created to verify
+// docs/VERIFICATION.md § Test-Data Cleanup is a permanent rule: anything created to verify
 // something is part of that unit of work, and a unit is not finished while its
 // residue is still in the database. The rule has been in the file for weeks and
 // has been broken twice anyway — sixteen test leads accumulated in the real
@@ -130,7 +130,7 @@ if (!demo) {
       .map((e) => `'${e}'`)
       .join(", ");
     findings.push(
-      `  Removal (run by hand, per CLAUDE.md § Test-Data Cleanup):\n` +
+      `  Removal (run by hand, per docs/VERIFICATION.md § Test-Data Cleanup):\n` +
         `    SELECT * FROM organization_members WHERE organization_id = '${demo.id}';\n` +
         `    DELETE FROM organization_members WHERE organization_id = '${demo.id}'\n` +
         `      AND user_id NOT IN (SELECT id FROM auth.users WHERE email IN (${keep}));`,

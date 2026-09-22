@@ -1,6 +1,6 @@
 ---
 name: doc-audit
-description: Audit CLAUDE.md § 3, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the status-sync skill reports a check finding it could not resolve. This is the heavy pass — the status-sync skill does not run it.
+description: Audit docs/INITIATIVES.md, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the status-sync skill reports a check finding it could not resolve. This is the heavy pass — the status-sync skill does not run it.
 ---
 
 # Doc audit — measure the docs against the repo, repair what drifted
@@ -14,7 +14,7 @@ half every time.
 
 - `npm run check:docs` or `npm run check:residue` reported a finding the
   `status-sync` skill could not resolve from script output alone
-- a session shipped work that needs a new addendum or a § 3 status row
+- a session shipped work that needs a new addendum or a `docs/INITIATIVES.md` status row
 - the user asks for a doc audit, or says something in the docs looks wrong
 
 The `status-sync` skill runs the same scripts but reads only their **output**. It
@@ -29,7 +29,7 @@ its "Build discipline" / Known-Gaps rules):
 
 | What STATUS.md would hold elsewhere | Lives here in |
 |---|---|
-| Current initiative status, what shipped | `CLAUDE.md` § 3 "Post-Launch Feature Work" |
+| Current initiative status, what shipped | `docs/INITIATIVES.md` |
 | Dated build narrative, the "why" behind decisions | `docs/addenda/*.md`, indexed by `docs/ADDENDA_LOG.md` |
 | Deliberately deferred / open work | `docs/KNOWN_GAPS.md` |
 | Live DB schema, RLS, RPCs | `docs/SCHEMA_REFERENCE.md` (rarely stale — it's edited alongside migrations, not after the fact) |
@@ -58,10 +58,10 @@ Check, in this order:
    `git log --oneline -20` and, if the branch tracks a remote, `git log
    origin/main --oneline -5`. For every commit since `docs/ADDENDA_LOG.md`'s
    most recent dated entry, confirm there is either an addendum describing it
-   or a CLAUDE.md § 3 status line covering it. Read commit bodies — this repo
+   or a `docs/INITIATIVES.md` status line covering it. Read commit bodies — this repo
    writes real ones.
 
-2. **What CLAUDE.md § 3 claims that verification would contradict.** Each
+2. **What `docs/INITIATIVES.md` claims that verification would contradict.** Each
    initiative there is marked complete or in-progress with a one-line
    disposition. Spot-check the ones that matter for the upcoming planning
    session against the actual code — don't re-verify the whole section on
@@ -92,7 +92,7 @@ Check, in this order:
    an entry that was accurate on its own date but has since been overtaken with
    a short `**(State as of YYYY-MM-DD only — superseded by § <Title>.)**` clause
    pointing at the entry that replaced it. Then check whether
-   `docs/KNOWN_GAPS.md` or `CLAUDE.md` § 3 repeats the losing claim, and fix
+   `docs/KNOWN_GAPS.md` or `docs/INITIATIVES.md` repeats the losing claim, and fix
    those in the same pass.
 
    This check exists because it was skipped once: the webhook path's email
@@ -256,7 +256,7 @@ Check, in this order:
     row. List each finding under `### Open now`, same rule as checks 9 and 10.
 
 12. **Live test residue. Every run, no exceptions — and this is the one check
-    in the audit that touches the network.** CLAUDE.md § Test-Data Cleanup is a
+    in the audit that touches the network.** `docs/VERIFICATION.md` § Test-Data Cleanup is a
     permanent rule that has been broken twice anyway: sixteen test leads in the
     real TEKGUYZ org over three weeks, then two MEMBER memberships and two
     ACCEPTED invites found sitting in `TEKGUYZ Demo` on 2026-08-18. Neither was
@@ -329,7 +329,7 @@ Check, in this order:
 Then repair whichever doc is stale, using **that doc's own established
 maintenance convention** — do not invent a new format:
 
-- **CLAUDE.md § 3**: update an initiative's one-line disposition, or add a new
+- **`docs/INITIATIVES.md`**: update an initiative's one-line disposition, or add a new
   initiative entry, following the existing `**Name (N prompts).** ✅/⬜
   <status>.` pattern. Full narrative never goes here — see the next bullet.
   The Status cell stays one or two sentences; check 11 fails on one over 350
@@ -361,7 +361,7 @@ If all were already accurate, say so plainly and change nothing.
 
 **If any doc changed, commit it — the doc files touched, nothing else in the
 tree.** Message: what was corrected and why (e.g. "KNOWN_GAPS.md: relocate the
-resolved webhook-secret item, CLAUDE.md: mark Task/Calendar hardening
+resolved webhook-secret item, INITIATIVES.md: mark Task/Calendar hardening
 complete"). This is a doc-audit commit, not a feature commit — it must never
 stage or commit unrelated dirty files even if the working tree has other
 changes in progress. Rationale: CLAUDE.md's own Known Gaps rule already treats

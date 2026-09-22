@@ -154,3 +154,4 @@ repo matches a title in this column.
 | 2026-09-15 — Idle-based session timeout | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-15 — Today redesign Stage 1: two comps, Variant Brief picked, SLA Critical left as Fork A | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-20 — `handoff` becomes `status-sync`, and the paste block is cut | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-21 — CLAUDE.md slimmed from 64 KB to 10 KB (Job 4) | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

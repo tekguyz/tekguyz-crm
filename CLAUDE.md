@@ -1,227 +1,202 @@
 # TEKGUYZ CRM: TECHNICAL ARCHITECTURE & MASTER SCHEMA
 
+A multi-tenant Next.js/Supabase sales CRM. Tenant isolation runs through
+Postgres RLS, not application code, so anything touching `leads`,
+`organizations`, `organization_members`, `prospects` or credentials has a real
+security surface. `main` auto-deploys to Vercel — "pushed" is not "deployed"
+until the deploy is confirmed.
+
+**This file is permanent rules and pointers only.** It loads into every message.
+Detail lives in `.claude/rules/` with `paths:` frontmatter (free until a matching
+file is read) or in `docs/` (read on demand).
+
 ## Reference Index
 
-- **This file:** permanent rules only — the design system, operational rules, the multi-tenant security model, post-launch initiative status, and the standing disciplines. Edit it only when a permanent rule or pattern changes.
-- **`docs/DESIGN.md`:** the full design spec — token values in table form, the elevation ramp, iconography sizes, the brand asset rules, and § The Application Shell. Read it for any value; this file carries only the rules the values cannot tell you.
-- **`docs/SCHEMA_REFERENCE.md`:** the live database schema — every table, RLS policy with its paired `WITH CHECK`, `SECURITY DEFINER` RPC, and index. Read before any migration, RLS, or RPC work.
-- **`docs/ADDENDA_LOG.md`:** the **index** of dated build history — every section title and which file holds it. Split on 2026-08-18; the entries live in `docs/addenda/` (`prompts-1-15.md`, `2026-07.md`, `2026-08.md`, `archives.md`). The path and the `§ <Section Title>` citation style did not change, so every existing pointer still resolves through the index. New addenda go to the month file **and get an index row** — a section absent from the index is unreachable.
-- **`docs/ROADMAP.md`:** not-yet-started future initiatives, open product decisions, and the phase queue — distinct from `KNOWN_GAPS.md` (deferred edges of shipped work) and § 3 here (initiatives already started or complete). An item leaves it when a prompt pack starts work on it.
-- **`docs/KNOWN_GAPS.md`:** deliberately deferred work, **and the single copy of the rules for maintaining it.** Read it before assuming any limitation is already handled.
+| File | What it owns |
+| --- | --- |
+| `docs/DESIGN.md` | Design spec — token tables, elevation, iconography, § The Application Shell |
+| `docs/SCHEMA_REFERENCE.md` | The live schema. Read before any migration, RLS or RPC work |
+| `docs/SECURITY_MODEL.md` | The seven security rules in full, and role-enforcement status |
+| `docs/INITIATIVES.md` | Post-Launch Feature Work — initiative status, one row each |
+| `docs/VERIFICATION.md` | Session/verification discipline and Test-Data Cleanup, in full |
+| `docs/ADDENDA_LOG.md` | **Index** of dated history. Entries in `docs/addenda/`; a new addendum needs an index row |
+| `docs/ROADMAP.md` | Not-yet-started initiatives and open product decisions |
+| `docs/KNOWN_GAPS.md` | Deferred work, **and the single copy of the rules for maintaining it** |
 
-**There is deliberately no `STATUS.md`.** Status is split by responsibility across the files above — current initiative status in § 3 here, dated narrative in `ADDENDA_LOG.md`, open work in `KNOWN_GAPS.md`. Consolidating them into one status file is what produced this file's two emergency compressions; do not create one. The `.claude/skills/status-sync` skill (renamed from `handoff` on 2026-09-20) audits § 3 here, `ADDENDA_LOG.md`, `KNOWN_GAPS.md` and `SCHEMA_REFERENCE.md`, plus four scripted checks that run on every invocation — `check-design-drift.mjs` (`docs/DESIGN.md`’s value tables against `globals.css`), `check-doc-figures.mjs` (figures the docs assert against the same figures measured now), `check-section-pointers.mjs` (every `§` pointer resolves, every addendum is indexed, every § 3 Status cell stays short) and `check-test-residue.mjs` (live rows left behind by verification work) — and is the supported way to answer "where are we". It reports; it never pastes anything anywhere. The first three are repo-only and run together as `npm run check:docs`; the fourth reads the database and runs as `npm run check:residue`, SELECT-only, printing the removal SQL for a human rather than writing anything.
+Path-scoped detail, loaded only when a matching file is read:
 
----
+| `.claude/rules/` | Covers |
+| --- | --- |
+| `design-system.md` | Primitives, tokens, focus, the shell |
+| `brand-assets.md` | Brand pipeline, the mark, outward copy, crawler routes |
+| `leads-and-ingestion.md` | Click-to-action, Resurrection Engine, submissions, promotion |
+| `forms.md` | Field parity and the React 19 form reset |
+| `nextjs-patterns.md` | `use server` / `use client` exports, dev routes, redirect remount |
 
-## 1. CORE MECHANICS & ARCHITECTURE
+**There is deliberately no `STATUS.md`.** Status is split by responsibility —
+`docs/INITIATIVES.md`, `docs/ADDENDA_LOG.md`, `docs/KNOWN_GAPS.md`. Consolidating
+them is what produced this file's compressions; do not create one.
 
-### File Size
-Split files by responsibility, not by line count. A file should do one thing;
-when it starts doing two, split it into a sibling at the same directory level
-(the customer profile view is the reference shape: layout shell, brief,
-timeline, note-capture, each its own module).
+## Authority order
 
-**Around 200 lines is a smell worth a second look, not a wall.** Never split a
-cohesive unit purely to get under a number — that is how this project produced
-its worst bug class. A form split across siblings hides its own field set, so no
-single file shows it, and five `leads` columns were silently NULLed across two
-incidents as a direct result (see Form/Action Field Parity below). A 240-line
-file with one clear job beats two 120-line files that must be read together.
+When two documents disagree, the higher one wins and the lower one gets fixed —
+never silently pick one.
 
-### UI/UX Design System (Structural Neutral v2)
+1. **The live thing** — the database, `src/app/globals.css`, the running app. A
+   doc is not a measurement.
+2. **This file** — permanent rules. Where a skill's generic advice conflicts
+   with a rule here, this file wins.
+3. **`docs/SCHEMA_REFERENCE.md`, `docs/DESIGN.md`, `docs/SECURITY_MODEL.md`** —
+   the reference docs.
+4. **`docs/ADDENDA_LOG.md`** — dated history. Explains why; never overrides.
+
+## Hard rules
+
+These are never moved to a path-scoped file, because a path-scoped file does not
+load when it matters.
+
+- **Never `execute_sql` a write against a `public`-schema table.** Read-only
+  Supabase MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT
+  only) may be used freely. Anything that writes schema (`apply_migration`, any
+  DDL) is never called directly — write the migration SQL file and hand it to
+  the human. The one standing exception is the `vault` schema. This has been
+  broken once already. Detail: `docs/VERIFICATION.md`.
+- **Removal of test data is a database-level operation, and `archived` is not
+  removal.** Anything created to verify something is part of that unit of work
+  and is removed before the unit is reported done. Full rule:
+  `docs/VERIFICATION.md` § Test-Data Cleanup.
+- **Secrets live in the git-ignored `.env` / `.env.local` and in Vercel's env
+  settings.** Never commit one, never paste one into a doc, and never tell the
+  founder to put one in a Windows user environment variable. BYO tenant
+  credentials live in Supabase Vault, never in a `public` column —
+  `docs/SECURITY_MODEL.md` rule 3.
+- **Every column a Server Action writes from `formData.get("x")` must have a
+  rendered `<input name="x">` in the form posting to it**, and that form must
+  use controlled fields, not `defaultValue`. An absent field silently NULLs a
+  column. Full rule, and the `<select>`/`Checkbox` reset trap:
+  `.claude/rules/forms.md`.
+- **A classifier verdict ROUTES a lead, it never hides one.** No automated
+  judgement may set `archived` or gate the new-lead notification.
+- **An inbound resubmission never rewrites a `leads` identity column.** Detail:
+  `.claude/rules/leads-and-ingestion.md`.
+- **Adding a column to `LEAD_COLUMNS` is never additive — the migration lands
+  before the code.** PostgREST errors `42703` on a column the database does not
+  have, taking down every lead surface and inbound webhook capture at once.
+- **Account creation is invite-only, and the gate lives in the Server Action.**
+  `docs/SECURITY_MODEL.md` rule 7.
+- **Session verification on a render path is `getClaims()`, never `getUser()` —
+  and never `getSession()`.** `docs/SECURITY_MODEL.md` rule 6.
+- **Never invent a business fact, and never write a placeholder phone number.**
+- **Never edit a file in `public/brand/` or `public/icons/` by hand** — they are
+  generated by `scripts/brand/build_brand.py` and the next run reverts the edit.
+- **The webhook signing protocol is shared with `C:/Projects/tekguyz-site`.** Any
+  change to it ships in both repos, deployed back to back.
+- **Never assume a prior instruction landed.** A past conversation, a memory or a
+  claim in chat is not evidence that code exists — read the file.
+- **Report what you did not finish.** Never describe unfinished work as complete.
+
+## Multi-tenant security model
+
+Seven rules, permanent architectural law, in full in **`docs/SECURITY_MODEL.md`**:
+membership-based tenant resolution; RLS with paired `WITH CHECK`;
+service-role-only credentials in Supabase Vault; per-tenant HMAC webhook signing
+with replay and rate-limit guards; explicit revenue/outcome tracking;
+`getClaims()` on the render path; invite-only account creation. That file also
+carries the role-enforcement status, which is **partial** — never assume it is
+complete. Before any migration, RLS or RPC work, read `docs/SCHEMA_REFERENCE.md`.
+
+## File size
+
+Split files by responsibility, not by line count. **Around 200 lines is a smell
+worth a second look, not a wall.** Never split a cohesive unit purely to get
+under a number — a form split across siblings hides its own field set, and that
+is how five `leads` columns were silently NULLed across two incidents.
+
+## Design system
+
 A dense, neutral, monochrome-first data tool. Structure comes from hairline
-borders and spacing, not shadow. Colour is signal, not decoration. Full spec:
-`docs/DESIGN.md`. Live reference: the dev-only route `/design` renders every
-primitive in every state in both themes — check a change there before shipping it.
+borders and spacing, not shadow. Colour is signal, not decoration.
 
-**`src/app/globals.css` is the single source of truth for every token value.**
-Read that file for values; a doc copy can only drift. What survives here is the
-rules the CSS cannot tell you:
+- **`src/app/globals.css` is the single source of truth for every token value.**
+  Read that file for values; a doc copy can only drift.
+- **Consume primitives from `src/components/ui/`, never one-off classes.** A new
+  one-off styled `<button>` is a bug, and a primitive is never hand-copied a
+  second time.
+- The live reference is the dev-only route `/design`.
 
-- **Consume primitives from `src/components/ui/`, never one-off classes.** Button, Input, Textarea, Select, Checkbox, Card, Badge, NavItem and the Table shell all exist. A new one-off styled `<button>` is a bug.
-- **Before writing any new UI element, walk these three steps in order and stop at the first that answers.** (1) Read `src/components/ui/` and use what is there. (2) If nothing fits, query the **live** shadcn registry — `npx shadcn@latest search @shadcn` — for a matching part; never recall its contents from memory, and never run `shadcn init` or import its default CSS-variable theme. (3) Build the part into `src/components/ui/` following the `alert-dialog.tsx` / `dialog.tsx` / `popover.tsx` / `Checkbox.tsx` recipe: copy shadcn's current structure by hand, keep the Radix primitive underneath if shadcn's version uses one, keep the `data-slot` attributes, and remap **every** class onto this project's own OKLCH tokens — shadcn's defaults never ship. Build only what has a live consumer today; a part with no caller is scope creep, same as any feature.
-- **Once a primitive exists, it is never hand-copied a second time.** If a control cannot be a `<button>` — a `next/link`, a `tel:`/`mailto:` href, a Radix `Trigger` that needs its own props on the element — reach for `asChild` (Button's own, or the Radix part's) and let the primitive supply the classes. Restating a primitive's class string in a caller creates a copy that drifts from it silently, with no error and no failing test; that is exactly how three copies of Button's variants accumulated before 2026-08-16.
-- **`--accent` is sampled and final** (values in `globals.css`, rationale in `docs/DESIGN.md` § `--accent` — SAMPLED AND CLOSED). Do not substitute the raw logo blue `#3B6FE0` — it measures 4.44:1 on the light canvas and fails AA as text.
-- **`--accent` is for primary CTAs, active nav links, focus rings, and inline navigational links only — never decorative.** The decorative pill palette is for category dots and status badges only — never layout borders, never primary buttons.
-- **`--accent-fg` / `--danger-fg` exist because those two colours flip lightness between themes.** Never hardcode white text on the accent.
-- **The radius scale overrides Tailwind's stock values under the same utility names** (`rounded-xs`/`sm`/`md`/`lg`/`xl`). Do not reason from Tailwind defaults; read the scale in `docs/DESIGN.md` § Border Radius Scale.
-- **The type scale does NOT override Tailwind's names.** `text-xs`/`sm`/`base` keep their stock meanings; the v2 roles are extra names (`text-display`/`h1`/`h2`/`title`/`body-md`/`body-sm`/`label`/`caption`), each baking in size, weight and tracking.
-- **Any new `text-*` role must be registered in `src/lib/utils/cn.ts`.** tailwind-merge's stock config has never seen these names, so it files them under text-COLOUR and treats a role as conflicting with a colour: `cn("text-accent-fg", "text-body-md")` silently returns only `text-body-md` and the foreground colour vanishes with no error. `cn.ts` registers all eight as a `font-size` group; extend that list, never work around it at the call site.
-- **`globals.css` uses `@theme inline`, and that is load-bearing — do not revert it to a plain `@theme`.** A plain `@theme` emits `--color-x: var(--x)` on `:root`, so the indirection resolves at `:root` and only the already-resolved colour inherits down — a nested `.light`/`.dark` wrapper can never re-theme its own subtree (both `/design` panes rendered identically). `inline` puts the reference in the utility itself, so the lookup happens on the element being painted.
-- **Dark mode runs ~3x the light alpha at each elevation stop — keep that ratio if the ramps are retuned.** Which level belongs to which component: `docs/DESIGN.md` § Elevation & Depth.
-- **Never copy shadcn's `outline-none` onto an interactive row when porting a part.** It silently deletes this project's accessibility floor — the global `:focus-visible` rule — for every instance, and nothing fails: no error, green build, all tests pass. It reached `DropdownMenuItem` that way and left the five identity-menu controls with a `canvas-soft`-on-`canvas-pure` tint as their only focus signal. Radix focuses a row on `pointermove`, and Chromium only matches `:focus-visible` on a programmatic focus after real keyboard input, so the ring the class was suppressing never paints for mouse users anyway. Overlay *content* boxes may keep it; rows may not.
-- **Measuring a focus ring in the browser has two traps that both read as "the rule does not work".** `transition-colors` includes `outline-color`, so reading `getComputedStyle().outlineColor` in the same task that focused the element returns the transition's *start* value (currentColor) — the reduced-motion clamp does not help, the transition still has not ticked. And `getComputedStyle` lags one element behind when several are focused in a loop, so a sweep looks uniformly broken while being uniformly off-by-one. Focus one element, read it in a separate call, and confirm with a screenshot. Both traps produced a wrong Known Gaps entry that survived two sessions.
-- **Global focus rule gotcha:** any `:not()` must stay a single `:not()` with a comma-separated list. Chaining `:not(a):not(b)` silently fails to compile under this project's Lightning CSS/Turbopack pipeline — no error, just no focus styling.
-- **Going Cold SLA rule:** when a lead's `next_action_at` is overdue, its card border becomes a dashed `--cold` line and its status badge desaturates. This is `Card`'s `cold` prop and `Badge`'s `cold` tone. It is business signal — never repurpose either for styling.
-- **Icons are `@tabler/icons-react`, outline only** (stroke and sizes: `docs/DESIGN.md` § Iconography). `lucide-react` was fully removed on 2026-08-14 — a new import from it is a bug.
-- **Brand assets are generated, never hand-edited.** `scripts/brand/build_brand.py` is the single source of truth for the mark's geometry, every SVG, every raster, and the outlined wordmark. Editing a file in `public/brand/` or `public/icons/` directly is a bug — the next pipeline run silently reverts it. Fix the script and re-run.
-- **The mark has two colour variants and the theme picks one.** Its structure is carried entirely by ink outlines; on dark canvases `#1A1A1A` vanishes and the mark collapses into disconnected shapes. Dark surfaces use `icon-on-dark.svg` / `lockup-*-dark.svg`. **Never `filter: invert()`** — it flips the blue and teal too.
-- **The mark themes through the `--brand-mark` CSS variable, never a `dark:` utility.** This codebase uses no `dark:` variants at all, and Tailwind v4 maps `dark:` to `prefers-color-scheme` rather than the `.dark` class — so a class-based swap would ignore the theme toggle and break the nested panes on `/design`.
-- **The mark has a reduced variant at small sizes, and that is not optional** — the nodes cannot resolve at favicon scale. Exact thresholds and which asset applies: `docs/DESIGN.md` § Brand Identity → Two hard rules. Do not "simplify" this back to one asset.
-- **The wordmark is always outlined, never live `<text>`.** A logo carrying `font-family="Inter"` renders correctly in the app and silently falls back to a system stack in email, decks, and on other machines — no error, green build. The pipeline outlines it from the real Inter TTF.
-- **Logo colours are not UI tokens.** `#3B6FE0` / `#2FA679` / `#16976B` live in the mark only. No component consumes them. The decorative pill palette and `--accent` remain the only sanctioned colour sources for UI.
-- **Outward-facing copy has one home: `BRAND` in `src/lib/brand/copy.ts`** (`name`, `shortName`, `description`, `tagline`). Import it; never retype the literal. These were duplicated across `layout.tsx`, `manifest.ts` and `opengraph-image.tsx` — same drift shape as a hand-copied primitive, except the stale copy is the one a stranger sees.
-- **The sidebar's collapse state is the `tg_sidebar` cookie, read in the server layout — never `localStorage`.** localStorage cannot be read on the server or before hydration, so it paints expanded and snaps to the rail a frame later. **The collapse itself animates `translate` on an overlaid rail, never a layout property, and never conditionally per route** — the original `transition-[width]` on an in-flow flex sibling relaid out the whole content area every frame and dropped frames on the Pipeline board. Full shell spec: `docs/DESIGN.md` § The Application Shell.
-- **The shell's `<main>` must stay `relative`, and that is load-bearing.** It is the app's scroll container (`overflow-y-auto`), and an absolutely-positioned descendant is clipped by an ancestor's overflow only when that ancestor is in its **containing-block chain**. With `main` static the chain skips it and lands on the shell's own `relative` div, which is outside the scroller — so every `.sr-only` span (Tailwind's is `position: absolute`) and Radix `Checkbox`'s hidden bubble `<input>` escape the clip and inflate the **document's** scroll height to the full content height. The result is a second, page-length scrollbar under the real one on every long view, with a green build and passing tests. Measured on `/prospects` and `/settings` before the fix. Full history: `docs/ADDENDA_LOG.md` § 2026-08-27 — Three UI defects: double scrollbar, the missing Maps link, the raw timezone id.
-- **The font variable belongs on `<html>`, not `<body>`.** Tailwind's preflight applies `font-family: var(--font-sans)` at the html level and `--font-sans` resolves to `var(--font-inter)`, so a next/font variable declared on `<body>` is out of reach and the whole app silently falls back to the system stack with no error.
-
-### High-Leverage Operational Utilities
-- **Click-to-Action Real-Time Shortcuts:** Every phone number dynamically renders with `tel:` and `sms:` protocols. Every email compiles a `mailto:` redirect wrapper, and physical addresses point directly to Google Maps URL parameters for single-tap field execution.
-- **Resurrection Engine:** No hard deletions are permitted; deletions toggle the `archived` boolean flag. If an archived client submits an inbound webhook form, the system resurrects the profile, shifts its status to NEW, and flags it with a `[Returned Prospect]` UI indicator.
-- **An inbound resubmission never rewrites a `leads` identity column (permanent rule, 2026-08-17).** `client_name`, `phone`, `company`, `website`, `physical_address`, `service_category` and `lead_source` are **first-known** values, written once when the contact is created and never again by ingestion. Everything a given enquiry actually said belongs in its own immutable `lead_submissions` row, one per inbound enquiry; `leads` stays exactly one row per `(organization_id, lower(email))` contact. Overwriting in place destroyed `510c28db`'s real identity with no error and no audit trail. Adding any of those columns back to `ingestWebhookLead`'s update object reopens that bug — the only fields it may touch are `updated_at` plus the Resurrection Engine's `archived`/`status`. A human editing a lead through `updateLead` is a different thing and still writes them all. Every lead-origin path (webhook, `createLead`, CSV import, demo seed, prospect promotion) writes a submission row — all via `src/lib/submissions/record.ts` except promotion, which writes it inside the `promote_prospect` RPC so the lead, submission and prospect claim share one transaction; that SQL mirrors `record.ts`'s row shape and must change with it. Full history: `docs/ADDENDA_LOG.md` § 2026-08-17 — `lead_submissions`: the immutable enquiry log.
-- **A classifier verdict ROUTES a lead, it never hides one (permanent rule, 2026-08-11).** No automated judgement — spam shield today, anything scored later — may set `archived`, and none may gate the new-lead notification. `archived` means "a human removed this"; overloading it with "a model doubted this" cost 12 real leads five days of silent invisibility, because every list query filters `archived = false` *and* the notification was suppressed by the same verdict, so nobody could review a queue they were never told existed. A verdict routes to a review surface and always notifies. Full history: `docs/ADDENDA_LOG.md` § Spam Shield routing fix.
-- **A prospect is “already promoted” if and only if `prospects.promoted_lead_id` is non-NULL (permanent rule, 2026-08-26).** `status` carries a `'CONVERTED'` value, but status is a label an operator sets by hand from a dropdown and cannot carry the identity of the lead. Every write that sets `status = 'CONVERTED'` must set `promoted_lead_id` in the **same statement** — one statement is one transaction, so the two can never disagree — and that statement must carry `where … and promoted_lead_id is null`, which is what makes promoting twice affect zero rows instead of overwriting the first lead id. Every read that asks whether a prospect can still be promoted queries `promoted_lead_id`, never the status string. `CONVERTED` is deliberately absent from the operator status dropdown for the same reason. Full history: `docs/ADDENDA_LOG.md` § 2026-08-26 — Prospect promotion: the write path into `leads`.
-- **Kanban Reorder Rule:** Same-column drag does NOT persist a manual order; column order stays driven by existing field logic (SLA date / revenue / starred). Only cross-column drag persists, and only changes `status`.
-- **Contacts Directory Scope:** The Contacts directory shows all non-archived leads regardless of `outcome` (WON/LOST/ABANDONED all remain visible) — deliberately different from Pipeline views, which filter to active work only. `archived` is the only visibility lever for Contacts; `outcome` is never used to hide a contact. Reasoning: WON leads become paying clients and need to stay reachable; LOST/ABANDONED may get re-engaged later; a directory's job is different from a pipeline's job. If clutter becomes a real problem, the fix is better search (Prompt 8's command palette), not blanket suppression of real data.
-
-### Multi-Tenant Security Model
-Following a Principal Architect audit of the original schema, five structural gaps were identified and closed. These are now permanent architectural law, not optional hardening:
-
-1. **Membership-based tenant resolution.** A user's access to an organization is never assumed or hardcoded — it's resolved through an `organization_members` table (user_id ↔ organization_id ↔ role). RLS policies call a `SECURITY DEFINER` helper, `private.current_org_ids()`, rather than referencing a literal UUID or tautological condition. (Lives in a dedicated `private` schema, never added to the API-exposed schema list, rather than `auth` — hosted Supabase does not allow creating objects in the `auth` schema itself.)
-2. **RLS with paired `WITH CHECK` clauses.** Every write policy validates both the row being touched (`USING`) and the row being written (`WITH CHECK`), preventing a request from reassigning a row into a different tenant's scope.
-3. **Access-controlled credentials, service-role only, encrypted at rest via Supabase Vault (as of Prompt 13a).** BYO LLM/integration keys and tokens live in a dedicated `organization_credentials` table with `anon` and `authenticated` grants fully revoked and zero RLS policies, so service-role (used only from Server Actions) is the sole path in — but the table itself no longer stores the secret value at all. Prompt 13's plaintext `TEXT` columns (confirmed empty, zero rows ever written) were replaced in Prompt 13a with nullable `UUID` columns (`*_secret_id`) pointing into `vault.secrets`; the real value only ever exists inside Supabase Vault, reachable exclusively through two `SECURITY DEFINER` RPCs (`vault_set_org_credential`, `authenticated`-gated with an internal OWNER/ADMIN role check; `vault_get_org_credential`, `service_role`-gated only). Verified live: the `authenticated` role's own attempt to call `vault_get_org_credential` fails with "permission denied," and the stored column value is a UUID, never the raw key. This is now real encryption, not just access control — re-verify against the live schema before describing it any other way, since this doc has been wrong about it before (see the Prompt 12/13 addenda in `docs/ADDENDA_LOG.md`, both superseded by Prompt 13a).
-4. **Per-tenant webhook signing key — tenant resolution and authentication are two separate concerns (rewritten 2026-08-18).** The inbound webhook URL carries the plain `organization_id` (`POST /api/v1/triage/<organization_id>`) and resolves the tenant; the request is authenticated by an `X-TekGuyz-Signature` header holding a hex HMAC-SHA256 of the **raw, unparsed request body**, keyed by `organizations.webhook_secret`. **The org id in the URL grants no access on its own** — a valid org id with a missing, malformed or wrong signature is rejected with exactly the same opaque 401 as an org id that does not exist, so nothing is learned from either. `webhook_secret` keeps its column, its uniqueness and its rotation flow, but its role changed from bearer token to signing key: it is never transmitted, so it can no longer land in a request log, which is the whole point of the change. Verify against the raw bytes with `crypto.timingSafeEqual`, never `===` and never a re-serialized body — `src/lib/webhooks/signature.ts` carries both traps in comments. **This supersedes the previous rule 4, which said traffic was tenant-scoped by the secret and "never by a payload-supplied `organization_id`"; that was correct only while the URL value doubled as the credential.** A payload-supplied org id is still never trusted — the id is taken from the URL and the signature is what authorises it. The protocol's own spec doc was removed on 2026-08-19 as not belonging in this repo — the authoritative spelling of the header, the digest and the raw-body rule now lives in `src/lib/webhooks/signature.ts` and its test, and the one real caller carries its half in `C:/Projects/tekguyz-site`. **Timestamped since 2026-09-14:** the digest covers `${timestamp}.${rawBody}`, the timestamp travels in `X-TekGuyz-Timestamp` (Unix seconds) and must be within 300s of the server clock in either direction, and a signature already accepted for the tenant is refused via Redis. The route's check order is load-bearing — tenant, signature, timestamp, replay, rate limit — and every refusal before the rate limiter is the same opaque 401. Both Redis guards fail **open**, logging `WEBHOOK_STORE_UNAVAILABLE`. Full history: `docs/ADDENDA_LOG.md` § 2026-08-18 — HMAC request signing replaces the URL-path webhook secret, § 2026-09-14 — Webhook replay protection and a Redis-backed rate limiter.
-5. **Explicit revenue/outcome tracking.** `leads` carries `outcome` (WON / LOST / ABANDONED), `closed_at`, and `actual_revenue`, so the analytics cron can distinguish realized revenue from abandoned or lost pipeline — rather than inferring outcome from the `archived` flag alone.
-
-6. **Session verification on a render path is `getClaims()`, never `getUser()` — and never `getSession()` (permanent rule, 2026-08-28).** All three answer "who is this request", and the difference is a network round-trip. `getUser()` calls the Supabase Auth server to revalidate the token; `getClaims()` verifies the JWT signature locally with the Web Crypto API against this project's asymmetric (**ES256**) signing key, cached module-globally by `@supabase/auth-js`, so it is the same security guarantee for a fraction of the cost. `getSession()` is neither — it trusts the cookie unverified and must never be used to gate anything. `getUser()` remains correct only where the **canonical server-side user record** is genuinely needed (immediately after a password or email change); everything on a render path — `updateSession` in `src/lib/supabase/middleware.ts`, `getCurrentOrg` in `src/lib/organizations/current.ts` — uses claims. The cost of getting this wrong is not theoretical: those two call sites each ran `getUser()` on **every page load and every client-side RSC navigation**, and that fixed, route-independent tax was measured as the whole cause of the loading-skeleton flash (details below, under Build discipline). One consequence has to be paid for deliberately: claims are only as fresh as the token, which lives an hour, so any write that changes something read out of `user_metadata` must call `supabase.auth.refreshSession()` before revalidating — `updateDisplayName` in `src/lib/account/actions.ts` is the worked example and the reason display names do not go stale.
-
-7. **Account creation is invite-only, and the gate lives in the Server Action (permanent rule, 2026-09-05).** There is no self-serve signup: the only accounts that will ever exist are provisioned by the owner for one or two trusted collaborators, and a stranger creating an org would land in a product with no billing model, no ToS and no review. `/signup` renders **no form at all** without a `token` naming a live `PENDING` invite, and `signUp` in `src/lib/auth/actions.ts` re-runs the same check via `checkInviteToken` and additionally requires the submitted address to equal the invited one. **Removing the form from the page is presentation; the action's own check is the boundary** — a Server Action is POST-able directly, so a gate that exists only in the page is not a gate. Every refusal returns identical wording, so token-guessing leaks nothing. `/login` carries no signup link; an invitee arrives via `/invite/<token>`. This is routing and presentation only — no RLS policy, grant or migration is involved, and none should be added to enforce it. If self-serve signup is ever wanted, that is a product decision with its own revisit trigger in the P1 entry in `docs/ROADMAP.md`, not a quiet re-opening of the form.
-
-**Role enforcement status** (`organization_members.role`: OWNER/ADMIN/MEMBER) — partial, kept accurate here so it doesn't get assumed complete: enforced at RLS for `organization_invites` (create/revoke, OWNER/ADMIN only), the `organizations` UPDATE policy (OWNER/ADMIN only), and the `get_org_webhook_secret` RPC (OWNER/ADMIN only, re-checks the caller's own role for the specific `org_id` requested — never trusts a client-supplied `org_id` alone). Since 2026-08-18, also on **membership itself**: `change_member_role` and `remove_organization_member` (both `SECURITY DEFINER`, both re-resolving the caller's role for the `p_org_id` passed) hold three rules the type system cannot — the last OWNER may not be demoted or removed *even by themselves*, an ADMIN may not manage an OWNER, and an ADMIN may not grant OWNER. Self-removal is the one MEMBER-permitted write. **`organization_members` deliberately has no UPDATE or DELETE policy, and must not get one** — `authenticated` holds no such grant, so the RPC-only path is enforced below RLS and a policy would only be able to widen it. On **`leads`, scoped and column-level, not table-wide**: `archived`, `outcome`, `actual_revenue` and `closed_at` are OWNER/ADMIN-only on UPDATE — a MEMBER cannot archive a lead or change how it closed. Everything else on `leads` keeps full MEMBER parity by design: unrestricted INSERT (all columns, those four included), full tenant-wide SELECT, and full UPDATE of every other column. Enforced by a `BEFORE UPDATE` trigger, **not** a policy — RLS `WITH CHECK` evaluates the resulting row and cannot express a column-level diff; the paired `USING`/`WITH CHECK` remains the tenant boundary underneath it. The trigger exempts `auth.uid() IS NULL` so service-role paths (the webhook Resurrection Engine, seed scripts) still work — **RLS bypass is not trigger bypass**, so that exemption has to be written, never assumed. `tasks` still has no role enforcement at all, deliberately. Sensitive per-row data (`webhook_secret`, invite tokens) is gated at the fetch level, not just conditionally rendered — a value that never should reach a MEMBER is never queried for one, since anything passed as a prop to a client component ships in the RSC payload regardless of whether it's visually rendered.
-
----
-
-## 2. Build History
-
-The initial build was a closed 15-phase roadmap (Prompts 1–15), complete. Full
-list and per-prompt narrative: `docs/ADDENDA_LOG.md` § Archived: 15-Phase
-Technical Roadmap. Do not add new prompts to it — a new feature gets its own
-initiative in § 3.
-
----
-
-## 3. Post-Launch Feature Work
-
-Each initiative below is its own named, numbered prompt sequence — not a
-continuation of the closed 15-phase roadmap in § 2. This table is **status
-only**; the full narrative for every prompt is in `docs/ADDENDA_LOG.md` at the
-sections named in the last column, and every open item is in
-`docs/KNOWN_GAPS.md`. **A Status cell is one or two sentences, never a
-report** — test counts, measurements and reasoning go in the addendum, and
-`npm run check:docs` fails on a cell over 350 characters. Prompt reports
-written into these rows took this file to 89 KB (history: `docs/ADDENDA_LOG.md`
-§ CLAUDE.md compression history).
-
-| Initiative | Status | Shipped | Full history — `docs/ADDENDA_LOG.md` § |
-|---|---|---|---|
-| **Task/Calendar** (4 prompts + hardening) | ✅ Complete | 2026-07-28 | Task/Calendar addendum — Prompts 1 & 2, § Prompt 3, § Prompt 4, § Prompt 5 |
-| **Help System** (2 prompts) | ✅ Complete | 2026-07-30 | Help Drawer addendum — Prompt 1, § Prompt 2 |
-| **Brand Identity "Converging Funnel"** (1 prompt) | ✅ Complete — also closed the `--accent` placeholder | 2026-08-14 | Brand identity + `--accent` sampling |
-| **Leads MEMBER-Role Enforcement** (1 prompt + UI follow-up) | ✅ Complete, proven live on `npm run test:rls`. A MEMBER's lifecycle controls are also hidden, but that is presentation only — the trigger is the boundary | 2026-08-14, UI 2026-08-17 | Leads MEMBER-role enforcement addendum, § 2026-08-17 — Deterministic org resolution, and hiding lifecycle controls from a MEMBER |
-| **Brand Application Pass** (2 prompts) | ✅ Complete | 2026-08-15 | Brand application pass |
-| **Design System v2 "Structural Neutral"** (Prompt 1, then 2a/2b/2c, then a primitive audit and a pre-auth closing pass) | ✅ Complete — **every view in the app now consumes `src/components/ui/`**; raw-element grep down to three pre-documented exceptions | 2026-08-14 → 2026-08-16 | Design System v2 "Structural Neutral" — foundation layer, § Prompt 2a, § Prompt 2b, § Prompt 2c, § Primitive audit, § pre-auth surfaces |
-| **Application Shell Redesign** (1 prompt + close-out) | ✅ Complete — its six binding decisions live in `docs/DESIGN.md` § The Application Shell, not in a prompt | 2026-08-16 | Application shell redesign, § Shell redesign close-out |
-| **`lead_submissions` immutable enquiry log** (1 prompt) | ✅ Complete, applied and live-verified through the real webhook route — closes both the webhook-overwrite and no-`message`-column gaps | 2026-08-17 | 2026-08-16 — Wave decisions, § 2026-08-17 — `lead_submissions`: the immutable enquiry log |
-| **Per-lead ownership — `leads.assigned_to`** (Prompt 1 of 2) | ✅ Complete, live-verified. Ownership only — **visibility is deliberately unchanged**, and no RLS policy reads the column | 2026-08-18 | 2026-08-18 — `leads.assigned_to`: per-lead ownership |
-| **Team management — role change + member removal** (Prompt 2 of 2) | ✅ Complete, live-verified. Two `SECURITY DEFINER` RPCs. **`organization_members` gets no UPDATE or DELETE policy, ever** — removal also releases the leaver's `assigned_to` in the same transaction | 2026-08-18 | 2026-08-18 — Team management: role change and member removal |
-| **Webhook HMAC request signing** (1 prompt) | ✅ Complete, deployed 2026-08-19. The URL-path secret was removed, not dual-supported. The current protocol is § Multi-Tenant Security Model rule 4 | 2026-08-18, deployed 2026-08-19 | 2026-08-18 — HMAC request signing replaces the URL-path webhook secret |
-| **Reporting view — `/reports`** (1 prompt) | ✅ Complete. Read-only and whole-tenant, filtered by period; win rate = `WON / (WON + LOST)`, `ABANDONED` excluded. Aggregate CSV export added 2026-09-14, from the same `getPipelineReport` call as the page | 2026-08-19, 2026-09-14 | 2026-08-19 — Reporting view: `/reports`, § 2026-09-14 — `/reports` aggregate CSV export |
-| **Task editing + non-destructive dismiss** (1 prompt) | ✅ Complete, live-verified. Dismiss sets `tasks.dismissed` and keeps the row. **No DELETE grant or policy was added** | 2026-08-19 | 2026-08-19 — Task editing and non-destructive dismiss |
-| **Prospects — cold-outreach staging + promotion** (2 prompts) | ✅ Complete. Since 2026-09-14 promotion is one transaction in the `promote_prospect` RPC. `leads` DDL, RLS and `LEAD_COLUMNS` were never touched | 2026-08-26, 2026-09-14 | 2026-08-26 — `prospects`: cold-outreach staging, its RLS and its CSV import, § 2026-08-26 — Prospect promotion: the write path into `leads`, § 2026-09-14 — Prospect promotion becomes one transaction |
-| **Public read-only demo entry point** (1 prompt, P1's first piece) | ✅ Complete, live-verified. Read-only is the **`demo_readonly` Postgres role holding `SELECT` only**, never a `VIEWER` member role. A refused write explains itself, in the demo tenant only | 2026-09-04, 2026-09-14 | 2026-09-04 — The public read-only demo identity, § 2026-09-04 — The demo read-only badge, and why it is neutral (later same day), § 2026-09-14 — The demo explains a refused write, § 2026-09-14 — The demo explains a refused write inside a form |
-| **Invite-only signup + demo entry on `/login`** (1 prompt) | ✅ Complete, live-verified by POSTing `signUp` directly. No schema, RLS or grant — the rule is § Multi-Tenant Security Model rule 7 | 2026-09-05 | 2026-09-05 — Signup is invite-only, and `/login` offers the demo |
-| **Three registered gaps in one wave — leads CSV export, `/reports` period filter, dead CSS** (1 prompt) | ✅ Complete, live-verified. Leads CSV export, the `/reports` period filter, and one dead CSS declaration. No schema, RLS or grant | 2026-09-05 | 2026-09-05 — Three registered gaps closed: leads CSV export, the `/reports` period filter, one dead declaration |
-| **Global search — command palette** (2 prompts) | ✅ Complete — contacts, tasks and prospects. `src/lib/hooks/use-arrival-highlight.ts` is the one arrival highlight. Pagination stays open in `docs/KNOWN_GAPS.md` | 2026-08-28, 2026-09-05 | 2026-08-28 — Command palette: tasks alongside contacts, § 2026-09-05 — Command palette: prospects as the third source |
-| **Webhook ingestion failure visibility** (1 prompt) | ✅ Complete. Every failure prints one `[webhook-triage-failure]` line; a signature-valid request that fails to persist also emails OWNER/ADMIN. **A 401 never alerts** | 2026-09-05 | 2026-09-05 — Webhook ingestion failure visibility |
-| **Webhook replay protection + Redis rate limiter** (1 prompt, ROADMAP P2 + P3 folded) | ✅ Complete, deployed 2026-09-14. The protocol is § Multi-Tenant Security Model rule 4. **Any change to it ships in the CRM and `C:/Projects/tekguyz-site` back to back** | 2026-09-14 | 2026-09-14 — Webhook replay protection and a Redis-backed rate limiter |
-| **Avatar primitive** (1 prompt) | ✅ In production — the lead read panel and the shell's account menu. **`src/components/ui/Avatar.tsx` is the one Avatar; never write a second** | 2026-09-08 | 2026-09-08 — The Avatar primitive, and the second copy that was deleted |
-| **Shell/IA redesign pass** (2 stages) | ✅ Complete, closed 2026-09-13. Picks, all wired: Quiet shell, jump-strip read panel, lead Drawer, Grouped pipeline card, Split Settings. The shell's binding decisions live in `docs/DESIGN.md` § The Application Shell | 2026-09-12 (lead surface), 2026-09-13 (shell, pipeline card, Settings) | 2026-09-07 — Shell/IA Stage 1, prompt 1 of 4: the sidebar, header and mobile tab bar. § 2026-09-11 — Shell/IA Stage 1, prompt 2 of 4: the lead detail panel, and why the jump strip won. § 2026-09-11 — Shell/IA Stage 1, prompt 3 of 4: the pipeline card, and why Grouped won. § 2026-09-11 — Shell/IA Stage 1, prompt 4 of 4: the form's container, the Settings layout, and a width check a unit test cannot be. § 2026-09-12 — The lead form at real scale: what actually causes the scrolling, and why width was not it. § 2026-09-12 — Shell/IA Stage 2: the lead read panel and edit drawer, wired at one width. § 2026-09-13 — Shell/IA Stage 2: the Quiet shell wired, and the read panel's way into the edit drawer. § 2026-09-13 — Shell/IA Stage 2: the pipeline card wired, one field block, and a row for the status select, § 2026-09-13 — Shell/IA Stage 2: Settings wired, Variant Split, and the pass closes |
-| **`/prospects` column resize + reorder** (1 prompt) | ✅ Complete, verified with a real pointer. Opt-in beside the Table shell. **Session-only** — persistence is open in `docs/KNOWN_GAPS.md` | 2026-09-14 | 2026-09-14 — `/prospects` column resize and reorder, session-only |
-| **`/login` redesign** (P1's last piece; 2 stages) | ✅ Complete, live-verified with a real wrong password and a real sign-in. Split is the real `/login`, in its own `(login)` route group; the typed email lives in that group's layout because `signIn`'s error redirect remounts the page. `login-fence.test.ts` deleted; P1 closed | 2026-09-15 | 2026-09-15 — `/login` redesign Stage 1: three comps, and Split picked, § 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that remounts the page |
-| **Idle-based session timeout** (1 prompt) | ✅ Complete — client-side idle timer only; Supabase JWT/refresh-token config deliberately untouched. Warns at 28 min, signs out at 30, synced by `BroadcastChannel`. The demo tenant is exempt | 2026-09-15 | 2026-09-15 — Idle-based session timeout |
-| **Today redesign** (Stage 1 of 2) | 🟡 Stage 1 comps built; **Variant Brief picked 2026-09-15, not yet wired**, and SLA Critical left as **Fork A** — the lane stays every overdue lead and `getSlaCriticalLeads` is untouched. Ledger kept as the record | 2026-09-15 (comps) | 2026-09-15 — Today redesign Stage 1: two comps, Variant Brief picked, SLA Critical left as Fork A |
-
----
+Everything else — the three-step rule for a new UI element, `--accent`'s limits,
+the radius and type scales, `cn.ts` registration, elevation, focus, the shell —
+is in **`.claude/rules/design-system.md`** and **`docs/DESIGN.md`**.
 
 ## Build discipline
-Finish and verify one unit before starting the next. Never generate ahead of
-what has been verified. "Verified" means the thing was actually run — dev server,
-test, or browser — not that it compiled. If a unit includes a migration, apply it
-to the real Supabase project and confirm it before continuing.
 
-**Adding a column to `LEAD_COLUMNS` is never an additive change — the migration must land before the code does.** That one string in `src/lib/leads/queries.ts` backs six query functions there, is re-exported as `CONTACT_COLUMNS`, and is imported by `src/lib/webhooks/ingest-lead.ts` — eight read sites from one edit. PostgREST **errors** on a selected column the database does not have (`42703`) rather than ignoring it, so code naming a not-yet-applied column takes down every lead surface at once — dashboard, pipeline, contacts, agenda, profile sheet, command palette — **and silently breaks inbound webhook lead capture**, which is external, unattended, and the most expensive one to notice late. It fails total, not partial, so there is no degraded mode to ship in. Apply the DDL first, then deploy; a lead-column commit and its migration are one unit and must not be separated by a deploy. Found on 2026-08-18 by three independent baseline agents, all of which hit the live `42703` before shipping. Full history: `docs/ADDENDA_LOG.md` § 2026-08-18 — what a baseline proved, and the skill it stopped.
+Finish and verify one unit before starting the next. "Verified" means the thing
+was actually run — dev server, test, or browser — not that it compiled. If a unit
+includes a migration, apply it to the real Supabase project and confirm it first.
 
-**A route-independent cost on the render path shows up as a loading-skeleton "flash", and it will not look like a performance bug.** Next paints a segment's `loading.tsx` the instant a `<Link>` is clicked — the fallback is prefetched, the data is not — so every dynamic navigation shows the skeleton for exactly as long as the server takes, no matter how little that route actually fetches. That makes a *fixed* per-request cost read as "the skeleton flashes even on empty pages, and its length has nothing to do with the page". Measured on 2026-08-28: two `auth.getUser()` round-trips per navigation (middleware + `getCurrentOrg`) plus a second serial query for the organization held the skeleton at a flat ~759ms on `/settings`, `/reports`, `/contacts` and `/pipeline` alike; removing them took it to ~345ms. Before treating any skeleton as a data-volume problem, check what every route pays regardless of its data. Full history: `docs/ADDENDA_LOG.md` § 2026-08-28 — The loading-skeleton flash: a fixed auth tax on every navigation.
+**Build the current unit in isolation** unless a documented roadmap item already
+calls for the sharing. Anticipating an unstated future consumer is scope creep.
 
-**A `"use server"` file may only export async functions.** Exporting a constant, a type-only value or an object from one fails `next build` at *page-data collection* with “A 'use server' file can only export async functions, found object” — `tsc` and `eslint` both pass, so nothing catches it before the build. Constants that a Server Action and its callers share belong in a plain sibling module (e.g. `src/lib/prospects/statuses.ts`), which the action imports like anything else.
+The App Router patterns that fail silently here — a `"use server"` file's
+exports, a `"use client"` file's constants, a dev-only route's `notFound()`, a
+redirect that remounts the page, the fixed render-path cost that reads as a
+loading-skeleton flash — are in **`.claude/rules/nextjs-patterns.md`**.
 
-**A `"use client"` file's plain constants are not readable by a Server Component either, and that one fails silently (found 2026-09-07).** Next replaces a client module with client-reference proxies, so a Server Component importing a bare `export const FOO = "…"` from one does not get the string. No error, no warning, `tsc` and `eslint` clean, green build — the value simply arrives as nothing at the call site. Measured: a `className` constant imported from a `"use client"` preview module vanished from `cn()`, leaving the element with the class list it had before the override. Same rule as the `"use server"` bullet above, opposite failure mode: a shared constant goes in a plain sibling module that both sides import.
+## Session and verification discipline
 
-**A Server Action's redirect to the same route with new search params remounts the whole page — state that must survive the redirect belongs in a layout, not the page (found 2026-09-15).** Next treats a redirect-triggered render of the same segment as a fresh mount, not a re-render in place, so page-level state (a controlled input's value) is lost exactly when an error redirect is trying to show it. `/login`'s email field hit this: `signIn`'s `?error=` redirect wiped a controlled email input because the state lived in `page.tsx`; the fix moved it to the `(login)` layout (`LoginEmailProvider`), which persists across the remount. Full history: `docs/ADDENDA_LOG.md` § 2026-09-15 — `/login` redesign Stage 2: Split wired, and the redirect that remounts the page.
+Full text, including the browser-pane traps, `GET /api/dev-login`, the
+migration dry-run rule, and the PowerShell-for-`.env` rule, is in
+**`docs/VERIFICATION.md`**. The short version:
 
-**A dev-only route's `notFound()` belongs in the `page.tsx`, not only in a `layout.tsx` above it — and it will never produce a 404 status code in this app (measured 2026-09-07).** Two separate facts, both counter-intuitive. (1) A layout that throws does **not** stop its own page rendering: React renders the two concurrently, so a guard living only in the layout still let `next build` prerender 39KB of real page markup into `.next/server/app/…/page.html` and ship it inside the 404 response. With the check at the top of the page, the component returns before rendering anything and the markup does not exist — which is why `/design` has always put it there, and why its prerendered output is a clean 404. (2) The status is always **200** for a page route here, because `src/app/loading.tsx` puts a Suspense boundary above every route and Next commits the response before any page or layout body runs; the 404 arrives in the stream as `NEXT_HTTP_ERROR_FALLBACK;404` and the browser renders Next's 404 page. Only a Route Handler can answer a true 404, which is why `/api/dev-login` does. **So verify a dev-only page route by checking that the payload carries that digest and does NOT carry the page's own content — a bare `curl -w "%{http_code}"` proves nothing here**, and unauthenticated it only ever shows the middleware's 307 to `/login` anyway.
+- Reach the signed-in app locally via `GET /api/dev-login`. It is a real
+  sign-in, development-only.
+- Dry-run every migration's SQL against a temp-table replica before handing the
+  file to the human. The human applies all DDL.
+- Any script that needs `.env` runs through the **PowerShell** tool, not Bash —
+  Bash is sandboxed and cannot see `.env`.
+- Deferred work is registered in `docs/KNOWN_GAPS.md`, which carries the only
+  copy of the rules for maintaining it.
+- **Update this file proactively** when a durable rule or constraint is
+  established. When unsure whether something is durable, leave it out. New dated
+  addenda go to `docs/addenda/` with an index row, never into this file.
 
-**No App Router icon-convention file may exist under `src/app/`.** `favicon.ico`,
-`icon.*` and `apple-icon.*` there all take precedence over `public/` and over
-`metadata.icons`. With one present the app serves it, the build passes, and the
-wrong mark keeps shipping. Same silent-failure class as the Inter
-`<body>`/`<html>` bug. All three were deleted on 2026-08-14; if one reappears,
-that is the bug.
+Skills in use on this repo: `impeccable`, `vercel-react-best-practices`, and
+`web-design-guidelines` — the last is used standalone, never in the same pass as
+`impeccable`. None of them overrides this file.
 
-**Any route that exists to be read by a crawler must stay in the
-`isPublicMetadataRoute` allowlist in `src/lib/supabase/middleware.ts`** —
-`/opengraph-image`, `/twitter-image`, `/manifest.webmanifest`, `/robots.txt`,
-`/sitemap.xml`, `/icons/`, `/brand/`. Crawlers and link unfurlers carry no
-session cookie, so without the allowlist `updateSession` 307s every one of them
-to `/login` while a signed-in human sees the real asset and the build stays
-green — that is exactly how the OG card shipped broken to Slack and Vercel's own
-inspector. None of it is tenant data. Check any new such route with a cookie-less
-`curl`. Full history: `docs/ADDENDA_LOG.md` § Brand application pass.
+## Gates
 
-## Test-Data Cleanup (permanent rule)
-**Anything created to verify something is part of that unit of work, not a leftover. Remove it before reporting the unit done.** Covers test leads, tasks and activity rows, seeded files, scratch scripts, and any row written by a webhook or form submission made to prove a code path works. A unit is not finished while its test residue is still in the database.
+`npm run build` · `npm run lint` · `npx tsc --noEmit` · `npm test` ·
+`npm run test:rls` (any policy, grant, RPC or membership change) ·
+`npm run check:docs` (design drift, doc figures, section pointers) ·
+`npm run check:residue` (live test rows, SELECT-only, needs `.env`) ·
+`npm run check:widths` (real-browser text width, for layout work).
 
-**`archived` is not removal.** Archiving is the app's user-facing behaviour and is correct there — the Resurrection Engine depends on it, and there is deliberately no delete control in the UI. But an archived row is still a row: it still counts, still appears in Contacts (which filters only on `archived`), and still lands in any query that forgets the flag. Sixteen test leads accumulated in the real TEKGUYZ org across three weeks precisely because archiving felt like cleanup.
-
-Removal is therefore a database-level operation, and the Supabase MCP tool-access rule in § Session & Verification Discipline applies unchanged: **never `execute_sql` a write against a `public`-schema table.** Either hand the human the exact `DELETE` to run (preceded by the matching `SELECT`, so they can see what it will take), or use a disposable service-role script. Scope every such statement by `organization_id` **and** by an explicit id exclusion for anything real — a `WHERE` clause that names what to keep survives a mistake better than one that names what to drop. `activity_logs` and `tasks` are `ON DELETE CASCADE` from `leads`, so deleting a lead cleans up its children; nothing else needs a second statement.
-
-## Form/Action Field Parity (permanent rule)
-**Every column a Server Action writes from `formData.get("x")` must have a rendered `<input name="x">` in the form posting to it.** An absent field yields `null`, so a written-but-unrendered column is silently NULLed on every save — no error, invisible until the data is gone. Hit five `leads` columns across two incidents (2026-07-27, 2026-07-30). Defaults are worse than `|| null`, not better: `?? "UTC"` / `?? "NEW"` silently *reset* a column and pass validation, since the default is itself valid.
-**A form posting to a Server Action must use controlled fields, not `defaultValue`.** React 19 resets a `<form action={…}>` after the action returns, **failure included**, by calling `form.reset()` — so an uncontrolled form wipes whatever the user typed at exactly the moment the error is telling them to fix it. Green build, passing tests, found only in a browser (2026-08-26, the Promote modal; the other seven surfaces fixed the same day).
-**Controlling the field is only half of it, and the other half is invisible in a unit test that re-renders.** React restores a controlled `<input>` after that reset by itself. It does **not** restore a controlled `<select>` — `form.reset()` moves the DOM selection behind React's back, state is unchanged, so nothing re-renders and nothing writes it back; measured live with React's props reading `"WON"` while the DOM read `""`, which also means the *next* submit posts the wrong value, since `FormData` reads the DOM. And Radix's `Checkbox` actively drags itself back: it registers its own `reset` listener and calls `setChecked(<value at mount>)`. Any group owning a `<select>` or a `Checkbox` must therefore re-assert itself after a reset — use `src/lib/forms/use-form-reset-restore.ts`, never a second copy of the mechanism. A checkbox's intent is recorded from `onClick`, never `onCheckedChange`, because Radix's restore drives `onCheckedChange` too and would overwrite the value being restored.
-**Test it with `form.reset()`, never with `rerender()`.** RTL's `rerender` forces a render that re-applies the controlled value, which the real app does not necessarily do — that masked the whole `<select>` failure above while nine tests stayed green. Note also that `hasAttribute("defaultValue")` proves nothing: React never emits that attribute, so it reads `false` for controlled and uncontrolled alike.
-**A form inside a Radix overlay must own its own component, or its reset machinery silently does nothing (found 2026-09-12).** Radix mounts a `Dialog`/`Sheet`'s content only while it is OPEN, so a `useFormResetRestore` called in the component that renders the overlay runs its effect with `anchor.current === null` and registers no `reset` listener at all — `tsc`, `eslint` and the build are all clean, and the only symptom is that one field comes back empty after a failed save while every other field survives. Put the `<form>` and its hook in a child component rendered INSIDE the overlay's content, so the two mount together (`CreateLeadForm`, `LeadProfilePanel` are the worked examples). The `edit-form/` field groups were never exposed to this, because they already live inside the content. Same class applies to any effect that needs the overlay's DOM.
-Whenever a form or its action changes, diff the form's `name=` set against the action's `formData.get()` set (both directions empty). For a form split across siblings, diff the shell **plus every sibling** — no single file shows the field set. Full audit + exact commands: `docs/ADDENDA_LOG.md` § Server Action field-parity audit.
-
-## Session & Verification Discipline
-- **Reach the signed-in app locally via `GET /api/dev-login`.** Every app route is auth-gated and an agent cannot type a password into a form, so this is the only way a screenshot of an authenticated view is reachable. It is a **real** `signInWithPassword` as the seeded demo owner, not a bypass — RLS, org membership and role enforcement all still apply, which is the point. It 404s unless `NODE_ENV === "development"`. If it 401s, run `npm run seed:demo`. It redirects to the request's own origin (any port), and `?next=/path` lands on that page — `/api/dev-login?next=/shell/pipeline` is one link to a comp. Full history: `docs/ADDENDA_LOG.md` § Dev-only sign-in route for browser verification.
-- **Dry-run every migration's SQL against a temp-table replica before handing the file to the human.** The human applies DDL, so an agent's migration is otherwise unverified until it fails in their hands, and `tsc`/`eslint`/`next build` cannot see SQL at all. A temp table plus a `pg_temp` function is session-local, touches no `public`-schema object, and is inside the read-only MCP allowance. This caught a complete, reviewed, wrong migration on 2026-08-15: a `SECURITY DEFINER` function's OUT column named `email` is ambiguous against `ON CONFLICT (…, lower(email))`, because an inference expression cannot be table-qualified. Full history: `docs/ADDENDA_LOG.md` § CSV import chunk-write RPC.
-- **Navigation-timing work must be measured against `next build` + `next start`, never `next dev`.** Next disables `<Link>` prefetching in development, and that single difference inverts the result: in dev the loading skeleton appears *after* the server responds (~500ms in, looking like a slow fetch), while in production it appears ~55ms after the click, before any data is requested. A dev-only measurement of a navigation therefore mis-locates the cause and understates it. Reaching the signed-in app in a production build cannot use `/api/dev-login` (it 404s outside `NODE_ENV=development`) — drive the real `/login` form with the same seeded demo credentials that route holds, which is a real sign-in with RLS intact.
-- **Never assume a prior instruction landed without checking actual code/file state.** A past conversation, a memory, or a claim in chat is not evidence that code exists — read the file. If asked to confirm behavior, show the real current code/output, not a recollection of intent.
-- **Deferred work is registered in `docs/KNOWN_GAPS.md`, which carries the only copy of the rules for maintaining it** — including when a bullet is added, and the requirement to relocate a resolved one to `docs/ADDENDA_LOG.md` in the same session. Follow that file; do not restate its policy here.
-- **Build the current unit in isolation unless the roadmap already documents a shared requirement.** Build shared infrastructure ahead of time only when this file's own roadmap text explicitly calls for the sharing (e.g. Prompt 5's data adapter, shared with Prompt 4's Kanban); anticipating an unstated future consumer is scope creep.
-- **A scripted click on a state-changing button can report success while doing nothing.** Cross-check any such result against the network tab or the DOM before trusting it. The current Browser pane tools are `computer` (real pointer and keyboard), `read_page`, `read_network_requests`, and `javascript_tool`; a direct `button.click()` via `javascript_tool` is the reliable fallback when a synthetic click no-ops.
-- **`document.visibilityState === "hidden"` is NOT "the browser tool is broken" — it means the page did its initial load while the Browser pane was not the displayed pane, and it is self-inflicted and recoverable (root-caused 2026-09-05, correcting the earlier version of this bullet, which said "environmental" and taught two sessions to give up).** The chain, measured: a hidden document gets no `requestAnimationFrame` callbacks from Chromium → React 19 gates its Suspense reveal on rAF → the streamed content stays parked in `<div hidden id="S:…">` holders → `innerText` is `""` (so `get_page_text` returns empty while `innerHTML` is ~200KB), every click inside them no-ops, and the whole app looks dead. Proven on `/prospects`: `rafFired: false`, 4 holders, `innerText` 0 → **1433** the instant the `hidden` attributes were removed, with all 6 table rows already in the DOM. **The reveal never self-heals: `tabs_select` on the tab afterwards leaves it hidden with rAF still dead** — the render has already settled and nothing re-fires it. A tab that loaded *while the pane was displayed* stays readable forever after, even once the pane is hidden again (the sibling tab measured `visible`-loaded, 0 holders, text intact, in the same instant the broken one measured 0). So: **check `tabs_context`'s own "pane is displayed/hidden" line before trusting any DOM read**, and recover by reloading that URL with the pane displayed — not by abandoning browser verification. Accumulating tabs is what strands one this way, and the bullet below is why tabs got accumulated. Unhiding the holders by hand is the read-only fallback when the pane cannot be displayed. Test an already-shipped control the same way to tell this apart from a real bug in new code. Full symptoms: `docs/ADDENDA_LOG.md` § Silent NULL-on-save data-loss bug.
-- **A `preview_start` whose server never bound the port leaves the Browser pane half-working, and `navigate`'s error says "denied **or failed**" — read that as *failed* before reaching for permissions (root-caused 2026-09-05).** `preview_list` is the authority: an ended entry carries `neverBecameReady: true`, and two consecutive `dev` servers carried it while every `mcp__Claude_Browser__navigate` to `http://localhost:3000` was refused — on a `preview_start` tab, on a `tabs_create` blank tab, and inside a `browser_batch` (which aborts the whole batch on it). The trap is that **`curl` still returns 200 the whole time**, because a stale `next dev` from an earlier session is still holding port 3000; the newly-launched process cannot bind, never reports ready, and the pane refuses to drive a preview it does not consider up. `preview_start` also reports `reused: true` against that stale registration, so it looks healthy. On a ready server, `navigate` works on every tab with **no permission rule at all** — this was mis-diagnosed once as a missing allowlist entry, and an `mcp__Claude_Browser__navigate` rule was added and then removed after it was shown to change nothing (MCP rules cannot be scoped to an origin anyway — the settings validator rejects parentheses, so such a rule would grant every host). **Check `preview_list` for `neverBecameReady` and `Get-NetTCPConnection -LocalPort 3000` for a second listener before believing anything else about the pane.** This project is unusually exposed to it: the dev server is pinned to port 3000 and Windows leaves `node` processes behind.
-- **Never run `npm run build` while the Browser pane's dev server is up — they share `.next`, and the build wins (found 2026-09-08).** `next build` clears `.next` out from under the running `next dev`, which then serves a bare `Internal Server Error` page and floods its log with `ENOENT: ... .next\static\development\_buildManifest.js.tmp.<random>`. The dev server does **not** recover on its own and no reload fixes it; the page had been serving `/design` at 200 moments earlier, so it reads as a code fault rather than a tooling collision. Recovery is `preview_stop`, `Remove-Item -Recurse -Force .next`, then `preview_start` again. Running the two in one shell command also made a single unrelated test fail once and pass on all three reruns — build, test and dev contend for the same directory, so **finish browser verification first, then build**. This compounds the stranded-tab problem above: each recovery attempt spends another tab.
-- **In that same non-compositing state, geometry assertions pass VACUOUSLY against zeros.** React 19 gates its suspense reveal on `requestAnimationFrame`, which never fires when the pane does not composite, so the content stays parked in `<div hidden id="S:0">` holders and every `getBoundingClientRect()` returns 0x0 — a padding or size check "passes" while measuring nothing. Remove the `hidden` attribute on those holders before measuring, or the numbers are meaningless. Computed colour/style reads are reliable without the unhide.
-- **A controlled Radix overlay whose trigger lives outside its `Root` does not return focus to that trigger on close.** When the trigger can't live inside the `Root` (e.g. one overlay in `AppShell` opened from several places), capture `document.activeElement` at open time and restore it in `onCloseAutoFocus` via `preventDefault()` + `.focus()`, guarded by `isConnected`. Test focus return with the trigger **genuinely focused first** — a programmatic `.click()` never focuses — and assert on `document.activeElement` directly. Full history: `docs/ADDENDA_LOG.md` § Help Drawer addendum — Prompt 1, § Prompt 2.
-- **A dispatched synthetic `mouseover`/`mouseenter` does not fire React's `onMouseEnter`.** Test hover-driven UI with a real pointer (`computer{action:"hover"}`) or through its click path. Related: the Browser pane's screenshot-to-viewport coordinate scale drifts as the pane resizes, so derive it fresh from a known element's `getBoundingClientRect()` each time.
-- **Update CLAUDE.md proactively, without being asked,** whenever a durable architectural decision, newly-discovered constraint, scope decision, or permanent verification habit is established. When unsure whether something is durable enough, leave it out — this file has needed two emergency compressions, and "log it when unsure" is what filled it. If it turns out to matter, it will come up again and can be logged then. **New dated addenda go to the current month file in `docs/addenda/` and get a row in `docs/ADDENDA_LOG.md`'s index, not into this file**; edit this one only for a permanent rule/pattern change or a Known Gaps disposition update. A value that already lives in `globals.css` or `docs/DESIGN.md` does not get a second copy here — only the rule or failure story that value cannot tell you.
-- **Supabase MCP tool-access rule:** read-only MCP tools (`list_tables`, `get_advisors`, `execute_sql` for SELECT only) may be used freely for self-verification. Anything that writes schema (`apply_migration`, any DDL) must never be called directly — write the migration SQL file and hand it to the human. The one standing exception is the `vault` schema, which has no client-facing surface at all (see `docs/ADDENDA_LOG.md` § Prompt 13a addendum); it does **not** extend to any `public`-schema table, which must go through the app's own service-role key per Prompt 11's pattern. **This has been broken once already** (§ Lead Field Completion addendum, 2026-07-27) — before reaching for `execute_sql` to write or restore any `public`-schema row, stop and use a disposable script instead.
-- **Claude Code skills in use on this repo (2026-09-06):** `impeccable` (design guidance, product-mode), `vercel-react-best-practices` (Next.js/React performance rules), and `web-design-guidelines` (a Vercel Interface Guidelines audit). They replace the personal `frontend-design` skill this project used until 2026-09-06, which no longer exists on this machine — a prompt naming it is stale. **`web-design-guidelines` is used standalone, never in the same pass as `impeccable`**, because both give design direction and running them together produces overlapping and sometimes contradictory guidance. None of them overrides this file: where a skill's generic advice conflicts with a rule here — the design system in § 1, the primitive-first three steps, `--accent`'s limits — this file wins.
-- **Any script that needs `.env` must be run through the PowerShell tool, not the Bash tool (found 2026-09-07).** The Bash tool runs sandboxed and `.env` is outside what it can see: `ls -a` does not list it, and `node --env-file=.env` fails with a bare `node: .env: not found` — which reads exactly like a missing file and is not one. PowerShell sees the real filesystem and the same command succeeds. This affects all three env-dependent npm scripts — `check:residue`, `seed:demo`, `seed:demo:reset`. **Confirm a file's absence with `Get-ChildItem -Force` before reporting it missing**; a Bash `ls` is not evidence here. Mis-reported once as "there is no `.env` in this checkout" during a handoff audit, which turned a passing residue check into a false "needs the user" item.
+Exit `0` clean · `1` findings · `2` could not run, which is **not** a pass.
 
 ## Agent skills
 
 ### Issue tracker
 
-New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and `docs/ADDENDA_LOG.md` keep governing existing/deferred items per the rule above — this doesn't replace that. See `docs/agents/issue-tracker.md`.
+New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and
+`docs/ADDENDA_LOG.md` keep governing existing/deferred items per the rule above
+— this doesn't replace that. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default five: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Default five: `needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, created lazily as terms/decisions resolve. See `docs/agents/domain.md`.
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, created lazily as
+terms/decisions resolve. See `docs/agents/domain.md`.
+
+### Repo skills
+
+- `.claude/skills/status-sync/` — the cheap pass. Audits `docs/INITIATIVES.md`,
+  `docs/ADDENDA_LOG.md`, `docs/KNOWN_GAPS.md` and `docs/SCHEMA_REFERENCE.md`
+  from check-script output. It reports; it never pastes anything anywhere.
+  Renamed from `handoff` 2026-09-20.
+- `.claude/skills/doc-audit/` — the heavy pass. Measures the docs against the
+  repo, repairs them, and commits.

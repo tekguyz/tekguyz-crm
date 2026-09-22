@@ -18,7 +18,7 @@
 //   A. every `§` pointer resolves to a real heading or index title
 //   B. every index row in ADDENDA_LOG.md points at a section that exists
 //   C. every `##` section in docs/addenda/*.md has an index row
-//   D. every CLAUDE.md § 3 Status cell stays within STATUS_CELL_MAX chars
+//   D. every docs/INITIATIVES.md Status cell stays within STATUS_CELL_MAX chars
 //
 // Repo-only. No browser, no dev server, no database — same fence as checks 9-10.
 // Exit 0 clean · 1 drift · 2 could not read something (NOT a pass).
@@ -58,6 +58,9 @@ const ADDENDA_DIR = "docs/addenda";
 const INDEX = "docs/ADDENDA_LOG.md";
 const SOURCES = [
   "CLAUDE.md",
+  "docs/INITIATIVES.md",
+  "docs/SECURITY_MODEL.md",
+  "docs/VERIFICATION.md",
   "docs/KNOWN_GAPS.md",
   "docs/SCHEMA_REFERENCE.md",
   "docs/DESIGN.md",
@@ -76,7 +79,7 @@ try {
 // ---------------------------------------------------------------------------
 // Build the target set: every heading in every doc, plus the index table's
 // title column. A pointer may legitimately aim at any of them — `§ 3` and
-// `§ Test-Data Cleanup` aim inside CLAUDE.md, `§ Prompt 13a addendum` aims
+// `§ Test-Data Cleanup` aims inside docs/VERIFICATION.md, `§ Prompt 13a addendum` aims
 // through the index at a month file.
 // ---------------------------------------------------------------------------
 const targets = new Map(); // normalised heading -> where it lives
@@ -147,7 +150,7 @@ if (indexText) {
 // runs on) and just as routinely longer ("Known Gaps - Full Historical Record
 // (2026-07-22 triage)"), so a prefix in either direction counts.
 //
-// Two-word-or-longer prefixes may also match mid-title, because CLAUDE.md § 3
+// Two-word-or-longer prefixes may also match mid-title, because INITIATIVES.md
 // cites a series as "… — Prompts 1 & 2, § Prompt 3, § Prompt 4": the
 // continuations are real pointers that carry no title head of their own. One
 // word is never enough for that — it would match almost anything.
@@ -249,21 +252,19 @@ for (const f of addendaFiles) {
 if (sectionCount && !orphans) notes.push(`${sectionCount} addenda sections all indexed`);
 
 // ---------------------------------------------------------------------------
-// D. Every CLAUDE.md § 3 Status cell stays status, not narrative.
+// D. Every docs/INITIATIVES.md Status cell stays status, not narrative.
 //
-// § 3 calls itself "status only", and CLAUDE.md is loaded into every Claude
-// Code session. Prompt packs still wrote their whole report into their row:
-// by 2026-09-15 § 3 was 36 KB of an 88 KB file and one row alone was 17.6 KB.
-// Nothing measured it, so nothing stopped it. The narrative belongs in a dated
-// addendum; the row carries the state and the one fact a reader must not miss.
+// This table used to be CLAUDE.md § 3, which loads into every Claude Code
+// session. Prompt packs wrote their whole report into their row: by 2026-09-15
+// it was 36 KB of an 88 KB file and one row alone was 17.6 KB. Nothing measured
+// it, so nothing stopped it. It moved to docs/INITIATIVES.md on 2026-09-21, but
+// the cap stays — the narrative belongs in a dated addendum; the row carries the
+// state and the one fact a reader must not miss.
 // ---------------------------------------------------------------------------
 const STATUS_CELL_MAX = 350;
-const claudeText = fileText.get("CLAUDE.md");
+const claudeText = fileText.get("docs/INITIATIVES.md");
 if (claudeText) {
-  const start = claudeText.search(/^## 3\. /m);
-  const rest = start === -1 ? "" : claudeText.slice(start + 1);
-  const end = rest.search(/^## /m);
-  const section = end === -1 ? rest : rest.slice(0, end);
+  const section = claudeText;
   let rows = 0;
   let longRows = 0;
   for (const line of section.split(/\r?\n/)) {
@@ -275,16 +276,16 @@ if (claudeText) {
     if (status.length > STATUS_CELL_MAX) {
       longRows++;
       findings.push(
-        `LONG STATUS ROW: CLAUDE.md § 3 ${name} — Status cell is ${status.length} chars ` +
+        `LONG STATUS ROW: docs/INITIATIVES.md ${name} — Status cell is ${status.length} chars ` +
           `(max ${STATUS_CELL_MAX}). Move the narrative into a dated addendum.`,
       );
     }
   }
   if (rows === 0) {
     hardFail = true;
-    findings.push("CANNOT PARSE CLAUDE.md § 3 — no initiative rows found. Update this script; not a pass.");
+    findings.push("CANNOT PARSE docs/INITIATIVES.md — no initiative rows found. Update this script; not a pass.");
   } else if (!longRows) {
-    notes.push(`${rows} § 3 status rows all within ${STATUS_CELL_MAX} chars`);
+    notes.push(`${rows} INITIATIVES.md status rows all within ${STATUS_CELL_MAX} chars`);
   }
 }
 
