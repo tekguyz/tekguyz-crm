@@ -20,4 +20,16 @@ jobs:
       # users, so they run locally, serially. Never the aggregate `npm test`:
       # see CLAUDE.md § Gates.
       - run: npm run test:unit
+      # Fake, non-secret values. src/lib/env/validate-env.ts throws at boot on
+      # any missing var, and the build must not need real credentials.
       - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci
+          SUPABASE_SECRET_KEY: ci
+          PLATFORM_GEMINI_API_KEY: ci
+          PLATFORM_RESEND_API_KEY: ci
+          CRON_SECRET: ci
+          NEXT_PUBLIC_APP_URL: https://ci.invalid
+          DEMO_VISITOR_EMAIL: demo@ci.invalid
+          DEMO_VISITOR_PASSWORD: ci

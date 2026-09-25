@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => ({
     environment: "node",
     include: ["src/**/*.rls.test.ts"],
     globals: false,
+    // Serial, so a direct `npx vitest run --config vitest.rls.config.mts` is
+    // safe too: parallel files trip hosted Supabase's auth rate limit.
+    fileParallelism: false,
     env: loadEnv(mode, process.cwd(), ""),
     // Each suite signs in three separate users against the hosted project.
     testTimeout: 60_000,
