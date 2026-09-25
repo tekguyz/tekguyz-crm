@@ -5,8 +5,8 @@ import { configDefaults, defineConfig } from "vitest/config";
 const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 
 // *.rls.test.ts files talk to the real Supabase project and create/tear down
-// their own auth users, so they are deliberately NOT part of `npm test` — that
-// stays hermetic, offline and fast. Run them with `npm run test:rls`
+// their own auth users, so they are deliberately NOT part of `npm run test:unit` — that
+// stays hermetic, offline and fast. Run them with `npm run test:integration`
 // (vitest.rls.config.mts).
 const sharedExclude = [...configDefaults.exclude, "src/**/*.rls.test.ts"];
 

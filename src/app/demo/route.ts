@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 // advertising, and nothing more.
 //
 // Proven, not assumed: src/lib/demo/demo-visitor.rls.test.ts, 26 assertions
-// run against this exact account by `npm run test:rls`.
+// run against this exact account by `npm run test:integration`.
 //
 // A side effect on GET is deliberate, but it is NOT harmless, and the two
 // guards below are the whole reason this route is safe to publish.

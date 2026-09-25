@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 // which is the difference between a small header and an empty one. That is
 // what lets this bar be 8px shorter than the shipped one while carrying more.
 //
-// This is the variant that argues against docs/DESIGN.md § The Application
+// This is the variant that argues against DESIGN.md § The Application
 // Shell decision 2 ("the header holds exactly two things"). It holds four, and
 // is still smaller than the one that holds two, because one of them is text
 // and two of them are 32px glyphs.

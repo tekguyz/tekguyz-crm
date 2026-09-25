@@ -14,7 +14,8 @@ file is read) or in `docs/` (read on demand).
 
 | File | What it owns |
 | --- | --- |
-| `docs/DESIGN.md` | Design spec — token tables, elevation, iconography, § The Application Shell |
+| `PRODUCT.md` | Product truth — users, purpose, positioning, principles (Impeccable reads it) |
+| `DESIGN.md` | Design spec — token tables, elevation, iconography, § The Application Shell |
 | `docs/SCHEMA_REFERENCE.md` | The live schema. Read before any migration, RLS or RPC work |
 | `docs/SECURITY_MODEL.md` | The seven security rules in full, and role-enforcement status |
 | `docs/INITIATIVES.md` | Post-Launch Feature Work — initiative status, one row each |
@@ -46,7 +47,7 @@ never silently pick one.
    doc is not a measurement.
 2. **This file** — permanent rules. Where a skill's generic advice conflicts
    with a rule here, this file wins.
-3. **`docs/SCHEMA_REFERENCE.md`, `docs/DESIGN.md`, `docs/SECURITY_MODEL.md`** —
+3. **`docs/SCHEMA_REFERENCE.md`, `DESIGN.md`, `docs/SECURITY_MODEL.md`** —
    the reference docs.
 4. **`docs/ADDENDA_LOG.md`** — dated history. Explains why; never overrides.
 
@@ -126,7 +127,7 @@ borders and spacing, not shadow. Colour is signal, not decoration.
 
 Everything else — the three-step rule for a new UI element, `--accent`'s limits,
 the radius and type scales, `cn.ts` registration, elevation, focus, the shell —
-is in **`.claude/rules/design-system.md`** and **`docs/DESIGN.md`**.
+is in **`.claude/rules/design-system.md`** and **`DESIGN.md`**.
 
 ## Build discipline
 
@@ -166,13 +167,18 @@ Skills in use on this repo: `impeccable`, `vercel-react-best-practices`, and
 
 ## Gates
 
-`npm run build` · `npm run lint` · `npx tsc --noEmit` · `npm test` ·
-`npm run test:rls` (any policy, grant, RPC or membership change) ·
+`npm run build` · `npm run lint` · `npm run typecheck` · `npm run test:unit` ·
+`npm run test:integration` (any policy, grant, RPC or membership change; runs
+serially) ·
 `npm run check:docs` (design drift, doc figures, section pointers) ·
 `npm run check:residue` (live test rows, SELECT-only, needs `.env`) ·
 `npm run check:widths` (real-browser text width, for layout work).
 
 Exit `0` clean · `1` findings · `2` could not run, which is **not** a pass.
+
+**Never `npm test`.** It prints an error and exits `1` on purpose. CI runs
+`typecheck`, `build` and `test:unit` on every PR (`.github/workflows/ci.yml`);
+`test:integration` needs `.env` and runs locally only.
 
 ## Agent skills
 

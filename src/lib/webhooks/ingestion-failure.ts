@@ -10,7 +10,7 @@
  *
  * Deliberately NOT `server-only` and deliberately free of any database or
  * email import: it is pure formatting over values handed to it, which is what
- * makes it unit-testable in the hermetic `npm test` suite (same reasoning as
+ * makes it unit-testable in the hermetic `npm run test:unit` suite (same reasoning as
  * signature.ts). The alert email lives in lib/email/alert-ingestion-failure.ts.
  *
  * WHAT MAY NEVER ENTER A LINE THIS MODULE PRINTS: the tenant's

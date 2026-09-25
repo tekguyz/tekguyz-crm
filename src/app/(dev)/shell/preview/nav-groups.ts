@@ -15,7 +15,7 @@ import {
 // would be comparing two things at once and none of them would answer whether
 // grouping is worth having.
 //
-// THE GROUPING ITSELF IS THE OPEN QUESTION. docs/DESIGN.md § The Application
+// THE GROUPING ITSELF IS THE OPEN QUESTION. DESIGN.md § The Application
 // Shell decision 3 currently says the sidebar is flat "permanently ... at any
 // width, ever". These comps exist to put a real alternative in front of that
 // decision; nothing here changes the shipped shell.

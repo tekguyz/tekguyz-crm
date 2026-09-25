@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils/cn";
 // as the mobile tab bar gives it on a phone.
 //
 // Grouping has NO captions and NO disclosure — a full-bleed hairline between
-// groups is the whole of it (docs/DESIGN.md § The Application Shell, decision
+// groups is the whole of it (DESIGN.md § The Application Shell, decision
 // 3). Each group is a role="group" carrying its name as aria-label, so what a
 // sighted user is told by position a screen reader is told in words.
 //

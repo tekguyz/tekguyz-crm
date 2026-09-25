@@ -56,7 +56,7 @@ export default function ShellVariantsIndex() {
           cookie and WorkspaceBlock&apos;s static placeholder are untouched.
         </p>
         <p className="text-caption mt-2 max-w-[70ch] text-ink-muted">
-          All three group the nav, which docs/DESIGN.md § The Application Shell
+          All three group the nav, which DESIGN.md § The Application Shell
           decision 3 currently rules out permanently. Putting a real alternative
           in front of that decision is the point of Stage 1; nothing here ships
           until it is re-opened deliberately.

@@ -1,7 +1,7 @@
 // Live enforcement suite for the two team-management RPCs
 // (migration 20260818130000_team_management_rpcs.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. Same precedent, and
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. Same precedent, and
 // the same reason, as leads-role-enforcement.rls.test.ts and
 // leads-assignment.rls.test.ts: the rules live in SECURITY DEFINER function
 // bodies, so a mocked role check would prove nothing about whether the database
@@ -132,7 +132,7 @@ beforeAll(async () => {
     !SERVICE_KEY && "SUPABASE_SECRET_KEY",
   ].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:rls\`.`);
+    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:integration\`.`);
   }
 
   admin = createClient(SUPABASE_URL!, SERVICE_KEY!, {

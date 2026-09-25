@@ -28,7 +28,7 @@ views is Prompt 2 and is explicitly out of scope here.
 | Primitives dir | `src/components/ui/` — contains `Modal.tsx`, `dialog.tsx`, `alert-dialog.tsx`, `popover.tsx`, `sonner.tsx`, `Skeleton.tsx`, `CopyButton.tsx`, `PasswordInput.tsx`. No Button, Input, Select, Card, Badge, NavItem, or TableRow exists. |
 | Class-merge helper | `src/lib/utils/cn.ts` exports `cn()` (clsx + tailwind-merge). Reuse it. |
 | Fonts | `Geist` + `Geist_Mono` via `next/font/google` in `src/app/layout.tsx`. `font-mono` has zero consumers in `src/`. |
-| `docs/DESIGN.md` | Already contains the v2 spec as an uncommitted working-tree change. It is verified against this spec, not rewritten. |
+| `DESIGN.md` | Already contains the v2 spec as an uncommitted working-tree change. It is verified against this spec, not rewritten. |
 | Reference screenshots | **None attached to the session.** The accent value therefore stays the documented placeholder. |
 
 ## Decisions taken
@@ -97,7 +97,7 @@ note recording the parity rule rather than the old one-off fix.
 `globals.css` carries an inline comment at both accent declarations reading that
 the value is an unsampled placeholder pending visual sampling from a Twenty CRM
 reference screenshot, and that it must not be treated as final. The same caveat
-already exists in `docs/DESIGN.md` and is repeated verbatim in the final report.
+already exists in `DESIGN.md` and is repeated verbatim in the final report.
 
 ### 1.3 Danger tone — an addition beyond DESIGN.md v2
 
@@ -127,7 +127,7 @@ a paired foreground token that flips by theme:
 ```
 
 This is a mechanical contrast requirement, not a style choice. Both pairs are
-recorded in `docs/DESIGN.md` as additions to v2 and called out in the report.
+recorded in `DESIGN.md` as additions to v2 and called out in the report.
 
 ### 1.4 Decorative pill palette — desaturated
 
@@ -466,7 +466,7 @@ Expected result: 133 lines → roughly 60.
 
 | File | Change |
 |---|---|
-| `docs/DESIGN.md` | Verified against this spec rather than rewritten — it already holds v2. Two edits only: record the `--danger` addition (§1.3) and the dark-mode pill desaturation ratio (§1.4), so the doc and the CSS agree. |
+| `DESIGN.md` | Verified against this spec rather than rewritten — it already holds v2. Two edits only: record the `--danger` addition (§1.3) and the dark-mode pill desaturation ratio (§1.4), so the doc and the CSS agree. |
 | `CLAUDE.md` § UI/UX Design System | Pointer rewritten for v2. Keeps the permanent rules: accent is CTA/nav/focus/link only, radius overrides Tailwind's names, the single-`:not()` focus gotcha, Going Cold behaviour. Updates the elevation rule to "Level 0 is the default and has no shadow; Level 1 popovers only; Level 2 modals only". Notes the icon library is now `@tabler/icons-react`. Names the kitchen-sink route as the reference surface, and states that Prompt 2 (view rollout) is still outstanding. |
 | `docs/ADDENDA_LOG.md` | New dated addendum: the full v2 pivot narrative, the accent placeholder flag, the icon sweep, and the primitive inventory. |
 | `CLAUDE.md` Known Gaps | New entry: view rollout to v2 primitives is deferred to Prompt 2; the accent value is unconfirmed pending reference sampling. |

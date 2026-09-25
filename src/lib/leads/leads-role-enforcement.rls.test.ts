@@ -1,7 +1,7 @@
 // Live RLS/trigger enforcement suite for the leads MEMBER-role restriction
 // (migration 20260814120000_leads_member_role_enforcement.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. It talks to the real
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. It talks to the real
 // Supabase project, because that is the only place the enforcement exists: the
 // rule is a BEFORE UPDATE trigger, so a mocked role check would prove nothing
 // about whether the database actually rejects the write. This is the same
@@ -125,7 +125,7 @@ beforeAll(async () => {
     !SERVICE_KEY && "SUPABASE_SECRET_KEY",
   ].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:rls\`.`);
+    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:integration\`.`);
   }
 
   admin = createClient(SUPABASE_URL!, SERVICE_KEY!, {

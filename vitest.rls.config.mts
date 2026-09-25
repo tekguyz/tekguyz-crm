@@ -8,9 +8,9 @@ import { defineConfig } from "vitest/config";
 // the vault_clear_org_credential MEMBER test) — same fixtures, same teardown,
 // just runnable on demand instead of written fresh each time.
 //
-// Kept out of `npm test` on purpose (see the exclude in vitest.config.mts):
+// Kept out of `npm run test:unit` on purpose (see the exclude in vitest.config.mts):
 // they need network, real credentials, and ~30s, and they create then delete
-// real auth users. Run with `npm run test:rls`.
+// real auth users. Run with `npm run test:integration`.
 //
 // - node environment, not jsdom, and no React setup file — there is no DOM here.
 // - loadEnv(..., "") with an empty prefix pulls the whole .env (including the
@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => ({
     environment: "node",
     include: ["src/**/*.rls.test.ts"],
     globals: false,
+    // Serial, so a direct `npx vitest run --config vitest.rls.config.mts` is
+    // safe too: parallel files trip hosted Supabase's auth rate limit.
+    fileParallelism: false,
     env: loadEnv(mode, process.cwd(), ""),
     // Each suite signs in three separate users against the hosted project.
     testTimeout: 60_000,

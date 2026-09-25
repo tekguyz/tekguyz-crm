@@ -1,7 +1,7 @@
 // Live enforcement suite for prospect promotion
 // (migration 20260826130000_prospects_promotion.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. Every guarantee this
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. Every guarantee this
 // feature rests on is a database fact, and a mocked check would prove none of
 // them: that status and promoted_lead_id are written by ONE statement and so
 // can never disagree, that `where promoted_lead_id is null` makes a second
@@ -134,7 +134,7 @@ beforeAll(async () => {
     !SERVICE_KEY && "SUPABASE_SECRET_KEY",
   ].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:rls\`.`);
+    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:integration\`.`);
   }
 
   admin = createClient(SUPABASE_URL!, SERVICE_KEY!, {
