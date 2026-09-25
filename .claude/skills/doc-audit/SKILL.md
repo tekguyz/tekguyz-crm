@@ -1,6 +1,6 @@
 ---
 name: doc-audit
-description: Audit docs/INITIATIVES.md, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and docs/DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the status-sync skill reports a check finding it could not resolve. This is the heavy pass — the status-sync skill does not run it.
+description: Audit docs/INITIATIVES.md, docs/ADDENDA_LOG.md, docs/KNOWN_GAPS.md, docs/SCHEMA_REFERENCE.md's inventories and DESIGN.md's token tables against the real repo state, then repair whichever is stale and commit the doc files. Use when the user asks for a doc audit, says the docs are stale, or when the status-sync skill reports a check finding it could not resolve. This is the heavy pass — the status-sync skill does not run it.
 ---
 
 # Doc audit — measure the docs against the repo, repair what drifted
@@ -39,7 +39,7 @@ two emergency compressions specifically from letting status content accumulate
 in one place instead of staying split by responsibility — see CLAUDE.md's own
 compression history in `docs/ADDENDA_LOG.md`.
 
-`docs/DESIGN.md` is not a status file and is not part of that split — but it
+`DESIGN.md` is not a status file and is not part of that split — but it
 does hold a *copy* of values that live for real in `src/app/globals.css`, so it
 can go stale in a way no status audit would catch. Check 9 covers it.
 
@@ -113,7 +113,7 @@ Check, in this order:
 
 7. **Whether the gates in CLAUDE.md's own verification discipline actually
    pass**, if the audit will claim anything is "done": `npm run build`,
-   `npm run lint`, `npx tsc --noEmit`, `npm test`. A doc saying something is
+   `npm run lint`, `npm run typecheck`, `npm run test:unit`. A doc saying something is
    complete is not evidence; a green gate is closer to it, and CLAUDE.md itself
    says "verified" means the thing was actually run, not that it compiled.
 
@@ -124,10 +124,10 @@ Check, in this order:
    MCP tool-access rule, only read-only tools (`list_tables`, `get_advisors`,
    `execute_sql` SELECT-only) may be used to verify this — never `apply_migration`.
 
-9. **`docs/DESIGN.md` token drift against `src/app/globals.css` — every run,
+9. **`DESIGN.md` token drift against `src/app/globals.css` — every run,
    no exceptions.** CLAUDE.md names `globals.css` as the single source of truth
    for every token value and warns that "a doc copy can only drift."
-   `docs/DESIGN.md` carries exactly such a copy, in three tables, and until this
+   `DESIGN.md` carries exactly such a copy, in three tables, and until this
    check existed nothing ever compared the two — DESIGN.md was named in the
    attach-list below but never opened. Run:
 
@@ -349,7 +349,7 @@ maintenance convention** — do not invent a new format:
   deferred (⬜, one to two sentences, dated, pointing at the fuller story in
   ADDENDA_LOG.md); relocate anything now fully resolved to ADDENDA_LOG.md's
   archive section per its own rule.
-- **`docs/DESIGN.md`**: only when check 9 says its stated value is the wrong
+- **`DESIGN.md`**: only when check 9 says its stated value is the wrong
   one. Edit the table cell in place to the value `globals.css` actually carries
   — a token table is a mirror of the CSS, not a dated historical record, so it
   gets corrected rather than annotated with a "superseded" clause. If instead

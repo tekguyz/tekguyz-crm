@@ -81,7 +81,7 @@ if (gaps !== null) {
           const p = `${dir}/${e.name}`;
           if (e.isDirectory()) walk(p);
           // Mirrors vitest.config.mts's include/exclude: *.test.ts and
-          // *.test.tsx, never *.rls.test.ts (those are not in `npm test`).
+          // *.test.tsx, never *.rls.test.ts (those are not in `npm run test:unit`).
           else if (/\.test\.tsx?$/.test(e.name) && !/\.rls\.test\.ts$/.test(e.name)) {
             h.update(p).update(read(p) ?? "");
           }

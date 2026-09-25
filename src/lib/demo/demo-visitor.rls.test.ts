@@ -1,7 +1,7 @@
 // Live enforcement suite for the public read-only demo identity
 // (migration 20260904120000_demo_readonly_role.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. It talks to the
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. It talks to the
 // real Supabase project, because that is the only place the enforcement
 // exists: a Postgres role's grants are a database fact, and a mocked check
 // would prove nothing about them.

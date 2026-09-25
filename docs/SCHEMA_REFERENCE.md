@@ -554,7 +554,7 @@ CREATE OR REPLACE TRIGGER trigger_enforce_lead_role_restrictions
     EXECUTE FUNCTION public.enforce_lead_role_restrictions();
 ```
 
-Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enforcement.rls.test.ts`, run with `npm run test:rls` (deliberately excluded from `npm test` — it creates and tears down real auth users). Full narrative: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
+Enforcement is proven by a live three-role suite, `src/lib/leads/leads-role-enforcement.rls.test.ts`, run with `npm run test:integration` (deliberately excluded from `npm run test:unit` — it creates and tears down real auth users). Full narrative: `docs/ADDENDA_LOG.md` § Leads MEMBER-role enforcement addendum.
 
 **Lead assignment membership guard (2026-08-18, `supabase/migrations/20260818120000_leads_assigned_to.sql`, applied by the human per the standing DDL rule — not via MCP).** The second `leads` trigger, and the second rule RLS cannot express. It adds no policy: `assigned_to` rides inside the existing "Members write tenant leads" `USING`/`WITH CHECK` pair, which already scopes by `organization_id`.
 
@@ -594,7 +594,7 @@ Two deliberate differences from `enforce_lead_role_restrictions` above, both loa
 
 `SECURITY INVOKER` is safe here for the reason it is safe there: `organization_members`' SELECT policy is `organization_id IN (SELECT private.current_org_ids())`, so a member can already read every member row of their own org. An RLS-restricted read can only return *fewer* rows, which makes the `EXISTS` fail and the write reject — fail-closed, never fail-open.
 
-Proven by `src/lib/leads/leads-assignment.rls.test.ts` (`npm run test:rls`), which builds two disposable orgs because cross-tenant needs a real second tenant, and observes the rejection for OWNER, MEMBER, INSERT, UPDATE and service-role. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — `leads.assigned_to`: per-lead ownership.
+Proven by `src/lib/leads/leads-assignment.rls.test.ts` (`npm run test:integration`), which builds two disposable orgs because cross-tenant needs a real second tenant, and observes the rejection for OWNER, MEMBER, INSERT, UPDATE and service-role. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — `leads.assigned_to`: per-lead ownership.
 
 **Team management RPCs (2026-08-18, `supabase/migrations/20260818130000_team_management_rpcs.sql`, applied by the human per the standing DDL rule — not via MCP).** Two `SECURITY DEFINER` functions that give `organization_members` its first UPDATE and DELETE paths. **No RLS policy was added to that table and none should be** — see the note in Section 12: `authenticated` has no UPDATE/DELETE grant, so the RPC-only shape is enforced below RLS.
 
@@ -643,7 +643,7 @@ There is no FK from `leads.assigned_to` to `organization_members` — it referen
 
 Error sentinels, translated for the user by `src/lib/organizations/team-errors.ts`: `TEAM_NOT_AUTHORIZED`, `TEAM_ADMIN_CANNOT_MANAGE_OWNER`, `TEAM_ADMIN_CANNOT_GRANT_OWNER` (all `42501`), `TEAM_LAST_OWNER`, `TEAM_MEMBER_NOT_FOUND`, `TEAM_INVALID_ROLE` (all `23514`). Authorisation failures use `42501`, invariant failures `23514`, and the two are kept distinct on purpose.
 
-Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`npm run test:rls`, excluded from `npm test`), which builds two disposable orgs and five throwaway users and asserts each rejection's own sentinel rather than only its SQLSTATE — a plain RLS denial and a CHECK constraint reuse both codes. Three tests prove the allowed side, so the gates are specific rather than blanket. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — Team management: role change and member removal.
+Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`npm run test:integration`, excluded from `npm run test:unit`), which builds two disposable orgs and five throwaway users and asserts each rejection's own sentinel rather than only its SQLSTATE — a plain RLS denial and a CHECK constraint reuse both codes. Three tests prove the allowed side, so the gates are specific rather than blanket. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — Team management: role change and member removal.
 
 **CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
 

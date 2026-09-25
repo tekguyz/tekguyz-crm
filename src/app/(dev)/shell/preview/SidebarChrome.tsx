@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils/cn";
 // It sits INSIDE the right edge rather than straddling it. The reference draws
 // a circle half-outside the panel, which is a nicer handle — but the shipped
 // <aside> is `overflow-hidden`, load-bearing for the two-layer translate
-// collapse (docs/DESIGN.md § The Application Shell, decision 4), so anything
+// collapse (DESIGN.md § The Application Shell, decision 4), so anything
 // overhanging the right edge would be clipped away. Sitting inside is the
 // version that survives the mechanism this exploration is not allowed to
 // touch.

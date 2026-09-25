@@ -63,7 +63,7 @@ const SOURCES = [
   "docs/VERIFICATION.md",
   "docs/KNOWN_GAPS.md",
   "docs/SCHEMA_REFERENCE.md",
-  "docs/DESIGN.md",
+  "DESIGN.md",
   INDEX,
   ".claude/skills/status-sync/SKILL.md",
 ];
@@ -136,7 +136,7 @@ if (indexText) {
 // ---------------------------------------------------------------------------
 // A. Every `§` pointer resolves.
 //
-// Prose wraps, so a pointer can straddle a newline (docs/DESIGN.md does exactly
+// Prose wraps, so a pointer can straddle a newline (DESIGN.md does exactly
 // this). Collapse whitespace across the whole file before extracting, which
 // costs the line number and buys never missing a wrapped citation.
 //

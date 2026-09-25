@@ -23,7 +23,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const DESIGN = join(ROOT, "docs", "DESIGN.md");
+const DESIGN = join(ROOT, "DESIGN.md");
 const CSS = join(ROOT, "src", "app", "globals.css");
 
 /* ---------- helpers ---------- */
@@ -177,7 +177,7 @@ for (const line of design.split("\n")) {
 if (counts.color === 0 || counts.type === 0 || counts.radius === 0) {
   console.error(
     `design-drift: parsed ${counts.color} colour / ${counts.type} type / ${counts.radius} radius rows ` +
-      "from docs/DESIGN.md — a table shape changed and the check is no longer reading it. " +
+      "from DESIGN.md — a table shape changed and the check is no longer reading it. " +
       "Fix this script; do not report a pass."
   );
   process.exit(2);

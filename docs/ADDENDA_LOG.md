@@ -3,7 +3,7 @@
 This file was a single 419 KB document until 2026-08-18. It is now an **index**;
 the entries live in `docs/addenda/`. The path and the citation style did not change,
 so every existing ``docs/ADDENDA_LOG.md § <Section Title>`` pointer in `CLAUDE.md`,
-`docs/KNOWN_GAPS.md`, `docs/SCHEMA_REFERENCE.md`, `docs/DESIGN.md`, the status-sync skill
+`docs/KNOWN_GAPS.md`, `docs/SCHEMA_REFERENCE.md`, `DESIGN.md`, the status-sync skill
 and three source files still resolves — look the title up in the table below and open
 the file it names. **55 such pointers existed at the time of the split and all 55 were
 re-verified against this index afterwards.**

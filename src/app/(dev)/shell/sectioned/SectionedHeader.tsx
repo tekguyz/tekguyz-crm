@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 //    content-width, which reads as a small button sitting in a lot of empty
 //    bar; that emptiness is most of what "huge and plain" is describing. A
 //    field shape at a fixed width fills the space it is given without
-//    reintroducing an actual input, which decision 1 of docs/DESIGN.md § The
+//    reintroducing an actual input, which decision 1 of DESIGN.md § The
 //    Application Shell rules out for good reasons that have not changed.
 //
 // The right side gains the reference's cluster: one icon control, a hairline

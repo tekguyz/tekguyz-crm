@@ -1,7 +1,7 @@
 // Live enforcement suite for public.prospects and public.import_prospects_chunk
 // (migration 20260826120000_prospects.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. It talks to the real
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. It talks to the real
 // Supabase project, because that is the only place the enforcement exists: RLS
 // policies, a SECURITY DEFINER membership check, a GENERATED column and a
 // missing DELETE grant are all database facts, and a mocked check would prove
@@ -142,7 +142,7 @@ beforeAll(async () => {
     !SERVICE_KEY && "SUPABASE_SECRET_KEY",
   ].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:rls\`.`);
+    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:integration\`.`);
   }
 
   admin = createClient(SUPABASE_URL!, SERVICE_KEY!, {

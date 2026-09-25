@@ -23,7 +23,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  *
  * Deliberately NOT marked `server-only`. It holds no secret and touches no
  * database — it is pure crypto over bytes handed to it, which is what makes it
- * unit-testable in the hermetic `npm test` suite. The secret it is keyed with
+ * unit-testable in the hermetic `npm run test:unit` suite. The secret it is keyed with
  * is fetched by resolve-tenant.ts, which IS `server-only`.
  */
 

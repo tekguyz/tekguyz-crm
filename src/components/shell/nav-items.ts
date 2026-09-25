@@ -61,7 +61,7 @@ export const ALL_NAV: ShellNavItem[] = [...PRIMARY_NAV, ...SECONDARY_NAV];
 // destinations are now two position-only groups and a footer pair. There are
 // NO captions and NO disclosure — a full-bleed hairline between groups is the
 // whole of the grouping, so there is no label to go stale when a destination
-// moves. See docs/DESIGN.md § The Application Shell, decision 3.
+// moves. See DESIGN.md § The Application Shell, decision 3.
 //
 // Every entry is looked up out of PRIMARY_NAV / SECONDARY_NAV by href and a
 // miss throws at module load, so the sidebar cannot invent a route or silently

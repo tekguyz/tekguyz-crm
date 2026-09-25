@@ -1,7 +1,7 @@
 // Live enforcement suite for public.promote_prospect
 // (migration 20260914120000_promote_prospect_rpc.sql).
 //
-// NOT part of `npm test` — run it with `npm run test:rls`. The claim this RPC
+// NOT part of `npm run test:unit` — run it with `npm run test:integration`. The claim this RPC
 // exists to make is a database fact: the leads insert, the lead_submissions
 // insert and the guarded prospect claim commit together or not at all, so two
 // promotions of one prospect leave exactly one lead and zero orphans. A mock
@@ -125,7 +125,7 @@ beforeAll(async () => {
     !SERVICE_KEY && "SUPABASE_SECRET_KEY",
   ].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:rls\`.`);
+    throw new Error(`Missing env var(s): ${missing.join(", ")}. Run via \`npm run test:integration\`.`);
   }
 
   admin = createClient(SUPABASE_URL!, SERVICE_KEY!, {

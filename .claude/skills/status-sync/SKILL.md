@@ -31,7 +31,7 @@ times a day.
   already name the exact stale entry. That naming is the finding.
 - **Never open `docs/SCHEMA_REFERENCE.md`.** It is the largest file in the repo.
   Check 10 in `doc-audit` verifies its inventories; this skill does not.
-- **Never open `docs/DESIGN.md` or `docs/ADDENDA_LOG.md`.** `check-design-drift`
+- **Never open `DESIGN.md` or `docs/ADDENDA_LOG.md`.** `check-design-drift`
   covers the first; the second is history, and history does not change.
 - **`CLAUDE.md` is already in context** — it loads every session. Do not re-read
   it. `docs/INITIATIVES.md` does **not** load with it: read that file for the
@@ -79,7 +79,7 @@ treat silence as clean.
 5. `docs/KNOWN_GAPS.md` open bullets, by grep.
 6. `docs/INITIATIVES.md`, the initiative status table.
 
-Gates (`npm run build`, `npm run lint`, `npx tsc --noEmit`, `npm test`) only if
+Gates (`npm run build`, `npm run lint`, `npm run typecheck`, `npm run test:unit`) only if
 the audit will claim something is done. Otherwise report them as not run.
 
 ## The exclusion pass — every run
