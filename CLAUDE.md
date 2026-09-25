@@ -14,6 +14,7 @@ file is read) or in `docs/` (read on demand).
 
 | File | What it owns |
 | --- | --- |
+| `PRODUCT.md` | Product truth — users, purpose, positioning, principles (Impeccable reads it) |
 | `DESIGN.md` | Design spec — token tables, elevation, iconography, § The Application Shell |
 | `docs/SCHEMA_REFERENCE.md` | The live schema. Read before any migration, RLS or RPC work |
 | `docs/SECURITY_MODEL.md` | The seven security rules in full, and role-enforcement status |
