@@ -91,7 +91,6 @@ Never `npm test`. It stops on purpose. `test:integration` needs `.env`, changes 
 - [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) — the seven security rules
 - [`docs/INITIATIVES.md`](docs/INITIATIVES.md) — feature status
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md) — what is next and what is deferred
-- [`docs/NEXTJS-STARTER-NOTES.md`](docs/NEXTJS-STARTER-NOTES.md) — the old create-next-app README
 
 ---
 
