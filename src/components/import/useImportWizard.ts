@@ -10,7 +10,7 @@ import {
   type WizardStep,
 } from "@/lib/types/csv-import";
 
-const EMPTY_OUTCOME: ValidationOutcome = { valid: [], invalid: [] };
+const EMPTY_OUTCOME: ValidationOutcome = { valid: [], invalid: [], warnings: [] };
 
 export function useImportWizard() {
   const [step, setStep] = useState<WizardStep>("upload");

@@ -106,6 +106,7 @@ export function ImportWizardLayout() {
         <ImportSummary
           result={result}
           failedValidation={outcome.invalid.length}
+          warnings={outcome.warnings}
           onImportAnother={reset}
         />
       )}

@@ -1,0 +1,12 @@
+client_name,email,phone,company,website,physical_address,social_google_business,social_facebook,social_instagram,social_whatsapp,lead_source,service_category,ai_brief
+"LJ Air Conditioning Services, Inc.",,(305) 555-0141,"LJ Air Conditioning Services, Inc.",,"100 Test Way, Miami, FL",https://www.google.com/maps/search/?api=1&query=LJ+Air+Conditioning,https://www.facebook.com/LJAirTest,,,google-maps,HVAC,"Hi LJ team, saw your ""same-day"" repair posts.
+Would a simple booking page help?
+
+Family-run HVAC shop, 20 years in Miami."
+Phone Only Plumbing,,+1 305 555 0142,,,,,,,,facebook-group,Plumbing,
+WhatsApp Only Salon,,,,,,,,,https://wa.me/13055550143,instagram,Beauty,"Hola,
+line two"
+Junk Link Roofing,,305.555.0144,,N/A,,,N/A,,,facebook,Roofing,
+No Channel Bakery,,,,,"12 Test St, Doral, FL",,,,,,Food,Only a name and an address.
+Email Only Cleaners,Owner@EmailOnlyCleaners.test,,,,,,,,,,Cleaning,
+Junk Only Detailing,,,,,,,,@junkonlydetailing,,instagram,Auto,

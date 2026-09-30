@@ -1,6 +1,8 @@
 "use client";
 
 import type { BatchInsertResult } from "@/lib/actions/import-actions";
+import type { RowWarning } from "@/lib/import/validate-rows";
+import { RowWarningsTable } from "@/components/import/RowWarningsTable";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DemoBlockText } from "@/components/shell/DemoBlockText";
@@ -40,10 +42,12 @@ function StatTile({
 export function ImportSummary({
   result,
   failedValidation,
+  warnings,
   onImportAnother,
 }: {
   result: BatchInsertResult;
   failedValidation: number;
+  warnings: RowWarning[];
   onImportAnother: () => void;
 }) {
   const duplicateDetail = [
@@ -97,6 +101,8 @@ export function ImportSummary({
           failed to process — retry recommended for those rows.
         </p>
       )}
+
+      <RowWarningsTable warnings={warnings} />
 
       {result.existingArchived > 0 && (
         <p className="text-body-sm mb-4 text-ink-muted">
