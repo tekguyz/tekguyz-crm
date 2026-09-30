@@ -4,13 +4,16 @@ export type Lead = {
   id: string;
   client_name: string;
   company: string | null;
-  email: string;
+  // NULL for most Lead Pack leads: email is required only on the webhook (#37).
+  email: string | null;
   phone: string | null;
   website: string | null;
   physical_address: string | null;
   social_google_business: string | null;
   social_facebook: string | null;
   social_instagram: string | null;
+  // A https://wa.me/<digits> link.
+  social_whatsapp: string | null;
   lead_source: string | null;
   service_category: string | null;
   estimated_revenue: number;
@@ -29,7 +32,7 @@ export type Lead = {
 };
 
 export const LEAD_COLUMNS =
-  "id, client_name, company, email, phone, website, physical_address, social_google_business, social_facebook, social_instagram, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief, archived, assigned_to";
+  "id, client_name, company, email, phone, website, physical_address, social_google_business, social_facebook, social_instagram, social_whatsapp, lead_source, service_category, estimated_revenue, status, outcome, actual_revenue, next_action_at, is_starred, ai_brief, archived, assigned_to";
 
 export async function getSlaCriticalLeads(orgId: string): Promise<Lead[]> {
   const supabase = await createClient();

@@ -57,6 +57,7 @@ const lead = {
   social_google_business: null,
   social_facebook: null,
   social_instagram: null,
+  social_whatsapp: null,
   lead_source: "Webhook",
   service_category: "Plumber",
   estimated_revenue: 31500,
@@ -72,8 +73,8 @@ const lead = {
   assigned_to: null,
 } as unknown as Lead;
 
-function renderPanel() {
-  return render(<LeadProfilePanel lead={lead} onClose={() => {}} highlightTaskId={null} />);
+function renderPanel(current: Lead = lead) {
+  return render(<LeadProfilePanel lead={current} onClose={() => {}} highlightTaskId={null} />);
 }
 
 describe("LeadProfilePanel — the jump strip", () => {
@@ -121,7 +122,31 @@ describe("LeadProfilePanel — the jump strip", () => {
 });
 
 describe("LeadProfilePanel — header and metadata", () => {
-  it("puts the four click-to-action shortcuts on the header row as real protocol links", () => {
+  it("shows a Lead Pack lead's channels as icon links, and no Email link when it has no email", () => {
+    renderPanel({
+      ...lead,
+      email: null,
+      phone: null,
+      website: null,
+      physical_address: null,
+      social_facebook: "https://facebook.com/fakefalls",
+      social_instagram: "https://instagram.com/fakefalls",
+      social_whatsapp: "https://wa.me/18175550101",
+      social_google_business: "https://maps.google.com/?cid=1",
+    });
+
+    expect(screen.queryByRole("link", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+    expect(screen.getByRole("link", { name: "WhatsApp" })).toHaveAttribute(
+      "href",
+      "https://wa.me/18175550101",
+    );
+    expect(screen.getByRole("link", { name: "Facebook" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "Instagram" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Google" })).toBeInTheDocument();
+  });
+
+  it("puts the click-to-action shortcuts in the header as real protocol links", () => {
     renderPanel();
 
     expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:8175550101");

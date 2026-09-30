@@ -28,11 +28,15 @@ export type NewLeadInput = {
   clientName: string;
   // Caller lowercases. This function does NOT re-lowercase, so a caller that
   // forgets shows up as a real duplicate rather than being silently repaired
-  // in one of the two paths and not the other.
-  email: string;
+  // in one of the two paths and not the other. NULL when there is none (#37).
+  email: string | null;
   phone?: string | null;
   company?: string | null;
   website?: string | null;
+  socialGoogleBusiness?: string | null;
+  socialFacebook?: string | null;
+  socialInstagram?: string | null;
+  socialWhatsapp?: string | null;
   physicalAddress?: string | null;
   leadSource?: string | null;
   serviceCategory?: string | null;
@@ -78,6 +82,10 @@ export async function insertLeadWithSubmission(
       phone: input.phone ?? null,
       company: input.company ?? null,
       website: input.website ?? null,
+      social_google_business: input.socialGoogleBusiness ?? null,
+      social_facebook: input.socialFacebook ?? null,
+      social_instagram: input.socialInstagram ?? null,
+      social_whatsapp: input.socialWhatsapp ?? null,
       physical_address: input.physicalAddress ?? null,
       lead_source: input.leadSource ?? null,
       service_category: input.serviceCategory ?? null,

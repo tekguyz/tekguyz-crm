@@ -1,50 +1,51 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { InsertRow } from "@/lib/import/dedup";
+import type { InsertRow } from "@/lib/import/build-insert-rows";
 
 const CHUNK_SIZE = 250;
 
+// One outcome per row sent, from public.import_leads_chunk
+// (20260930120000_muse_lead_pack.sql). rowIndex is the row's position in the
+// whole import, not in its chunk. INSERTED: leadId is the new lead. DUPLICATE:
+// leadId is the lead it matched, on any Contact Channel, and leadArchived says
+// whether that lead is archived. REJECTED: nothing was written; reason says why.
+export type RowOutcome = {
+  rowIndex: number;
+  outcome: "INSERTED" | "DUPLICATE" | "REJECTED";
+  leadId: string | null;
+  leadArchived: boolean | null;
+  reason: string | null;
+};
+
 export type ChunkedInsertResult = {
-  insertedIds: string[];
-  // Additive, alongside insertedIds rather than replacing it: the caller needs
-  // the id↔email pairing to attach each new lead's first lead_submissions row
-  // to the CSV row it came from. The RPC's returned emails are already
-  // normalized the same way the stored value is, so the join is exact.
-  insertedLeads: ImportedLeadRow[];
-  skippedEmails: string[];
+  outcomes: RowOutcome[];
   failedChunks: number;
   failedChunkRows: number;
 };
 
-export type ImportedLeadRow = { lead_id: string; lead_email: string };
-
-// Mirrors the lower(trim(...)) the RPC applies before storing, so the diff
-// below compares like with like.
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
+type RpcOutcome = {
+  row_index: number;
+  outcome: RowOutcome["outcome"];
+  lead_id: string | null;
+  lead_archived: boolean | null;
+  reason: string | null;
+};
 
 export async function insertLeadChunks(
   supabase: SupabaseClient,
   organizationId: string,
   rows: InsertRow[],
 ): Promise<ChunkedInsertResult> {
-  const result: ChunkedInsertResult = {
-    insertedIds: [],
-    insertedLeads: [],
-    skippedEmails: [],
-    failedChunks: 0,
-    failedChunkRows: 0,
-  };
+  const result: ChunkedInsertResult = { outcomes: [], failedChunks: 0, failedChunkRows: 0 };
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
 
     try {
-      // Goes through a SECURITY DEFINER RPC rather than PostgREST's upsert.
-      // The only unique index here is unique_tenant_client_email_ci ON leads
-      // (organization_id, lower(email)) — an EXPRESSION index, which
-      // PostgREST's column-list `onConflict` parameter cannot address, so the
-      // old .upsert() threw on every single chunk and import could never
-      // insert a row. Raw SQL can infer an expression index; the RPC is that
-      // raw SQL. See 20260815120000_import_leads_chunk_rpc.sql.
+      // A SECURITY DEFINER RPC, not a PostgREST insert: it walks the rows one
+      // by one, skips any row that matches an existing lead (or an earlier row
+      // of this file) on any Contact Channel, and writes each new lead's first
+      // lead_submissions row in the same transaction. The matching rules live
+      // only in the database, in the lead_key_* functions.
       //
       // organizationId is passed as its own argument and is what the function
       // writes to every row — the org id sitting on each chunk row is ignored
@@ -53,33 +54,22 @@ export async function insertLeadChunks(
       // session-bound one from lib/supabase/server.ts, never admin.ts: the
       // RPC's membership check replaces the RLS policy that a service-role
       // client would have bypassed anyway.
-      const { data: inserted, error } = await supabase.rpc("import_leads_chunk", {
+      const { data, error } = await supabase.rpc("import_leads_chunk", {
         p_organization_id: organizationId,
         p_rows: chunk,
       });
 
       if (error) throw new Error(error.message);
 
-      // Diff the chunk against what actually came back, rather than
-      // pre-querying for existing emails — a pre-query is a TOCTOU race
-      // across chunks, whereas the RPC's own returned rows are atomic
-      // with the write. Anything missing was skipped as a duplicate.
-      const returned = (inserted ?? []) as ImportedLeadRow[];
-      const insertedEmails = new Set(returned.map((row) => normalizeEmail(row.lead_email)));
-
-      // Both sides of the diff are normalized the same way the RPC normalizes
-      // before storing. The Zod layer already lowercases, so this changes
-      // nothing on the real path — but without it a caller that skipped Zod
-      // would have its rows inserted and then counted as "already existed",
-      // a silent miscount rather than an error. The skipped email is pushed in
-      // its normalized form too, because reportDuplicateBreakdown looks it up
-      // against the stored (lowercased) value.
-      for (const row of chunk) {
-        const email = normalizeEmail(row.email);
-        if (!insertedEmails.has(email)) result.skippedEmails.push(email);
+      for (const row of (data ?? []) as RpcOutcome[]) {
+        result.outcomes.push({
+          rowIndex: i + row.row_index,
+          outcome: row.outcome,
+          leadId: row.lead_id,
+          leadArchived: row.lead_archived,
+          reason: row.reason,
+        });
       }
-      result.insertedIds.push(...returned.map((row) => row.lead_id));
-      result.insertedLeads.push(...returned);
     } catch (err) {
       // One bad chunk must not abort the rest of the batch — record it and
       // keep going, so a transient failure costs 250 rows, not the import.
@@ -93,6 +83,67 @@ export async function insertLeadChunks(
   }
 
   return result;
+}
+
+export type OutcomeSummary = {
+  insertedIds: string[];
+  intraFileDuplicates: number;
+  existingActive: number;
+  existingArchived: number;
+};
+
+// A duplicate whose match was inserted by this same import is a duplicate
+// inside the file (first row wins); any other match was already in the CRM.
+// Purely descriptive: an archived match stays archived. The Resurrection
+// Engine is for the webhook only.
+export function summarizeOutcomes(outcomes: RowOutcome[]): OutcomeSummary {
+  const insertedIds = outcomes.flatMap((o) => (o.outcome === "INSERTED" && o.leadId ? [o.leadId] : []));
+  const inserted = new Set(insertedIds);
+  const summary: OutcomeSummary = {
+    insertedIds,
+    intraFileDuplicates: 0,
+    existingActive: 0,
+    existingArchived: 0,
+  };
+
+  for (const o of outcomes) {
+    if (o.outcome !== "DUPLICATE") continue;
+    if (o.leadId && inserted.has(o.leadId)) summary.intraFileDuplicates += 1;
+    else if (o.leadArchived) summary.existingArchived += 1;
+    else summary.existingActive += 1;
+  }
+
+  return summary;
+}
+
+// A row that did not import, and why. `index` is the row's place in the rows
+// the client sent, so the client can turn it back into a spreadsheet row.
+// IN_FILE: the same business as the row at firstIndex, which imported.
+// EXISTING: the same business as a lead already in the CRM.
+// REJECTED: the row broke the contact rule; reason is the RPC's code, or
+// "SERVER_RECHECK" when the Server Action refused it before the RPC.
+export type SkippedRow =
+  | { index: number; kind: "IN_FILE"; firstIndex: number }
+  | { index: number; kind: "EXISTING"; leadId: string; archived: boolean }
+  | { index: number; kind: "REJECTED"; reason: string };
+
+// sentIndex[rowIndex] is where the RPC's row sits in the rows the client
+// sent. The two differ once the server re-check drops a row.
+export function listSkippedRows(outcomes: RowOutcome[], sentIndex: number[]): SkippedRow[] {
+  const insertedBy = new Map<string, number>();
+  for (const o of outcomes) {
+    if (o.outcome === "INSERTED" && o.leadId) insertedBy.set(o.leadId, sentIndex[o.rowIndex]);
+  }
+
+  return outcomes.flatMap((o): SkippedRow[] => {
+    const index = sentIndex[o.rowIndex];
+    if (o.outcome === "REJECTED") return [{ index, kind: "REJECTED", reason: o.reason ?? "UNKNOWN" }];
+    if (o.outcome !== "DUPLICATE" || !o.leadId) return [];
+
+    const firstIndex = insertedBy.get(o.leadId);
+    if (firstIndex !== undefined) return [{ index, kind: "IN_FILE", firstIndex }];
+    return [{ index, kind: "EXISTING", leadId: o.leadId, archived: o.leadArchived === true }];
+  });
 }
 
 export async function logImportedLeads(

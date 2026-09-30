@@ -1,6 +1,7 @@
 "use client";
 
 import type { ValidationOutcome } from "@/lib/import/validate-rows";
+import { RowWarningsTable } from "@/components/import/RowWarningsTable";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -27,7 +28,7 @@ export function ValidationResultsTable({
   onImport: () => void;
   isImporting: boolean;
 }) {
-  const { valid, invalid } = outcome;
+  const { valid, invalid, warnings } = outcome;
 
   return (
     <section className="rounded-lg border border-hairline bg-canvas-pure p-4">
@@ -43,6 +44,11 @@ export function ValidationResultsTable({
         {invalid.length > 0 && (
           <Badge tone="orange" className="rounded-full px-2">
             {invalid.length.toLocaleString()} with errors
+          </Badge>
+        )}
+        {warnings.length > 0 && (
+          <Badge tone="neutral" className="rounded-full px-2">
+            {warnings.length.toLocaleString()} with an emptied cell
           </Badge>
         )}
       </div>
@@ -72,6 +78,8 @@ export function ValidationResultsTable({
         </div>
       )}
 
+      <RowWarningsTable warnings={warnings} />
+
       {valid.length > 0 && (
         <div className="mb-4">
           <p className="text-body-sm mb-2 text-ink-muted">
@@ -85,20 +93,22 @@ export function ValidationResultsTable({
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Client name</TableHeaderCell>
-                <TableHeaderCell>Email</TableHeaderCell>
+                <TableHeaderCell>Email or phone</TableHeaderCell>
                 <TableHeaderCell>Company</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {/* Keyed by index, not email — a valid row set can legitimately
-                  contain the same email twice; that's what the intra-file
-                  dedup step resolves later, so email isn't unique here. */}
+              {/* Keyed by index — a valid row set can legitimately contain the
+                  same business twice; the import RPC resolves that later, so
+                  no field is unique here. */}
               {valid.slice(0, PREVIEW_LIMIT).map((row, index) => (
                 <TableRow key={index} className="last:border-0">
                   <TableCell className="max-w-48 truncate font-medium">
                     {row.client_name}
                   </TableCell>
-                  <TableCell className="max-w-48 truncate text-ink-muted">{row.email}</TableCell>
+                  <TableCell className="max-w-48 truncate text-ink-muted">
+                    {row.email ?? row.phone ?? "—"}
+                  </TableCell>
                   <TableCell className="max-w-48 truncate text-ink-muted">
                     {row.company ?? "—"}
                   </TableCell>

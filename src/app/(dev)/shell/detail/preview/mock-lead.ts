@@ -24,6 +24,7 @@ export const MOCK_LEAD: Lead = {
   social_google_business: null,
   social_facebook: null,
   social_instagram: null,
+  social_whatsapp: null,
   lead_source: "Google Ads",
   service_category: "HVAC",
   estimated_revenue: 31500,

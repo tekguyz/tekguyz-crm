@@ -1,7 +1,9 @@
 // Shared vocabulary for the CSV import wizard. Field ids below are real
-// `leads` column names, confirmed against the live schema — every one exists
-// with this exact spelling, and `client_name`/`email` are the two NOT NULL
-// columns without a default, which is why they're the required pair.
+// `leads` column names, spelled exactly as the live schema spells them. That
+// is also what makes a Muse Lead Pack auto-map with no clicks: its 13 headers
+// are these ids. Only `client_name` is required. Email is optional here, as
+// everywhere except the webhook; the contact rule (@/lib/leads/contact-rule)
+// is checked per row, not per mapping.
 export type ParsedCsvRow = Record<string, string>;
 
 export type MappableField =
@@ -14,6 +16,11 @@ export type MappableField =
   | "service_category"
   | "estimated_revenue"
   | "lead_source"
+  | "social_google_business"
+  | "social_facebook"
+  | "social_instagram"
+  | "social_whatsapp"
+  | "ai_brief"
   | "ignore";
 
 export interface FieldDefinition {
@@ -24,7 +31,7 @@ export interface FieldDefinition {
 
 export const MAPPABLE_FIELDS: FieldDefinition[] = [
   { id: "client_name", label: "Client Name", required: true },
-  { id: "email", label: "Email", required: true },
+  { id: "email", label: "Email" },
   { id: "company", label: "Company" },
   { id: "phone", label: "Phone" },
   { id: "website", label: "Website" },
@@ -32,6 +39,11 @@ export const MAPPABLE_FIELDS: FieldDefinition[] = [
   { id: "service_category", label: "Service Category" },
   { id: "estimated_revenue", label: "Estimated Revenue" },
   { id: "lead_source", label: "Lead Source" },
+  { id: "social_google_business", label: "Google Business Profile" },
+  { id: "social_facebook", label: "Facebook" },
+  { id: "social_instagram", label: "Instagram" },
+  { id: "social_whatsapp", label: "WhatsApp" },
+  { id: "ai_brief", label: "AI Brief" },
 ];
 
 export type ColumnMapping = Record<string, MappableField>;

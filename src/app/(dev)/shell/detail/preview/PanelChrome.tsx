@@ -74,11 +74,13 @@ function QuickActions({ className }: { className?: string }) {
           </Button>
         </>
       ) : null}
-      <Button asChild variant="secondary" size="sm" className="size-7 px-0">
-        <a href={`mailto:${lead.email}`} aria-label="Email" title="Email">
-          <IconMail stroke={1.75} aria-hidden className="size-4" />
-        </a>
-      </Button>
+      {lead.email ? (
+        <Button asChild variant="secondary" size="sm" className="size-7 px-0">
+          <a href={`mailto:${lead.email}`} aria-label="Email" title="Email">
+            <IconMail stroke={1.75} aria-hidden className="size-4" />
+          </a>
+        </Button>
+      ) : null}
       {mapQuery ? (
         <Button asChild variant="secondary" size="sm" className="size-7 px-0">
           <a

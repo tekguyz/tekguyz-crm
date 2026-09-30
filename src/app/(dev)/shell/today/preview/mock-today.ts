@@ -102,6 +102,7 @@ export const MOCK_TODAY_LEADS: Lead[] = ROWS.map(
     social_google_business: null,
     social_facebook: null,
     social_instagram: null,
+    social_whatsapp: null,
     lead_source: null,
     service_category: null,
     estimated_revenue,

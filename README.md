@@ -15,16 +15,17 @@
 | Row | |
 |---|---|
 | Phase | In production. Post-launch feature work. |
-| Shipped | Leads and pipeline, tasks, contacts, prospects, reports, team roles, command palette. Demo: each Guest gets their own writable Demo Org (#31). |
+| Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). |
 | Next | Demo Landing Page (#32), then retire the old demo role (#33). See `docs/INITIATIVES.md`. |
-| Updated | 2026-09-29 |
+| Updated | 2026-09-30 |
 
 ## What it does
 
 - Tracks each lead from first enquiry to won, lost or abandoned.
 - Takes leads from the tekguyz.com form over a signed webhook.
+- Imports the weekly Lead Pack CSV. Email is optional; a lead needs one way to
+  reach it. A row that matches a lead on any channel is skipped.
 - Flags leads that go cold, and keeps tasks and follow-ups.
-- Stages cold prospects from CSV. A human promotes each one to a lead.
 - Reports by period, with CSV export.
 - Has team roles (owner, admin, member) and per-lead owners.
 - Searches everything with a command palette.

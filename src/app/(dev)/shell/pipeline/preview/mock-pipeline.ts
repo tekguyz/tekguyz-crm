@@ -72,6 +72,7 @@ function build(status: string, rows: Row[], idBase: number): Lead[] {
     social_google_business: null,
     social_facebook: null,
     social_instagram: null,
+    social_whatsapp: null,
     lead_source: null,
     service_category: null,
     estimated_revenue: revenue,

@@ -1,6 +1,9 @@
 "use client";
 
 import type { BatchInsertResult } from "@/lib/actions/import-actions";
+import type { RowLabel, RowWarning } from "@/lib/import/validate-rows";
+import { RowWarningsTable } from "@/components/import/RowWarningsTable";
+import { SkippedRowsTable } from "@/components/import/SkippedRowsTable";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DemoBlockText } from "@/components/shell/DemoBlockText";
@@ -40,10 +43,14 @@ function StatTile({
 export function ImportSummary({
   result,
   failedValidation,
+  warnings,
+  labels,
   onImportAnother,
 }: {
   result: BatchInsertResult;
   failedValidation: number;
+  warnings: RowWarning[];
+  labels: RowLabel[];
   onImportAnother: () => void;
 }) {
   const duplicateDetail = [
@@ -84,19 +91,19 @@ export function ImportSummary({
         <StatTile value={failedValidation} label="Failed validation" tone="orange" />
       </div>
 
-      {result.rejectedServerSide > 0 && (
-        <p className="text-body-md mb-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-          {result.rejectedServerSide.toLocaleString()} row(s) were rejected during the server-side
-          re-check and not imported.
-        </p>
-      )}
-
       {result.failedChunks > 0 && (
         <p className="text-body-md mb-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           {result.failedChunks} batch(es) covering {result.failedChunkRows.toLocaleString()} rows
           failed to process — retry recommended for those rows.
         </p>
       )}
+
+      {/* Only when the import ran: a blocked import imported no row, emptied
+          cell or not. */}
+      {!result.error && <RowWarningsTable warnings={warnings} />}
+
+      {/* Duplicates and refused rows, one line each, by spreadsheet row. */}
+      <SkippedRowsTable skipped={result.skippedRows} labels={labels} />
 
       {result.existingArchived > 0 && (
         <p className="text-body-sm mb-4 text-ink-muted">
