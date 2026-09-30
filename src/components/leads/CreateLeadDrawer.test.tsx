@@ -51,6 +51,10 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
       ["Website", "rivers.example"],
       ["Lead source", "Referral"],
       ["Service category", "Roofing"],
+      ["Google Business Profile", "https://maps.google.com/?cid=1"],
+      ["Facebook", "https://facebook.com/rivers"],
+      ["Instagram", "https://instagram.com/rivers"],
+      ["WhatsApp", "https://wa.me/18175550101"],
       ["Estimated revenue", "1200"],
     ]) {
       await user.click(screen.getByLabelText(label));
@@ -74,6 +78,10 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
     expect(screen.getByLabelText("Website")).toHaveValue("rivers.example");
     expect(screen.getByLabelText("Lead source")).toHaveValue("Referral");
     expect(screen.getByLabelText("Service category")).toHaveValue("Roofing");
+    expect(screen.getByLabelText("Google Business Profile")).toHaveValue("https://maps.google.com/?cid=1");
+    expect(screen.getByLabelText("Facebook")).toHaveValue("https://facebook.com/rivers");
+    expect(screen.getByLabelText("Instagram")).toHaveValue("https://instagram.com/rivers");
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("https://wa.me/18175550101");
     expect(screen.getByLabelText("Estimated revenue")).toHaveValue(1200);
   });
 
@@ -94,7 +102,15 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
 });
 
 describe("CreateLeadDrawer — field parity", () => {
-  it("posts exactly the eight fields createLead reads", async () => {
+  it("does not require an email: any Contact Channel will do (#37)", async () => {
+    const user = userEvent.setup();
+    render(<CreateLeadDrawer />);
+    await openForm(user);
+
+    expect(screen.getByLabelText("Email")).not.toBeRequired();
+  });
+
+  it("posts exactly the twelve fields createLead reads", async () => {
     const user = userEvent.setup();
     render(<CreateLeadDrawer />);
     await openForm(user);
@@ -107,6 +123,10 @@ describe("CreateLeadDrawer — field parity", () => {
       "lead_source",
       "phone",
       "service_category",
+      "social_facebook",
+      "social_google_business",
+      "social_instagram",
+      "social_whatsapp",
       "website",
     ]);
   });

@@ -70,7 +70,7 @@ export async function promoteProspect(
     .single<PromoteRow>();
 
   if (error) {
-    if (isEmailCollision(error)) {
+    if (isEmailCollision(error) && lead.email) {
       const existingLeadId = await findLeadIdByEmail(supabase, orgId, lead.email);
       return {
         ok: false,

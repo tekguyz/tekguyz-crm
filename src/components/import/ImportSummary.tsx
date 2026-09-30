@@ -102,7 +102,9 @@ export function ImportSummary({
         </p>
       )}
 
-      <RowWarningsTable warnings={warnings} />
+      {/* Only when the import ran: a blocked import imported no row, emptied
+          cell or not. */}
+      {!result.error && <RowWarningsTable warnings={warnings} />}
 
       {result.existingArchived > 0 && (
         <p className="text-body-sm mb-4 text-ink-muted">

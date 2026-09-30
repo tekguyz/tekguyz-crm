@@ -116,7 +116,7 @@ describe.each(VARIANTS)("Variant %s", (_name, Today) => {
     expect(within(card).getByText(lead.status)).toBeInTheDocument();
 
     // Fields the card deliberately does not carry.
-    expect(within(card).queryByText(lead.email)).toBeNull();
+    expect(within(card).queryByText(lead.email!)).toBeNull();
   });
 
   // THE BADGE TONE, PER STAGE. The whole reason for the prompt: a stage has to

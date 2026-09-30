@@ -186,7 +186,7 @@ export function EditLeadDrawer({
               <FormSection
                 id="reach"
                 label="Address & social profiles"
-                count={4}
+                count={5}
                 open={openSections.reach}
                 onToggle={() => toggle("reach")}
               >

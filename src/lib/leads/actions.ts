@@ -11,6 +11,7 @@ import {
   LEAD_ROLE_DENIED_MESSAGE,
 } from "@/lib/leads/role-errors";
 import { insertLeadWithSubmission } from "@/lib/leads/create";
+import { hasContactChannel, NO_CONTACT_CHANNEL_MESSAGE } from "@/lib/leads/contact-rule";
 
 // NOTE: archiveLead / unarchiveLead live in @/lib/leads/archive-actions.ts,
 // split out on 2026-07-28 to bring this file back under the 200-line cap.
@@ -29,10 +30,40 @@ export async function createLead(
   // (unique_tenant_client_email_ci) and every other ingestion path (CSV
   // import, webhook) — same single-field fix, no lookup here to mismatch
   // since this always inserts and lets the constraint reject a collision.
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  // Optional: blank is NULL, never '' (check_lead_email_not_blank).
+  const email = optionalField(formData.get("email"))?.toLowerCase() ?? null;
 
-  if (!clientName || !email) {
-    return { error: "Client name and email are required." };
+  // Read once, then reused for both the leads row and its first submission —
+  // so the two can never disagree about what was entered. Every name here has
+  // a rendered <input name="..."> in CreateLeadForm; nothing new is read from
+  // formData by the submission write (CLAUDE.md § Form/Action Field Parity).
+  const phone = optionalField(formData.get("phone"));
+  const company = optionalField(formData.get("company"));
+  const website = optionalField(formData.get("website"));
+  const leadSource = optionalField(formData.get("lead_source"));
+  const serviceCategory = optionalField(formData.get("service_category"));
+  const socialGoogleBusiness = optionalField(formData.get("social_google_business"));
+  const socialFacebook = optionalField(formData.get("social_facebook"));
+  const socialInstagram = optionalField(formData.get("social_instagram"));
+  const socialWhatsapp = optionalField(formData.get("social_whatsapp"));
+
+  if (!clientName) {
+    return { error: "Client name is required." };
+  }
+  // The contact rule, said in words before check_lead_has_contact_channel
+  // says it as a constraint error.
+  if (
+    !hasContactChannel({
+      email,
+      phone,
+      website,
+      social_google_business: socialGoogleBusiness,
+      social_facebook: socialFacebook,
+      social_instagram: socialInstagram,
+      social_whatsapp: socialWhatsapp,
+    })
+  ) {
+    return { error: NO_CONTACT_CHANNEL_MESSAGE };
   }
 
   const estimatedRevenueRaw = formData.get("estimated_revenue");
@@ -40,16 +71,6 @@ export async function createLead(
 
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
-
-  // Read once, then reused for both the leads row and its first submission —
-  // so the two can never disagree about what was entered. Every name here has
-  // a rendered <input name="..."> in CreateLeadDrawer; nothing new is read from
-  // formData by the submission write (CLAUDE.md § Form/Action Field Parity).
-  const phone = optionalField(formData.get("phone"));
-  const company = optionalField(formData.get("company"));
-  const website = optionalField(formData.get("website"));
-  const leadSource = optionalField(formData.get("lead_source"));
-  const serviceCategory = optionalField(formData.get("service_category"));
 
   // The insert and its paired lead_submissions row both live in
   // insertLeadWithSubmission (@/lib/leads/create.ts), split out on 2026-08-26
@@ -66,6 +87,10 @@ export async function createLead(
     phone,
     company,
     website,
+    socialGoogleBusiness,
+    socialFacebook,
+    socialInstagram,
+    socialWhatsapp,
     leadSource,
     serviceCategory,
     estimatedRevenue,
@@ -97,11 +122,23 @@ export async function updateLead(
   const clientName = String(formData.get("client_name") ?? "").trim();
   // Lowercased for the same reason as createLead — this function looks up
   // the existing row by id (not email), so there's no lookup/write mismatch
-  // to fix here, only the stored value's casing.
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  // to fix here, only the stored value's casing. Optional, as in createLead.
+  const email = optionalField(formData.get("email"))?.toLowerCase() ?? null;
+  const channels = {
+    email,
+    phone: optionalField(formData.get("phone")),
+    website: optionalField(formData.get("website")),
+    social_google_business: optionalField(formData.get("social_google_business")),
+    social_facebook: optionalField(formData.get("social_facebook")),
+    social_instagram: optionalField(formData.get("social_instagram")),
+    social_whatsapp: optionalField(formData.get("social_whatsapp")),
+  };
 
-  if (!clientName || !email) {
-    return { error: "Client name and email are required." };
+  if (!clientName) {
+    return { error: "Client name is required." };
+  }
+  if (!hasContactChannel(channels)) {
+    return { error: NO_CONTACT_CHANNEL_MESSAGE };
   }
 
   const outcomeRaw = String(formData.get("outcome") ?? "");
@@ -139,14 +176,11 @@ export async function updateLead(
     .from("leads")
     .update({
       client_name: clientName,
-      email,
-      phone: formData.get("phone") || null,
+      // The seven Contact Channels, trimmed and blank-as-NULL: exactly the
+      // values the contact rule above was checked against.
+      ...channels,
       company: formData.get("company") || null,
-      website: formData.get("website") || null,
       physical_address: formData.get("physical_address") || null,
-      social_google_business: formData.get("social_google_business") || null,
-      social_facebook: formData.get("social_facebook") || null,
-      social_instagram: formData.get("social_instagram") || null,
       lead_source: formData.get("lead_source") || null,
       service_category: formData.get("service_category") || null,
       estimated_revenue: estimatedRevenue,

@@ -18,6 +18,7 @@ function lead(overrides: Partial<Lead> & { id: string }): Lead {
     social_google_business: null,
     social_facebook: null,
     social_instagram: null,
+    social_whatsapp: null,
     lead_source: "webhook",
     service_category: "Plumbing",
     estimated_revenue: 1200,

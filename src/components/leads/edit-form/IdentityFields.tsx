@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/Input";
 export function IdentityFields({ lead }: { lead: Lead }) {
   const [values, setValues] = useState({
     client_name: lead.client_name,
-    email: lead.email,
+    email: lead.email ?? "",
     phone: lead.phone ?? "",
     company: lead.company ?? "",
     website: lead.website ?? "",
@@ -49,7 +49,9 @@ export function IdentityFields({ lead }: { lead: Lead }) {
   return (
     <>
       <Input label="Client name" {...field("client_name")} required />
-      <Input label="Email" type="email" {...field("email")} required />
+      {/* Optional: a lead needs any one Contact Channel, and updateLead says
+          so when none is left (#37). */}
+      <Input label="Email" type="email" {...field("email")} />
       <div className="grid grid-cols-2 gap-3">
         <Input label="Phone" {...field("phone")} />
         <Input label="Company" {...field("company")} />

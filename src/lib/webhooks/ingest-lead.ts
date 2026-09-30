@@ -223,7 +223,9 @@ async function runSpamShieldAndNotify(
       const verdict = await evaluateLeadForSpam(
         {
           clientName: submission.client_name,
-          email: submission.email,
+          // Never empty here: webhookPayloadSchema requires an email, and the
+          // webhook is the one path where it still does (#37).
+          email: submission.email ?? "",
           message: submission.message ?? undefined,
         },
         apiKey,

@@ -25,7 +25,8 @@ export type SubmissionInput = {
   leadId: string;
   organizationId: string;
   clientName: string;
-  email: string;
+  // Only the webhook guarantees one; createLead and CSV import may have none.
+  email: string | null;
   phone?: string | null;
   company?: string | null;
   message?: string | null;
@@ -41,7 +42,7 @@ export type RecordedSubmission = {
   id: string;
   lead_id: string;
   client_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   company: string | null;
   message: string | null;

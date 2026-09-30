@@ -9,15 +9,17 @@ import { FormSection } from "@/components/leads/edit-form/FormSection";
 
 // Field parity with createLead() is the whole point of this list: every key
 // below has a matching formData.get() in @/lib/leads/actions.ts, and every
-// formData.get() there has an input here. Eight each way. website /
+// formData.get() there has an input here. Twelve each way. website /
 // lead_source / service_category in particular were read-but-never-rendered
 // once already (see ADDENDA_LOG § Silent NULL-on-save).
 //
-// EIGHT, NOT EIGHTEEN, and that is deliberate. `createLead` accepts these
-// eight and nothing else; rendering an input for a column it does not read
+// TWELVE, NOT EVERY COLUMN, and that is deliberate. `createLead` accepts these
+// twelve and nothing else; rendering an input for a column it does not read
 // would be a field with no destination, which is the same parity failure in
-// the opposite direction. The remaining ten columns are set on the edit
-// drawer, against `updateLead`, which does read them.
+// the opposite direction. The rest are set on the edit drawer, against
+// `updateLead`, which does read them. The four social links are here because
+// the contact rule counts them (#37): a lead with only a WhatsApp link must be
+// creatable from this form.
 export const CREATE_FIELD_NAMES = [
   "client_name",
   "email",
@@ -26,6 +28,10 @@ export const CREATE_FIELD_NAMES = [
   "website",
   "lead_source",
   "service_category",
+  "social_google_business",
+  "social_facebook",
+  "social_instagram",
+  "social_whatsapp",
   "estimated_revenue",
 ] as const;
 
@@ -59,10 +65,10 @@ export function CreateLeadForm({
   // CONTROLLED, not bare uncontrolled inputs, and that is load-bearing. React 19
   // resets a <form action={...}> after the action returns - including on
   // failure - by calling form.reset() on the element. Uncontrolled fields then
-  // revert to their default, wiping all eight values right as the error tells
-  // the operator to change one of them. The real trigger here is the
-  // unique_tenant_client_email_ci collision, which returns { error } and leaves
-  // the drawer open. See CLAUDE.md § Form/Action Field Parity.
+  // revert to their default, wiping every value right as the error tells the
+  // operator to change one of them. The real triggers here are the
+  // unique_tenant_client_email_ci collision and a lead with no Contact
+  // Channel, which both return { error } and leave the drawer open. See CLAUDE.md § Form/Action Field Parity.
   const [values, setValues] = useState<Values>(EMPTY);
   // The number field needs this even though the text fields do not: React
   // restores a controlled text <input> after the post-action form.reset() on
@@ -81,16 +87,18 @@ export function CreateLeadForm({
   return (
     <form ref={anchor} action={formAction} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* Both groups are always open, unlike the edit drawer's four. There is
-            nothing rarely-touched on a create form: eight fields never scroll,
-            so collapsing one would hide something for no gain. */}
+        {/* Every group is always open, unlike the edit drawer's. There is
+            nothing rarely-touched on a create form, so collapsing one would
+            hide something for no gain. */}
         <FormSection id="identity" label="Identity" count={7} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="Client name" {...field("client_name")} required />
             <Input label="Company" {...field("company")} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Email" type="email" {...field("email")} required />
+            {/* Optional: a lead needs a name and any one Contact Channel,
+                and createLead says so when there is none (#37). */}
+            <Input label="Email" type="email" {...field("email")} />
             <Input label="Phone" {...field("phone")} />
           </div>
           {/* Full width: a URL runs past a half column and would truncate for
@@ -100,6 +108,15 @@ export function CreateLeadForm({
             <Input label="Lead source" {...field("lead_source")} />
             <Input label="Service category" {...field("service_category")} />
           </div>
+        </FormSection>
+
+        <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
+          <Input label="Google Business Profile" {...field("social_google_business")} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Facebook" {...field("social_facebook")} />
+            <Input label="Instagram" {...field("social_instagram")} />
+          </div>
+          <Input label="WhatsApp" {...field("social_whatsapp")} placeholder="https://wa.me/…" />
         </FormSection>
 
         <FormSection id="pipeline" label="Pipeline" count={1} collapsible={false}>

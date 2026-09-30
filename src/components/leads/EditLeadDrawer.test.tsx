@@ -49,6 +49,7 @@ const lead = {
   social_google_business: "",
   social_facebook: "",
   social_instagram: "",
+  social_whatsapp: "",
   status: "NEW",
   estimated_revenue: 1000,
   next_action_at: "2026-09-01T15:00:00.000Z",
@@ -150,6 +151,7 @@ describe("EditLeadDrawer — surviving a failed submit across every sibling", ()
       "social_facebook",
       "social_google_business",
       "social_instagram",
+      "social_whatsapp",
       "status",
       "website",
     ]);
@@ -180,11 +182,12 @@ const ALL_FIELD_NAMES = [
   "next_action_at",
   "is_starred",
   "assigned_to",
-  // AddressSocialFields (4)
+  // AddressSocialFields (5)
   "physical_address",
   "social_google_business",
   "social_facebook",
   "social_instagram",
+  "social_whatsapp",
   // OutcomeFields (2)
   "outcome",
   "actual_revenue",
@@ -210,6 +213,7 @@ const POSTED_KEYS = [
   "social_facebook",
   "social_google_business",
   "social_instagram",
+  "social_whatsapp",
   "status",
   "website",
 ];
@@ -227,7 +231,7 @@ describe("EditLeadDrawer — collapsed groups keep their fields", () => {
       "true",
     );
     expect(
-      screen.getByRole("button", { name: "Address & social profiles, 4 fields" }),
+      screen.getByRole("button", { name: "Address & social profiles, 5 fields" }),
     ).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Outcome, 2 fields" })).toHaveAttribute(
       "aria-expanded",
@@ -238,10 +242,10 @@ describe("EditLeadDrawer — collapsed groups keep their fields", () => {
   it("states a field count on every group, and they total the whole form", () => {
     renderModal();
 
-    expect(7 + 5 + 4 + 2).toBe(ALL_FIELD_NAMES.length);
+    expect(7 + 5 + 5 + 2).toBe(ALL_FIELD_NAMES.length);
   });
 
-  it("keeps all 18 fields MOUNTED with every group closed", async () => {
+  it("keeps all 19 fields MOUNTED with every group closed", async () => {
     const user = userEvent.setup();
     renderModal();
 

@@ -6,10 +6,10 @@ import type { Lead } from "@/lib/leads/queries";
 import { Input } from "@/components/ui/Input";
 
 // Where to find the lead — the physical address (which drives the Contacts
-// Google Maps deep link) plus the three social profile columns. Grouped
-// together because they're all "reachability" data rather than pipeline state,
-// and because all four were completed as one unit in the 2026-07-27 Lead Field
-// Completion pass.
+// Google Maps deep link) plus the four social profile columns. Grouped
+// together because they're all "reachability" data rather than pipeline state.
+// The first four were completed as one unit in the 2026-07-27 Lead Field
+// Completion pass; WhatsApp joined for Muse Lead Packs (#37).
 //
 // CONTROLLED, not defaultValue. React 19 resets a <form action={...}> after the
 // action returns — including on failure — and the reset does not respect file
@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/Input";
 // uncontrolled field here loses its edit even when every other group is fixed.
 // See CLAUDE.md § Form/Action Field Parity.
 //
-// The three social inputs share one group label, so they carry an aria-label
+// The four social inputs share one group label, so they carry an aria-label
 // each instead of a visible one — Input renders no <label> when none is passed.
 export function AddressSocialFields({ lead }: { lead: Lead }) {
   const [values, setValues] = useState({
@@ -25,6 +25,7 @@ export function AddressSocialFields({ lead }: { lead: Lead }) {
     social_google_business: lead.social_google_business ?? "",
     social_facebook: lead.social_facebook ?? "",
     social_instagram: lead.social_instagram ?? "",
+    social_whatsapp: lead.social_whatsapp ?? "",
   });
 
   const field = (name: keyof typeof values) => ({
@@ -55,6 +56,11 @@ export function AddressSocialFields({ lead }: { lead: Lead }) {
             {...field("social_instagram")}
             aria-label="Instagram URL"
             placeholder="Instagram URL"
+          />
+          <Input
+            {...field("social_whatsapp")}
+            aria-label="WhatsApp link"
+            placeholder="WhatsApp link (https://wa.me/…)"
           />
         </div>
       </div>
