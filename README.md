@@ -73,6 +73,10 @@ Copy your values into `.env.local`. The app stops at boot if one is missing.
 Never commit `.env` files. Secrets live in `.env.local` and in Vercel.
 In development, `GET /api/dev-login` signs in a test account.
 
+Database changes go out with `npm run db:push`. It uses this project's own
+Supabase token from `.claude/settings.local.json` and links the checkout on
+first run. Any other CLI command: `npm run supabase -- <command>`.
+
 ## Tests
 
 ```bash
