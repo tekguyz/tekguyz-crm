@@ -16,7 +16,9 @@
     "check:residue": "node --env-file=.env scripts/check-test-residue.mjs",
     "check:widths": "node scripts/check-comp-text-widths.mjs",
     "seed:demo": "tsx --env-file=.env scripts/seed/create-demo-org.ts",
-    "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts"
+    "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts",
+    "supabase": "node scripts/supabase.mts",
+    "db:push": "node scripts/supabase.mts db push --linked"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

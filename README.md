@@ -73,6 +73,10 @@ Copy your values into `.env.local`. The app stops at boot if one is missing.
 Never commit `.env` files. Secrets live in `.env.local` and in Vercel.
 In development, `GET /api/dev-login` signs in a test account.
 
+Database changes go out with `npm run db:push`. It connects with
+`SUPABASE_DB_URL` from `.env`, so it needs no Supabase token. Any other
+database command: `npm run supabase -- <command> --linked`.
+
 ## Tests
 
 ```bash
