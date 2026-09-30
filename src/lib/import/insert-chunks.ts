@@ -90,7 +90,6 @@ export type OutcomeSummary = {
   intraFileDuplicates: number;
   existingActive: number;
   existingArchived: number;
-  rejected: number;
 };
 
 // A duplicate whose match was inserted by this same import is a duplicate
@@ -105,11 +104,9 @@ export function summarizeOutcomes(outcomes: RowOutcome[]): OutcomeSummary {
     intraFileDuplicates: 0,
     existingActive: 0,
     existingArchived: 0,
-    rejected: 0,
   };
 
   for (const o of outcomes) {
-    if (o.outcome === "REJECTED") summary.rejected += 1;
     if (o.outcome !== "DUPLICATE") continue;
     if (o.leadId && inserted.has(o.leadId)) summary.intraFileDuplicates += 1;
     else if (o.leadArchived) summary.existingArchived += 1;
@@ -117,6 +114,36 @@ export function summarizeOutcomes(outcomes: RowOutcome[]): OutcomeSummary {
   }
 
   return summary;
+}
+
+// A row that did not import, and why. `index` is the row's place in the rows
+// the client sent, so the client can turn it back into a spreadsheet row.
+// IN_FILE: the same business as the row at firstIndex, which imported.
+// EXISTING: the same business as a lead already in the CRM.
+// REJECTED: the row broke the contact rule; reason is the RPC's code, or
+// "SERVER_RECHECK" when the Server Action refused it before the RPC.
+export type SkippedRow =
+  | { index: number; kind: "IN_FILE"; firstIndex: number }
+  | { index: number; kind: "EXISTING"; leadId: string; archived: boolean }
+  | { index: number; kind: "REJECTED"; reason: string };
+
+// sentIndex[rowIndex] is where the RPC's row sits in the rows the client
+// sent. The two differ once the server re-check drops a row.
+export function listSkippedRows(outcomes: RowOutcome[], sentIndex: number[]): SkippedRow[] {
+  const insertedBy = new Map<string, number>();
+  for (const o of outcomes) {
+    if (o.outcome === "INSERTED" && o.leadId) insertedBy.set(o.leadId, sentIndex[o.rowIndex]);
+  }
+
+  return outcomes.flatMap((o): SkippedRow[] => {
+    const index = sentIndex[o.rowIndex];
+    if (o.outcome === "REJECTED") return [{ index, kind: "REJECTED", reason: o.reason ?? "UNKNOWN" }];
+    if (o.outcome !== "DUPLICATE" || !o.leadId) return [];
+
+    const firstIndex = insertedBy.get(o.leadId);
+    if (firstIndex !== undefined) return [{ index, kind: "IN_FILE", firstIndex }];
+    return [{ index, kind: "EXISTING", leadId: o.leadId, archived: o.leadArchived === true }];
+  });
 }
 
 export async function logImportedLeads(

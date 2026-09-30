@@ -77,6 +77,21 @@ describe("a Muse Lead Pack", () => {
 });
 
 describe("validateRows", () => {
+  it("names each valid row by its spreadsheet row, so a skipped row can be traced back", () => {
+    const outcome = validateRows(
+      [
+        { Name: "A", Phone: "305" },
+        { Name: "", Phone: "305" },
+        { Name: "C", Phone: "786" },
+      ],
+      { Name: "client_name", Phone: "phone" },
+    );
+    expect(outcome.validLabels).toEqual([
+      { lineNumber: 2, preview: "A" },
+      { lineNumber: 4, preview: "C" },
+    ]);
+  });
+
   it("still refuses a row with no name", () => {
     const outcome = validateRows([{ Name: " ", Phone: "305" }], { Name: "client_name", Phone: "phone" });
     expect(outcome.invalid[0].errors).toEqual(["Client name is required"]);

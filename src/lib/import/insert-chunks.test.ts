@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import { insertLeadChunks, summarizeOutcomes, type RowOutcome } from "@/lib/import/insert-chunks";
+import {
+  insertLeadChunks,
+  listSkippedRows,
+  summarizeOutcomes,
+  type RowOutcome,
+} from "@/lib/import/insert-chunks";
 import type { InsertRow } from "@/lib/import/build-insert-rows";
 
 const row = (n: number) => ({ client_name: `Lead ${n}`, phone: `${n}` }) as unknown as InsertRow;
@@ -79,7 +84,41 @@ describe("summarizeOutcomes", () => {
       intraFileDuplicates: 1,
       existingActive: 1,
       existingArchived: 1,
-      rejected: 1,
     });
+  });
+});
+
+describe("listSkippedRows", () => {
+  const outcome = (o: Partial<RowOutcome>): RowOutcome => ({
+    rowIndex: 0,
+    outcome: "INSERTED",
+    leadId: null,
+    leadArchived: null,
+    reason: null,
+    ...o,
+  });
+
+  it("names every row that did not import, by its place in the rows the client sent", () => {
+    // Row 1 of what the client sent failed the server re-check, so the RPC
+    // saw sent rows 0, 2, 3, 4, 5 as its rows 0..4.
+    const sentIndex = [0, 2, 3, 4, 5];
+
+    const skipped = listSkippedRows(
+      [
+        outcome({ rowIndex: 0, outcome: "INSERTED", leadId: "new-1", leadArchived: false }),
+        outcome({ rowIndex: 1, outcome: "DUPLICATE", leadId: "new-1", leadArchived: false }),
+        outcome({ rowIndex: 2, outcome: "DUPLICATE", leadId: "old-1", leadArchived: false }),
+        outcome({ rowIndex: 3, outcome: "DUPLICATE", leadId: "old-2", leadArchived: true }),
+        outcome({ rowIndex: 4, outcome: "REJECTED", reason: "NO_CONTACT_CHANNEL" }),
+      ],
+      sentIndex,
+    );
+
+    expect(skipped).toEqual([
+      { index: 2, kind: "IN_FILE", firstIndex: 0 },
+      { index: 3, kind: "EXISTING", leadId: "old-1", archived: false },
+      { index: 4, kind: "EXISTING", leadId: "old-2", archived: true },
+      { index: 5, kind: "REJECTED", reason: "NO_CONTACT_CHANNEL" },
+    ]);
   });
 });

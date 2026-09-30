@@ -18,8 +18,16 @@ export type RowWarning = {
   warnings: string[];
 };
 
+// Which spreadsheet row a valid row came from. validLabels[i] names valid[i];
+// the import summary uses it to show the row a skipped lead sat on.
+export type RowLabel = {
+  lineNumber: number;
+  preview: string;
+};
+
 export type ValidationOutcome = {
   valid: ValidatedRow[];
+  validLabels: RowLabel[];
   invalid: RowFailure[];
   warnings: RowWarning[];
 };
@@ -40,6 +48,7 @@ function applyMapping(row: ParsedCsvRow, mapping: ColumnMapping): Record<string,
 
 export function validateRows(rows: ParsedCsvRow[], mapping: ColumnMapping): ValidationOutcome {
   const valid: ValidatedRow[] = [];
+  const validLabels: RowLabel[] = [];
   const invalid: RowFailure[] = [];
   const warnings: RowWarning[] = [];
 
@@ -55,6 +64,7 @@ export function validateRows(rows: ParsedCsvRow[], mapping: ColumnMapping): Vali
 
     if (parsed.success) {
       valid.push(parsed.data);
+      validLabels.push({ lineNumber, preview });
       if (cleaned.warnings.length > 0) warnings.push({ lineNumber, preview, warnings: cleaned.warnings });
       return;
     }
@@ -68,5 +78,5 @@ export function validateRows(rows: ParsedCsvRow[], mapping: ColumnMapping): Vali
     });
   });
 
-  return { valid, invalid, warnings };
+  return { valid, validLabels, invalid, warnings };
 }

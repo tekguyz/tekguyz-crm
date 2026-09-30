@@ -8,7 +8,13 @@ import { getCurrentOrg } from "@/lib/organizations/current";
 import { validatedRowSchema, type ValidatedRow } from "@/lib/validation/csv-lead-schema";
 import { buildInsertRows } from "@/lib/import/build-insert-rows";
 import { clearJunkChannelCells } from "@/lib/import/channel-cells";
-import { insertLeadChunks, logImportedLeads, summarizeOutcomes } from "@/lib/import/insert-chunks";
+import {
+  insertLeadChunks,
+  listSkippedRows,
+  logImportedLeads,
+  summarizeOutcomes,
+  type SkippedRow,
+} from "@/lib/import/insert-chunks";
 
 export type BatchInsertResult = {
   imported: number;
@@ -16,9 +22,10 @@ export type BatchInsertResult = {
   existingDuplicates: number;
   existingActive: number;
   existingArchived: number;
-  rejectedServerSide: number;
   failedChunks: number;
   failedChunkRows: number;
+  // Every row that did not import, and why, by its place in the rows sent.
+  skippedRows: SkippedRow[];
   error?: string;
 };
 
@@ -28,9 +35,9 @@ const emptyResult = (): BatchInsertResult => ({
   existingDuplicates: 0,
   existingActive: 0,
   existingArchived: 0,
-  rejectedServerSide: 0,
   failedChunks: 0,
   failedChunkRows: 0,
+  skippedRows: [],
 });
 
 export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInsertResult> {
@@ -61,13 +68,18 @@ export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInser
   // row it had itself just produced. Junk link cells are emptied first, the
   // same way validateRows does on the client.
   const revalidated: ValidatedRow[] = [];
-  let rejectedServerSide = 0;
+  const sentIndex: number[] = [];
+  const refused: SkippedRow[] = [];
 
-  for (const row of rows) {
+  rows.forEach((row, index) => {
     const parsed = validatedRowSchema.safeParse(clearJunkChannelCells(row).row);
-    if (parsed.success) revalidated.push(parsed.data);
-    else rejectedServerSide += 1;
-  }
+    if (parsed.success) {
+      revalidated.push(parsed.data);
+      sentIndex.push(index);
+    } else {
+      refused.push({ index, kind: "REJECTED", reason: "SERVER_RECHECK" });
+    }
+  });
 
   // No duplicate check here, in the file or against the CRM: the RPC does
   // both, row by row, on every Contact Channel. See insertLeadChunks.
@@ -89,8 +101,8 @@ export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInser
     existingDuplicates: summary.existingActive + summary.existingArchived,
     existingActive: summary.existingActive,
     existingArchived: summary.existingArchived,
-    rejectedServerSide: rejectedServerSide + summary.rejected,
     failedChunks,
     failedChunkRows,
+    skippedRows: [...refused, ...listSkippedRows(outcomes, sentIndex)].sort((a, b) => a.index - b.index),
   };
 }

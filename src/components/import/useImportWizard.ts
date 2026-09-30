@@ -10,7 +10,7 @@ import {
   type WizardStep,
 } from "@/lib/types/csv-import";
 
-const EMPTY_OUTCOME: ValidationOutcome = { valid: [], invalid: [], warnings: [] };
+const EMPTY_OUTCOME: ValidationOutcome = { valid: [], validLabels: [], invalid: [], warnings: [] };
 
 export function useImportWizard() {
   const [step, setStep] = useState<WizardStep>("upload");
@@ -44,9 +44,9 @@ export function useImportWizard() {
         existingDuplicates: 0,
         existingActive: 0,
         existingArchived: 0,
-        rejectedServerSide: 0,
         failedChunks: 0,
         failedChunkRows: outcome.valid.length,
+        skippedRows: [],
         error: err instanceof Error ? err.message : "The import failed to run.",
       });
     } finally {

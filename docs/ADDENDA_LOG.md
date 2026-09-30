@@ -156,3 +156,4 @@ repo matches a title in this column.
 | 2026-09-20 — `handoff` becomes `status-sync`, and the paste block is cut | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-21 — CLAUDE.md slimmed from 64 KB to 10 KB (Job 4) | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-29 — Each Guest gets their own Demo Org | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-30 — Muse Lead Packs: any-channel duplicates, and email is optional | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

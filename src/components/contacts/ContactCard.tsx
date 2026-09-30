@@ -6,18 +6,14 @@ import type { ContactLead } from "@/lib/leads/queries";
 import { ChannelIcon } from "@/components/leads/ChannelIcon";
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-// The click-to-action row stays as real <a> elements: tel:, sms:, mailto:, the
-// channel links and the Maps deep link are the Click-to-Action Real-Time
-// Shortcuts, and a <button> cannot carry an href. One link per channel the
-// lead has, from the same channelLinks() as the profile header (#37). Button renders a <button>, so this is
-// a deliberate documented exception to "consume primitives" — the class string
-// below is held to Button's own secondary/sm token set so the two read
-// identically.
-const actionLinkClass =
-  "text-body-sm inline-flex h-7 items-center gap-1.5 rounded-md border border-hairline bg-canvas-pure px-2 text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main";
-
+// The click-to-action row: tel:, sms:, mailto:, the channel links and the Maps
+// deep link are the Click-to-Action Real-Time Shortcuts. They must stay real
+// <a> elements, so each is a Button with `asChild` — the primitive's own
+// classes, not a hand-copied string. One link per channel the lead has, from
+// the same channelLinks() as the profile header (#37).
 export function ContactCard({ lead }: { lead: ContactLead }) {
   const [open, setOpen] = useState(false);
 
@@ -46,15 +42,15 @@ export function ContactCard({ lead }: { lead: ContactLead }) {
 
         <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
           {channelLinks(lead).map((link) => (
-            <a
-              key={link.kind}
-              href={link.href}
-              className={actionLinkClass}
-              {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            >
-              <ChannelIcon kind={link.kind} className="size-3.5" />
-              {link.label}
-            </a>
+            <Button key={link.kind} asChild variant="secondary" size="sm">
+              <a
+                href={link.href}
+                {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
+                <ChannelIcon kind={link.kind} className="size-3.5" />
+                {link.label}
+              </a>
+            </Button>
           ))}
         </div>
       </Card>
