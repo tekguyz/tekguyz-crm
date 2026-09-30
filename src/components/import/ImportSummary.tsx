@@ -3,6 +3,7 @@
 import type { BatchInsertResult } from "@/lib/actions/import-actions";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { DemoBlockText } from "@/components/shell/DemoBlockText";
 
 // The receipt moment: categorized totals, colour-coded by what they mean.
 // Green = landed, amber = no-op (a duplicate isn't an error), orange = didn't
@@ -62,7 +63,7 @@ export function ImportSummary({
 
       {result.error && (
         <p className="text-body-md mb-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-          {result.error}
+          <DemoBlockText message={result.error} />
         </p>
       )}
 
