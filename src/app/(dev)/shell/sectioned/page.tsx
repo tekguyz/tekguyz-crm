@@ -27,7 +27,7 @@ export default function SectionedVariantPage() {
       <DesktopFrame label="Desktop — expanded rail, demo badge shown">
         <SectionedSidebar collapsed={false} activeHref="/pipeline" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <SectionedHeader {...USER} isDemo />
+          <SectionedHeader {...USER} />
           <div className="flex-1 overflow-y-auto p-4">
             <FakeContent title="Pipeline" />
           </div>

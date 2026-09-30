@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isDemoSession } from "@/lib/demo/demo-block";
+import { DEMO_BLOCK_MESSAGE } from "@/lib/demo/demo-block-message";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { validatedRowSchema, type ValidatedRow } from "@/lib/validation/csv-lead-schema";
@@ -42,6 +44,9 @@ export async function batchInsertLeads(rows: ValidatedRow[]): Promise<BatchInser
   // bypasses RLS — so on that one path the tenant boundary is the RPC's own
   // membership re-check, not the "Members create tenant leads" WITH CHECK
   // policy. Every other statement in this action still goes through RLS.
+  // Demo Block: nobody fills the database through the demo.
+  if (await isDemoSession()) return { ...emptyResult(), error: DEMO_BLOCK_MESSAGE };
+
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 

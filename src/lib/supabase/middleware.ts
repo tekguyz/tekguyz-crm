@@ -57,12 +57,10 @@ export async function updateSession(request: NextRequest) {
   // redirect that page routes use.
   const isApiRoute = path.startsWith("/api/");
 
-  // The public demo entry point. It is NOT under /api/, so it has to be named
-  // here — and naming it explicitly is the point. This is a deliberate
-  // exemption for a route whose identity holds no privileges at all (the
-  // demo_readonly Postgres role: SELECT and nothing else), not an exemption
-  // inherited by accident from a path prefix. See src/app/demo/route.ts for
-  // why it needs no NODE_ENV guard, and why /api/dev-login still does.
+  // The old public demo link. It is NOT under /api/, so it has to be named
+  // here. Since #31 it only redirects to the Landing Page and never signs
+  // anyone in (src/app/demo/route.ts), so letting a signed-out visitor reach it
+  // exposes nothing.
   const isDemoEntryRoute = path === "/demo";
 
   // Public metadata routes. These are fetched by link-preview crawlers and by

@@ -27,7 +27,7 @@ export default function DockVariantPage() {
       <DesktopFrame label="Desktop — expanded rail, edge chevron, identity top-right">
         <DockSidebar collapsed={false} activeHref="/contacts" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <DockHeader title="Contacts" {...USER} isDemo />
+          <DockHeader title="Contacts" {...USER} />
           <div className="flex-1 overflow-y-auto p-4">
             <FakeContent />
           </div>

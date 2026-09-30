@@ -1,10 +1,11 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Single source of truth for "is this the public demo tenant". Keyed on the
-// organization rather than on a user id, so it still holds if a second demo
-// identity is ever added. Two consumers: the weekly-report cron's org sweep,
-// and the voice-transcription skip.
+// "Is this org a demo org" — every Guest's Demo Org and TEKGUYZ Demo alike.
+// Keyed on the organization rather than on a user id. For code that runs with
+// no signed-in user: the new-lead email (sent from the inbound webhook) and the
+// voice-transcription skip. Code that has a session uses isDemoSession
+// (demo-block.ts) instead.
 //
 // Service-role client: organizations.is_demo must be readable for an org the
 // caller may not be a member of — the cron runs with no user at all.

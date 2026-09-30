@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 
-import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { isEmailCollision } from "@/lib/leads/create";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { buildPromotePayload } from "@/lib/prospects/promote-payload";
@@ -84,7 +83,7 @@ export async function promoteProspect(
     if (error.code === NOT_FOUND) {
       return { ok: false, error: "That prospect no longer exists." };
     }
-    return { ok: false, error: await demoAwareMessage(error, error.message) };
+    return { ok: false, error: error.message };
   }
 
   // The double-click and the lost race both land here. Nothing was written,

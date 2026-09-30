@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 
 // Source-level guard, deliberately.
 //
-// The real proof that the public demo cannot spend Gemini credit is
-// src/lib/demo/demo-visitor.rls.test.ts, which shows the demo identity cannot
-// upload to storage or insert an activity_logs row, and so never reaches
-// transcribeAndSaveAudioNote at all.
+// The real proof that the demo cannot spend Gemini credit is the Demo Block on
+// addAudioTranscript (src/lib/demo/demo-block.test.ts), which refuses a Demo
+// Org before transcribeAndSaveAudioNote is ever reached. The guard below is the
+// second line.
 //
 // The obvious unit test here — mock everything and assert resolveOrgCredential
 // was not called — would need the first `@/lib/supabase/server` mock in this

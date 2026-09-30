@@ -2,7 +2,8 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
+import { isDemoSession } from "@/lib/demo/demo-block";
+import { DEMO_BLOCK_MESSAGE } from "@/lib/demo/demo-block-message";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { TIMEZONES, CURRENCIES } from "@/lib/organizations/org-options";
@@ -55,7 +56,7 @@ export async function updateOrgSettings(
       error:
         error.code === "PGRST116"
           ? "Couldn't save those settings — only owners and admins can update the organization."
-          : await demoAwareMessage(error, error.message),
+          : error.message,
     };
   }
 
@@ -81,6 +82,9 @@ export type RotateWebhookSecretResult = { signingSecret?: string; error?: string
 export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> {
   const { orgId, role } = await getCurrentOrg();
 
+  // Demo Block: no Demo Org becomes a live webhook endpoint.
+  if (await isDemoSession()) return { error: DEMO_BLOCK_MESSAGE };
+
   if (role !== "OWNER" && role !== "ADMIN") {
     return { error: "Only owners and admins can rotate the webhook secret." };
   }
@@ -101,10 +105,7 @@ export async function rotateWebhookSecret(): Promise<RotateWebhookSecretResult> 
 
   if (error) {
     return {
-      error: await demoAwareMessage(
-        error,
-        "Failed to rotate the webhook secret — no organization row was updated.",
-      ),
+      error: "Failed to rotate the webhook secret — no organization row was updated.",
     };
   }
 

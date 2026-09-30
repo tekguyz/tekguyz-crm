@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { demoAwareError } from "@/lib/demo/demo-aware-error";
+import { demoBlockError, isDemoSession } from "@/lib/demo/demo-block";
 import { getActivityLogs, type ActivityLog } from "@/lib/activity/queries";
 import { transcribeAndSaveAudioNote } from "@/lib/activity/audio-transcription";
 
@@ -45,12 +45,18 @@ export async function addManualNote(leadId: string, content: string): Promise<Ac
     .select("id, lead_id, log_type, content, audio_url, created_at")
     .single();
 
-  if (error) throw await demoAwareError(error);
+  if (error) throw error;
   return data;
 }
 
 // Client-callable boundary for NoteCaptureForm's recording mode — the actual
 // upload/transcription pipeline lives in audio-transcription.ts.
+//
+// Demo Block, before the upload as well as the paid transcription: a Guest's
+// recording would otherwise land in storage, which no org delete cascades to,
+// and outlive the Demo Org it came from. Thrown, not returned, because this
+// action returns the new log row; the digest is what NoteCaptureForm reads.
 export async function addAudioTranscript(leadId: string, audioBlob: Blob): Promise<ActivityLog> {
+  if (await isDemoSession()) throw demoBlockError();
   return transcribeAndSaveAudioNote(leadId, audioBlob);
 }

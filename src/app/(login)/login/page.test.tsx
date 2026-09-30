@@ -6,6 +6,9 @@ import { BRAND } from "@/lib/brand/copy";
 vi.mock("@/lib/auth/actions", () => ({
   signIn: vi.fn(),
 }));
+vi.mock("@/lib/demo/start-demo", () => ({
+  startDemo: vi.fn(),
+}));
 
 const { default: LoginPage } = await import("./page");
 
@@ -22,13 +25,16 @@ describe("/login — Variant Split, wired", () => {
     expect(screen.getByText(BRAND.description)).toBeInTheDocument();
   });
 
-  it("points the demo at the real /demo route, as a plain anchor", async () => {
+  it("offers the demo as a button that posts, never as a link", async () => {
+    // Until #32's Landing Page, this is the demo's door. A link that starts
+    // the demo is what let a prefetch replace a real session on 2026-09-11,
+    // so the door is a form's submit button and nothing else.
     await renderPage();
 
-    const demo = screen.getByRole("link", { name: "View demo" });
-    expect(demo).toHaveAttribute("href", "/demo");
-    // Button's asChild gives the anchor its classes; the anchor stays an <a>.
-    expect(demo.tagName).toBe("A");
+    const demo = screen.getByRole("button", { name: "Try the demo" });
+    expect(demo).toHaveAttribute("type", "submit");
+    expect(demo.closest("form")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /demo/i })).toBeNull();
   });
 
   it("never offers a sign-up link — accounts are invite-only", async () => {

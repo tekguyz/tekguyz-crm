@@ -1,5 +1,4 @@
 import { CommandTrigger } from "@/components/shell/CommandTrigger";
-import { DemoModeBadge } from "@/components/shell/DemoModeBadge";
 import { HelpTrigger } from "@/components/shell/HelpTrigger";
 import { IdentityMenu } from "@/components/shell/IdentityMenu";
 import { PageTitle } from "@/components/shell/PageTitle";
@@ -16,18 +15,14 @@ import { PageTitle } from "@/components/shell/PageTitle";
 // Workspace identity still does NOT appear here. On desktop it is the
 // sidebar's WorkspaceBlock; on mobile it is the "More" sheet's title.
 //
-// The demo badge sits beside the title, for the public read-only demo identity
-// ONLY. It is a session-mode indicator rather than workspace identity, and it
-// has to survive a collapsed sidebar and a phone, which WorkspaceBlock cannot
-// do. Full reasoning lives in DemoModeBadge.tsx.
+// The demo's signal is not here: it is the DemoBanner strip above this header
+// (AppShell.tsx).
 export function Header({
   userEmail,
   displayName,
-  isDemo,
 }: {
   userEmail: string;
   displayName: string | null;
-  isDemo: boolean;
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-canvas-pure px-4">
@@ -35,11 +30,6 @@ export function Header({
           off a narrow header. */}
       <div className="flex min-w-0 items-center gap-2">
         <PageTitle />
-        {isDemo ? (
-          <span className="shrink-0 whitespace-nowrap">
-            <DemoModeBadge />
-          </span>
-        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">

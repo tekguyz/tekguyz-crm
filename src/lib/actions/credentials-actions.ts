@@ -1,6 +1,7 @@
 "use server";
 
-import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
+import { isDemoSession } from "@/lib/demo/demo-block";
+import { DEMO_BLOCK_MESSAGE } from "@/lib/demo/demo-block-message";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
@@ -41,6 +42,9 @@ export async function saveOrganizationCredentials(
   formData: FormData,
 ): Promise<CredentialsFormState> {
   const { orgId, role } = await getCurrentOrg();
+
+  // Demo Block: nobody stores a secret in a throwaway org.
+  if (await isDemoSession()) return { error: DEMO_BLOCK_MESSAGE };
 
   // Fast-fail before touching Vault at all. The real boundary is
   // vault_set_org_credential's own internal role check (this table has no
@@ -84,7 +88,7 @@ export async function saveOrganizationCredentials(
     });
 
     if (error) {
-      return { error: await demoAwareMessage(error, error.message) };
+      return { error: error.message };
     }
   }
 
@@ -108,6 +112,8 @@ export async function clearOrganizationCredential(
 ): Promise<ClearCredentialState> {
   const { orgId, role } = await getCurrentOrg();
 
+  if (await isDemoSession()) return { error: DEMO_BLOCK_MESSAGE };
+
   // Fast-fail before the RPC round-trip, same as saveOrganizationCredentials
   // above — the real boundary is vault_clear_org_credential's own internal
   // role check (this table has no RLS policies), which must be re-checked
@@ -127,7 +133,7 @@ export async function clearOrganizationCredential(
   });
 
   if (error) {
-    return { error: await demoAwareMessage(error, error.message) };
+    return { error: error.message };
   }
 
   return null;

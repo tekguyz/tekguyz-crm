@@ -11,6 +11,7 @@ import { ProfileSheetSkeleton } from "@/components/leads/profile/ProfileSheetSke
 import { HelpProvider } from "@/components/help/HelpContext";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
 import { IdleTimeoutController } from "@/components/shell/IdleTimeoutController";
+import { DemoBanner } from "@/components/shell/DemoBanner";
 import type { SidebarState } from "@/lib/shell/sidebar-cookie";
 import type { TeamMember } from "@/lib/invites/queries";
 
@@ -39,10 +40,10 @@ export function AppShell({
   // Read from a cookie in the server layout, so the first paint already has
   // the right sidebar width. See src/lib/shell/sidebar-cookie.ts.
   sidebar: SidebarState;
-  // organizations.is_demo for the current tenant. Drives the header's
-  // read-only badge and nothing else — it is presentation only. The actual
-  // boundary is the demo_readonly Postgres role, which refuses every write
-  // below RLS whether or not this prop is ever passed correctly.
+  // organizations.is_demo for the current tenant. Drives the demo banner and
+  // the idle-timeout exemption, and nothing else — it is presentation only.
+  // The Demo Block's real boundary is on the server (src/lib/demo/demo-block.ts),
+  // whether or not this prop is ever passed correctly.
   isDemo: boolean;
 }) {
   return (
@@ -75,7 +76,8 @@ export function AppShell({
                   visually. */}
               <MobileTabBar orgName={orgName} userEmail={userEmail} />
               <div className="flex min-w-0 flex-1 flex-col">
-                <Header userEmail={userEmail} displayName={displayName} isDemo={isDemo} />
+                {isDemo ? <DemoBanner /> : null}
+                <Header userEmail={userEmail} displayName={displayName} />
                 {/* pb-24 below md clears the fixed bottom tab bar; above md the
                     bar is not displayed and the padding returns to the shell's
                     normal 6.

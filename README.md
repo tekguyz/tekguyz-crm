@@ -15,8 +15,8 @@
 | Row | |
 |---|---|
 | Phase | In production. Post-launch feature work. |
-| Shipped | Leads and pipeline, tasks, contacts, prospects, reports, team roles, command palette, read-only demo. |
-| Next | Today page redesign, Stage 2. See `docs/INITIATIVES.md`. |
+| Shipped | Leads and pipeline, tasks, contacts, prospects, reports, team roles, command palette. Demo: each Guest gets their own writable Demo Org (#31). |
+| Next | Demo Landing Page (#32), then retire the old demo role (#33). See `docs/INITIATIVES.md`. |
 | Updated | 2026-09-29 |
 
 ## What it does
@@ -67,8 +67,7 @@ Copy your values into `.env.local`. The app stops at boot if one is missing.
 | `PLATFORM_RESEND_API_KEY` | Resend |
 | `CRON_SECRET` | Any long random string |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` locally |
-| `DEMO_VISITOR_EMAIL`, `DEMO_VISITOR_PASSWORD` | The demo user. Made by `npm run seed:demo`. |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Upstash |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Upstash. The demo's hourly caps need it; without it "Try the demo" says busy. |
 
 Never commit `.env` files. Secrets live in `.env.local` and in Vercel.
 In development, `GET /api/dev-login` signs in a test account.

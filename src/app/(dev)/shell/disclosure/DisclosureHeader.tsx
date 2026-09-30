@@ -1,6 +1,5 @@
 import { IconChevronDown, IconHelpCircle, IconSearch } from "@tabler/icons-react";
 
-import { DemoModeBadge } from "@/components/shell/DemoModeBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 
@@ -23,11 +22,9 @@ import { Button } from "@/components/ui/Button";
 export function DisclosureHeader({
   displayName,
   userEmail,
-  isDemo = false,
 }: {
   displayName: string | null;
   userEmail: string;
-  isDemo?: boolean;
 }) {
   const name = displayName || userEmail;
 
@@ -41,11 +38,6 @@ export function DisclosureHeader({
         </kbd>
       </Button>
 
-      {isDemo ? (
-          <span className="shrink-0 whitespace-nowrap">
-            <DemoModeBadge />
-          </span>
-        ) : null}
 
       <div className="ml-auto flex items-center gap-1">
         <Button variant="ghost" aria-label="Help" className="w-8 px-0">

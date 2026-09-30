@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { Button } from "@/components/ui/Button";
+import { TryDemoButton } from "@/components/demo/TryDemoButton";
 import { BRAND } from "@/lib/brand/copy";
 
 // /login — the /login redesign, Stage 2: Variant Split, wired 2026-09-15.
@@ -51,18 +51,12 @@ export default async function LoginPage({
           <div className="border-t border-hairline pt-6">
             <p className="text-label uppercase text-ink-muted">Just looking?</p>
             <p className="text-body-sm mt-1 text-ink-muted">
-              The demo is a real workspace with sample data. It is read-only and
-              needs no account.
+              The demo is your own workspace with sample data. Add and edit
+              leads freely. It needs no account.
             </p>
-            <Button asChild variant="secondary" className="mt-3">
-              {/* A plain <a>, NOT next/link, and that is load-bearing. /demo is
-                  a route handler that signs the visitor in, so a <Link> here
-                  made Next prefetch it and mint a demo session for anyone who
-                  merely LOOKED at this page — which on 2026-09-11 replaced a
-                  signed-in operator's own session. The route now refuses RSC
-                  requests too, but the link should not be asking. */}
-              <a href="/demo">View demo</a>
-            </Button>
+            {/* Temporary home for the demo's door, until #32 moves it to the
+                Landing Page. A form post, never a link: see TryDemoButton. */}
+            <TryDemoButton className="mt-3" />
           </div>
         </div>
       </section>

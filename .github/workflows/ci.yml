@@ -31,5 +31,3 @@ jobs:
           PLATFORM_RESEND_API_KEY: ci
           CRON_SECRET: ci
           NEXT_PUBLIC_APP_URL: https://ci.invalid
-          DEMO_VISITOR_EMAIL: demo@ci.invalid
-          DEMO_VISITOR_PASSWORD: ci

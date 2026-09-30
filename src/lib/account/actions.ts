@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 
@@ -18,11 +17,8 @@ export async function updateDisplayName(
     data: { display_name: displayName || null },
   });
 
-  // Routed through demoAwareMessage for uniformity only. This is an Auth API
-  // call, not a Postgres write, so it never carries 42501 and the demo
-  // read-only role does not refuse it; the message always comes back as-is.
   if (error) {
-    return { error: await demoAwareMessage(error, error.message) };
+    return { error: error.message };
   }
 
   // Mint a new access token before revalidating, and that ordering is
@@ -77,7 +73,7 @@ export async function updateNotificationPreferences(
     .single();
 
   if (error) {
-    return { error: await demoAwareMessage(error, "Failed to save notification preferences.") };
+    return { error: "Failed to save notification preferences." };
   }
 
   revalidatePath("/settings");

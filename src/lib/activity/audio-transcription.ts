@@ -9,9 +9,9 @@ import type { ActivityLog } from "@/lib/activity/queries";
 const TRANSCRIPTION_TIMEOUT_MS = 20000;
 const AUDIO_BUCKET = "audio-notes";
 
-// Shown in place of a transcript for the public demo org. The recording still
-// uploads and the activity_logs row still says an audio note exists — the
-// feature is visibly present, it just costs nothing.
+// Shown in place of a transcript for a demo org, should one ever get this far.
+// The Demo Block on addAudioTranscript refuses a Demo Org before this file
+// runs, so this is the second line, not the first.
 const DEMO_SKIP_MESSAGE = "Voice notes are not transcribed in the public demo.";
 
 const TRANSCRIPTION_PROMPT =
@@ -60,10 +60,10 @@ export async function transcribeAndSaveAudioNote(
   // lose the recording — the audio is already uploaded above regardless of
   // what happens next. Each case just changes what the log's content says.
   //
-  // Belt and braces. The public demo identity holds the demo_readonly Postgres
-  // role, so it cannot upload to storage or insert an activity_logs row and can
-  // never reach this line at all — but a stranger's recording must not be able
-  // to spend Gemini credit even if that grant is ever loosened by mistake.
+  // Belt and braces. The Demo Block on addAudioTranscript (activity/actions.ts)
+  // refuses a Demo Org before this function runs — but a stranger's recording
+  // must not be able to spend Gemini credit even if that block is ever removed
+  // by mistake.
   //
   // The check MUST stay above transcribeOrFallback, because that is where
   // resolveOrgCredential runs, and resolveOrgCredential falls back to

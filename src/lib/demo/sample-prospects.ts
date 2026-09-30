@@ -1,8 +1,7 @@
-import { createAdminClient } from "./clients";
-import { DEMO_ORG_NAME } from "./demo-org";
-
-// Fixture prospects for "TEKGUYZ Demo", so /prospects and the Promote flow have
-// something to render during dev-login browser verification.
+// Sample Data: the invented prospects every new Demo Org starts with, and the
+// ones the seed scripts put in "TEKGUYZ Demo" for dev-login. Moved here from
+// scripts/seed/lib/demo-prospects.ts (#31). A plain module — see
+// sample-leads.ts for why.
 //
 // EVERY ROW IS OBVIOUSLY SYNTHETIC, and that is a requirement, not a style
 // choice. A real leadgen scrape lands in the REAL TEKGUYZ tenant, and 122 real
@@ -23,7 +22,7 @@ import { DEMO_ORG_NAME } from "./demo-org";
 // alongside a promoted_lead_id written in the same statement, and promotion is
 // the thing this fixture exists to let a human exercise by hand.
 
-type DemoProspect = {
+export type DemoProspect = {
   place_id: string;
   name: string;
   category: string;
@@ -194,63 +193,3 @@ export const DEMO_PROSPECTS: DemoProspect[] = [
   },
 ];
 
-export async function countDemoProspects(orgId: string): Promise<number> {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("prospects")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", orgId);
-
-  if (error) throw new Error(`Failed to count demo prospects: ${error.message}`);
-  return count ?? 0;
-}
-
-export async function seedDemoProspects(orgId: string): Promise<number> {
-  const admin = createAdminClient();
-
-  const rows = DEMO_PROSPECTS.map((prospect) => ({
-    organization_id: orgId,
-    ...prospect,
-  }));
-
-  // Plain insert, not the import_prospects_chunk RPC: that function is
-  // SECURITY DEFINER and re-checks organization_members for auth.uid(), and a
-  // service-role JWT resolves auth.uid() to NULL — it would raise
-  // PROSPECT_IMPORT_NOT_AUTHORIZED. Seeding is a service-role job by design, so
-  // it writes the table directly, exactly as seedDemoLeads writes leads.
-  const { error } = await admin.from("prospects").insert(rows);
-  if (error) throw new Error(`Failed to insert demo prospects: ${error.message}`);
-
-  return rows.length;
-}
-
-// Same name-verified safety check as wipeDemoLeads: refuse to touch anything
-// unless this id genuinely resolves to the demo org.
-export async function wipeDemoProspects(orgId: string): Promise<number> {
-  const admin = createAdminClient();
-
-  const { data: org, error: orgError } = await admin
-    .from("organizations")
-    .select("id, name")
-    .eq("id", orgId)
-    .single();
-
-  if (orgError || !org) {
-    throw new Error(
-      `Refusing to wipe prospects: could not verify org ${orgId} (${orgError?.message ?? "not found"})`,
-    );
-  }
-  if (org.name !== DEMO_ORG_NAME) {
-    throw new Error(
-      `Refusing to wipe prospects: org ${orgId} is named "${org.name}", not "${DEMO_ORG_NAME}".`,
-    );
-  }
-
-  const existing = await countDemoProspects(orgId);
-  if (existing === 0) return 0;
-
-  const { error } = await admin.from("prospects").delete().eq("organization_id", orgId);
-  if (error) throw new Error(`Failed to delete demo prospects: ${error.message}`);
-
-  return existing;
-}

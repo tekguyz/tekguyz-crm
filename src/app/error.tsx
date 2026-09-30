@@ -4,8 +4,8 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { DemoReadOnlyNotice } from "@/components/shell/DemoReadOnlyNotice";
-import { isDemoReadOnlyRefusal } from "@/lib/demo/read-only-refusal";
+import { DemoBlockNotice } from "@/components/shell/DemoBlockNotice";
+import { isDemoBlock } from "@/lib/demo/demo-block-message";
 
 // Root-level boundary. Catches errors from the (auth) tree (login/signup/
 // onboarding) and the top-level invite/[token] page — anything NOT under
@@ -20,14 +20,14 @@ export default function RootError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // A refused write in the public demo can land here, not only in (app)'s
-  // boundary: the profile sheet is mounted by the layout, so its task controls
-  // throw above (app)/error.tsx. Matched on the digest only — see
-  // src/lib/demo/read-only-refusal.ts.
-  if (isDemoReadOnlyRefusal(error)) {
+  // A Demo Block can land here, not only in (app)'s boundary: the profile
+  // sheet is mounted by the layout, so its controls throw above
+  // (app)/error.tsx. Matched on the digest only — see
+  // src/lib/demo/demo-block-message.ts.
+  if (isDemoBlock(error)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas-soft p-6 text-ink-main">
-        <DemoReadOnlyNotice reset={reset} />
+        <DemoBlockNotice reset={reset} />
       </div>
     );
   }

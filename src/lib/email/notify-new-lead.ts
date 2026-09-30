@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import { resolveOrgCredential } from "@/lib/credentials/resolve-org-credential";
 import { getOwnerAdminRecipients } from "@/lib/email/recipients";
+import { isDemoOrg } from "@/lib/demo/is-demo-org";
 import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
 import type { Lead } from "@/lib/leads/queries";
 
@@ -29,6 +30,11 @@ export async function sendNewLeadNotification(
   lead: Lead,
   spamReason: string | null = null,
 ): Promise<void> {
+  // Demo Block: a Demo Org never sends email. Checked by org, not session —
+  // this runs from the inbound webhook, which has no signed-in user. First,
+  // before the credential resolver, which falls back to the platform key.
+  if (await isDemoOrg(organizationId)) return;
+
   const { value: apiKey } = await resolveOrgCredential(organizationId, "token_resend");
   if (!apiKey) {
     console.error(
