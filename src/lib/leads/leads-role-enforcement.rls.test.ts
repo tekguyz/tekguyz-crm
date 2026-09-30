@@ -25,7 +25,7 @@ const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY;
 
 const RUN_ID = Math.random().toString(36).slice(2, 10);
 const ORG_NAME = `RLS Role Enforcement Test ${RUN_ID}`;
-const PASSWORD = `Rls-Role-Test-${RUN_ID}!`;
+const PASSWORD = `It-${RUN_ID}-Aa1!`;
 
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 

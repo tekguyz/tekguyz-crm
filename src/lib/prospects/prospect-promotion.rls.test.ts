@@ -20,7 +20,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY;
 
 const RUN_ID = Math.random().toString(36).slice(2, 10);
-const PASSWORD = `Rls-Promote-Test-${RUN_ID}!`;
+const PASSWORD = `It-${RUN_ID}-Aa1!`;
 
 type Person = "HOME_OWNER" | "HOME_MEMBER" | "OUTSIDER_OWNER";
 
