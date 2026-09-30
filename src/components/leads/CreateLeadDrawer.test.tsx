@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -43,6 +43,11 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
     // real onChange, so the state being restored is genuinely the state the
     // user produced. Raising the timeout instead is the fix vitest.config.mts
     // says not to repeat.
+    //
+    // FOCUS, not user.click, for the same reason (#37, twelve fields now): a
+    // simulated click fires the whole pointer sequence per field, and paste
+    // only needs the field focused. This kept the test under the budget when
+    // four social fields joined it.
     for (const [label, value] of [
       ["Client name", "Dana Rivers"],
       ["Email", "dana@example.invalid"],
@@ -57,7 +62,7 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
       ["WhatsApp", "https://wa.me/18175550101"],
       ["Estimated revenue", "1200"],
     ]) {
-      await user.click(screen.getByLabelText(label));
+      act(() => screen.getByLabelText(label).focus());
       await user.paste(value);
     }
 

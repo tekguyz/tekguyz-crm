@@ -23,3 +23,17 @@ _Avoid_: Seed, fixture, fake data
 **Demo Block**:
 A server-side refusal of an action that costs money or reaches the outside world, shown to a Guest as "Not available in the demo."
 _Avoid_: Read-only notice, disabled feature
+
+## Leads
+
+**Lead Pack**:
+The weekly CSV of new leads from Muse (Meta AI), imported by hand into leads. Most of its leads have no email.
+_Avoid_: Scrape, prospect list
+
+**Contact Channel**:
+Any way to reach a lead: email, phone, website, Facebook, Instagram, WhatsApp or a Google Business Profile. Every lead needs a name and at least one. Email is required only on the website's contact form, never anywhere else in the CRM.
+_Avoid_: Sending Channel (the outreach playbook's narrower term, where phone and Google do not count)
+
+**Duplicate Lead**:
+A new row that is the same business as a lead already in the organization, because a link, an email or a phone or WhatsApp number matches. A matching name alone never makes a Duplicate Lead. An import skips a Duplicate Lead; it never overwrites the existing one.
+_Avoid_: Dupe, conflict

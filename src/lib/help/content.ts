@@ -19,7 +19,9 @@ export const HELP_TOPICS: HelpTopic[] = [
       "Drop a CSV on the Import page. The first row must be your column headers, and a file can hold up to 1,000 rows — anything larger is rejected outright rather than silently truncated, so split it and import in batches.",
       "On the mapping step, columns are matched to fields automatically wherever the header is unambiguous (\"Email Address\", \"Full Name\", \"Phone Number\" and similar all resolve on their own). It only auto-maps exact matches, so an unusual header simply lands on \"Ignore\" instead of being guessed wrong.",
       "To fix a mapping, change the dropdown in that row's \"Maps to\" column. Anything left on \"Ignore\" is not imported. Each field can only be filled by one column — map two columns to the same field and you'll get a warning naming both.",
-      "The pills at the top track the two required fields, Client Name and Email. Orange means still unmapped; green means satisfied. Continue stays disabled until both are green.",
+      "The pill at the top tracks the one required field, Client Name. Orange means still unmapped; green means satisfied. Continue stays disabled until it is green. Email is optional: a Lead Pack with the Muse header maps all 13 columns by itself.",
+      "Each row needs a name and at least one way to reach the lead: an email, phone, website, Facebook, Instagram, WhatsApp or Google link. A link cell that is not the right kind of link (\"N/A\", say) is left empty and listed as a warning; the row still imports if it has another way to reach the lead.",
+      "A row that matches a lead you already have, on any email, phone, WhatsApp number or link, is skipped and never overwrites that lead. A matching name alone is not a match. An archived match stays archived.",
     ].join("\n\n"),
   },
   {

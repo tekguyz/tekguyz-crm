@@ -1,14 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// The one TypeScript write path into lead_submissions. The webhook, createLead
-// and CSV import go through here, so "every lead has at least one submission
-// from day one" is a property of this module, not a convention three call sites
-// have to remember separately.
+// The one TypeScript write path into lead_submissions. The webhook and
+// createLead go through here, so "every lead has at least one submission from
+// day one" is a property of this module, not a convention each call site has
+// to remember separately.
 //
-// One exception, deliberate: prospect promotion writes its submission inside
-// the public.promote_prospect RPC (20260914120000_promote_prospect_rpc.sql),
-// because the lead, the submission and the prospect claim must commit in one
-// transaction. That SQL mirrors toRow() below column for column — change both.
+// Three exceptions, deliberate, each because the lead and its submission must
+// commit in one transaction: prospect promotion (public.promote_prospect,
+// 20260914120000_promote_prospect_rpc.sql), CSV import
+// (public.import_leads_chunk, 20260930120000_muse_lead_pack.sql) and the demo
+// seed (public.create_demo_org). That SQL mirrors toRow() below column for
+// column — change them together.
 //
 // Takes the client as an argument rather than building one (same shape as
 // lib/import/insert-chunks.ts): the webhook path passes the service-role

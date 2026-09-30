@@ -80,6 +80,11 @@ load when it matters.
   judgement may set `archived` or gate the new-lead notification.
 - **An inbound resubmission never rewrites a `leads` identity column.** Detail:
   `.claude/rules/leads-and-ingestion.md`.
+- **Email is required only on the webhook.** Everywhere else a lead needs a
+  name and one Contact Channel (`CONTEXT.md` § Leads); the database enforces it.
+  New leads arrive as Muse Lead Packs through the CSV import; `prospects` is
+  unused since 2026-09-30 — do not build on it. Detail:
+  `.claude/rules/leads-and-ingestion.md`.
 - **Adding a column to `LEAD_COLUMNS` is never additive — the migration lands
   before the code.** PostgREST errors `42703` on a column the database does not
   have, taking down every lead surface and inbound webhook capture at once.

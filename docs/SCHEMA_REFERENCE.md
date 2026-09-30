@@ -58,7 +58,9 @@ CREATE TABLE public.leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     client_name TEXT NOT NULL,
-    email TEXT NOT NULL,
+    -- Nullable since 2026-09-30 (#37): required only on the webhook. See
+    -- § Muse Lead Pack (2026-09-30) at the end of this file.
+    email TEXT DEFAULT NULL,
     phone TEXT DEFAULT NULL,
     company TEXT DEFAULT NULL,
     website TEXT DEFAULT NULL,
@@ -66,6 +68,8 @@ CREATE TABLE public.leads (
     social_google_business TEXT DEFAULT NULL,
     social_facebook TEXT DEFAULT NULL,
     social_instagram TEXT DEFAULT NULL,
+    -- Added 2026-09-30 (#37). A https://wa.me/<digits> link.
+    social_whatsapp TEXT DEFAULT NULL,
     lead_source TEXT DEFAULT NULL,
     service_category TEXT DEFAULT NULL,
     estimated_revenue NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -87,7 +91,16 @@ CREATE TABLE public.leads (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT check_valid_status CHECK (status IN ('NEW', 'DISCOVERY', 'QUOTED', 'ACTIVE')),
-    CONSTRAINT check_valid_outcome CHECK (outcome IS NULL OR outcome IN ('WON', 'LOST', 'ABANDONED'))
+    CONSTRAINT check_valid_outcome CHECK (outcome IS NULL OR outcome IN ('WON', 'LOST', 'ABANDONED')),
+    -- The contact rule, added 2026-09-30 (#37): a non-blank name, no '' email,
+    -- and at least one non-blank Contact Channel.
+    CONSTRAINT check_lead_name_not_blank CHECK (btrim(client_name) <> ''),
+    CONSTRAINT check_lead_email_not_blank CHECK (email IS NULL OR btrim(email) <> ''),
+    CONSTRAINT check_lead_has_contact_channel CHECK (coalesce(
+        nullif(btrim(email), ''), nullif(btrim(phone), ''), nullif(btrim(website), ''),
+        nullif(btrim(social_facebook), ''), nullif(btrim(social_instagram), ''),
+        nullif(btrim(social_whatsapp), ''), nullif(btrim(social_google_business), '')
+    ) IS NOT NULL)
     -- Tenant-scoped email uniqueness is enforced by unique_tenant_client_email_ci,
     -- a case-insensitive UNIQUE INDEX in Section 13 below, not an inline
     -- table constraint — see that index's comment for why (Prompt 10's
@@ -645,7 +658,7 @@ Error sentinels, translated for the user by `src/lib/organizations/team-errors.t
 
 Enforcement is proven by `src/lib/organizations/team-management.rls.test.ts` (`npm run test:integration`, excluded from `npm run test:unit`), which builds two disposable orgs and five throwaway users and asserts each rejection's own sentinel rather than only its SQLSTATE — a plain RLS denial and a CHECK constraint reuse both codes. Three tests prove the allowed side, so the gates are specific rather than blanket. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-18 — Team management: role change and member removal.
 
-**CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
+**CSV import chunk-write addendum (2026-08-15, `supabase/migrations/20260815120000_import_leads_chunk_rpc.sql`, applied by the human per the standing DDL rule — not via MCP):** *Superseded on 2026-09-30: the function was dropped and re-created with a per-row return type and any-channel duplicate matching — see § Muse Lead Pack (2026-09-30) at the end of this file. The membership check below is unchanged.* Adds `public.import_leads_chunk(p_organization_id UUID, p_rows JSONB) RETURNS TABLE(lead_id UUID, lead_email TEXT)`. Adds nothing else — no table, no policy, no index, no trigger. The three `leads` RLS policies and `unique_tenant_client_email_ci` are byte-for-byte unchanged.
 
 **This is the ninth `SECURITY DEFINER` function, and it self-checks.** Running inventory of which of them re-assert authorization inside the body rather than trusting their arguments (a tenth was added on 2026-08-17 — see the last row and the invite-close addendum at the end of this file):
 
@@ -721,7 +734,8 @@ CREATE TABLE public.lead_submissions (
     -- Denormalized snapshots of what THIS enquiry said: deliberately not FKs
     -- and not generated, so they never change when the leads row changes.
     client_name TEXT NOT NULL,
-    email TEXT NOT NULL,
+    -- Nullable since 2026-09-30 (#37): only the webhook guarantees an email.
+    email TEXT DEFAULT NULL,
     phone TEXT DEFAULT NULL,
     company TEXT DEFAULT NULL,
     message TEXT DEFAULT NULL,
@@ -812,15 +826,19 @@ three RLS policies, `unique_tenant_client_email_ci`, `enforce_lead_role_restrict
 `enforce_lead_assignee_membership` and `import_leads_chunk` were all re-queried
 live after the migration and are unchanged.
 
-The cold-outreach staging table for Google Business Profile scrapes from the
-sibling `tekguyz-leadgen` repo. It exists because GBP exposes no email address
+**Unused since 2026-09-30 (#37).** New leads now arrive as Muse Lead Packs,
+imported straight into `leads`, which no longer needs an email. The table, its
+route and its code stay as they are. Do not build on it.
+
+The cold-outreach staging table for Google Business Profile listings from an
+outside lead-finding tool. It existed because GBP exposes no email address
 and `leads.email` is `NOT NULL` and half of `unique_tenant_client_email_ci`, so
 this data cannot enter `leads`. A prospect is promoted into `leads` by hand once
 a call produces a real email — that path is Prompt 2 and does not exist yet.
 
 **Columns.** `id UUID PK`, `organization_id UUID NOT NULL FK -> organizations ON DELETE CASCADE`,
 `place_id TEXT NOT NULL` (Google's Place ID; the dedup key), then the scrape
-payload in the exact order the leadgen CSV writes it — `name TEXT NOT NULL`,
+payload in the exact order that tool's CSV wrote it — `name TEXT NOT NULL`,
 `category`, `address`, `city`, `state`, `postal_code`, `phone`, `website_url`,
 `website_status`, `rating NUMERIC(2,1)`, `review_count INTEGER`,
 `google_maps_url`, `niche_searched`, `city_searched`, `run_id`,
@@ -894,7 +912,7 @@ would be a cross-tenant phone-number oracle), `ORDER BY l.created_at LIMIT 1`,
 Live-verified before the file was handed over, against a temp-table replica
 (`pg_temp` function, `ON COMMIT DROP` temp tables, no `public`-schema object
 touched), and again after applying: 64/64 on `npm run test:rls` (43 pre-existing
-unchanged, 21 new), and a real import of both leadgen CSVs through the UI —
+unchanged, 21 new), and a real import of both prospect CSVs through the UI —
 91 + 31 inserted on the first run, 0 + 0 on the second with 91 + 31 reported as
 already present. Full narrative: `docs/ADDENDA_LOG.md` § 2026-08-26 — `prospects`:
 cold-outreach staging, its RLS and its CSV import.
@@ -1100,3 +1118,53 @@ Nothing may assume a single demo org.
 **`demo_readonly` is still live** (§ `demo_readonly` role addendum above). The
 code stopped using it in #31; migration 2 drops it in #33, after that code is
 deployed.
+
+## Muse Lead Pack (2026-09-30)
+
+Migration `supabase/migrations/20260930120000_muse_lead_pack.sql` (#37), applied
+by the human. Words: `CONTEXT.md` § Leads (**Lead Pack**, **Contact Channel**,
+**Duplicate Lead**).
+
+**Columns.** `leads.email` and `lead_submissions.email` are nullable. The
+`(organization_id, lower(email))` unique index stays: it lets many NULLs in. New
+`leads.social_whatsapp TEXT` (nullable), in `LEAD_COLUMNS`.
+
+**The contact rule.** Three CHECKs on `leads` (in the DDL above):
+`check_lead_name_not_blank`, `check_lead_email_not_blank` (a missing email is
+NULL, never `''`, or two email-less leads would collide on the unique index) and
+`check_lead_has_contact_channel`. `src/lib/leads/contact-rule.ts` mirrors the
+last one so the forms and the import can say why.
+
+**Key functions.** One per channel, `IMMUTABLE STRICT`, `search_path = ''`, in
+`public`, EXECUTE for `authenticated` and `service_role` only. Postgres checks
+EXECUTE on an index expression's function for the role that writes the row, so
+every lead writer needs it. They are the one place the matching rules live.
+
+| Function | Returns |
+|---|---|
+| `lead_key_email(text)` | trimmed, lower case |
+| `lead_key_phone(text)` | digits only, a leading `1` dropped from 11 digits; the query cut first, except a `?phone=` WhatsApp link. Used for `phone` and `social_whatsapp` alike: a number is a number |
+| `lead_key_website(text)` | no scheme, no `www.`, lower-case host, path kept, no query, fragment or trailing `/`; NULL when the host has no dot |
+| `lead_key_facebook(text)` | `facebook.com/<path>` (m., web., mbasic., www., fb.com folded in); `profile.php` keeps only `id=`; NULL for another site |
+| `lead_key_instagram(text)` | `instagram.com/<handle>`; NULL for post, reel and explore links |
+| `lead_key_google(text)` | `place_id:`, `cid:`, `ftid:` or `place:<name>@<lat>,<lng>`; NULL for a search link or a bare name |
+
+**Indexes.** Plain (non-unique) `(organization_id, lead_key_x(column))` for
+each: `idx_leads_key_email`, `_phone`, `_whatsapp`, `_website`, `_facebook`,
+`_instagram`, `_google`. Not unique on purpose: a lead edited by hand may share a
+link with another. Only the import skips.
+
+**`import_leads_chunk(p_organization_id uuid, p_rows jsonb) returns table (row_index integer, outcome text, lead_id uuid, lead_archived boolean, reason text)`.**
+Dropped and re-created (the return type changed). `SECURITY DEFINER`,
+`search_path = ''`, EXECUTE for `authenticated` only; the same membership check
+as before is the tenant boundary. It walks the rows in order, so a row also
+matches a lead an earlier row of the same file inserted (first row wins). Per
+row: `REJECTED` with `NO_NAME` or `NO_CONTACT_CHANNEL`; `DUPLICATE` of an
+existing lead when any channel key matches (active preferred, never overwritten,
+an archived match stays archived); else `INSERTED`, with the lead's first
+`lead_submissions` row written in the same transaction, mirroring
+`src/lib/submissions/record.ts`. `ON CONFLICT (organization_id, lower(email)) DO
+NOTHING` stays as a backstop for a race on the same email.
+
+Proven by `src/lib/import/import-leads-chunk.rls.test.ts`
+(`npm run test:integration`).
