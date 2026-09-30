@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isDemoSession } from "@/lib/demo/demo-block";
+import { DEMO_BLOCK_MESSAGE } from "@/lib/demo/demo-block-message";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import {
@@ -44,6 +46,9 @@ export async function importProspects(
   // JWT reaches the database and auth.uid() resolves inside the RPC — where the
   // membership re-check, not the "Members create tenant prospects" policy, is
   // the tenant boundary, because SECURITY DEFINER bypasses RLS.
+  // Demo Block: nobody fills the database through the demo.
+  if (await isDemoSession()) return { ...emptyResult(), error: DEMO_BLOCK_MESSAGE };
+
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 

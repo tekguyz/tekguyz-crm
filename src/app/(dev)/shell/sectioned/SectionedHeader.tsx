@@ -1,6 +1,5 @@
 import { IconChevronDown, IconHelpCircle, IconSearch } from "@tabler/icons-react";
 
-import { DemoModeBadge } from "@/components/shell/DemoModeBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 
@@ -31,11 +30,9 @@ import { Button } from "@/components/ui/Button";
 export function SectionedHeader({
   displayName,
   userEmail,
-  isDemo = false,
 }: {
   displayName: string | null;
   userEmail: string;
-  isDemo?: boolean;
 }) {
   const name = displayName || userEmail;
 
@@ -53,11 +50,6 @@ export function SectionedHeader({
             ⌘K
           </kbd>
         </Button>
-        {isDemo ? (
-          <span className="shrink-0 whitespace-nowrap">
-            <DemoModeBadge />
-          </span>
-        ) : null}
       </div>
 
       <div className="flex items-center gap-1">

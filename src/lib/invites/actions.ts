@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { demoAwareMessage } from "@/lib/demo/demo-aware-error";
+import { isDemoSession } from "@/lib/demo/demo-block";
+import { DEMO_BLOCK_MESSAGE } from "@/lib/demo/demo-block-message";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrg } from "@/lib/organizations/current";
 
@@ -24,6 +25,9 @@ export async function createInvite(
     return { error: "Invalid role." };
   }
 
+  // Demo Block: the demo never invites a stranger into an org.
+  if (await isDemoSession()) return { error: DEMO_BLOCK_MESSAGE };
+
   const { orgId } = await getCurrentOrg();
   const supabase = await createClient();
 
@@ -43,7 +47,7 @@ export async function createInvite(
   });
 
   if (error) {
-    return { error: await demoAwareMessage(error, error.message) };
+    return { error: error.message };
   }
 
   revalidatePath("/settings");
@@ -72,7 +76,7 @@ export async function acceptInvite(
   });
 
   if (error) {
-    return { error: await demoAwareMessage(error, error.message) };
+    return { error: error.message };
   }
 
   redirect("/");

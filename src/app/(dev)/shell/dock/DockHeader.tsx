@@ -1,6 +1,5 @@
 import { IconChevronDown, IconHelpCircle, IconSearch } from "@tabler/icons-react";
 
-import { DemoModeBadge } from "@/components/shell/DemoModeBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 
@@ -31,22 +30,15 @@ export function DockHeader({
   title,
   displayName,
   userEmail,
-  isDemo = false,
 }: {
   title: string;
   displayName: string | null;
   userEmail: string;
-  isDemo?: boolean;
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-canvas-pure px-4">
       <div className="flex min-w-0 items-center gap-2">
         <h1 className="text-title truncate">{title}</h1>
-        {isDemo ? (
-          <span className="shrink-0 whitespace-nowrap">
-            <DemoModeBadge />
-          </span>
-        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">

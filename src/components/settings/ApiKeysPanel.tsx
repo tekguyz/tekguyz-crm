@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { DemoBlockText } from "@/components/shell/DemoBlockText";
 
 const initialState: CredentialsFormState = null;
 
@@ -71,7 +72,7 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
     try {
       const result = await clearOrganizationCredential(clearDialogField);
       if (result?.error) {
-        toast.error(result.error);
+        toast.error(<DemoBlockText message={result.error} />);
         return;
       }
       toast.success(`${FIELD_LABELS[clearDialogField]} cleared.`);
@@ -93,7 +94,7 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
           <form action={formAction} className="space-y-3">
             {state?.error && (
               <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-                {state.error}
+                <DemoBlockText message={state.error} />
               </p>
             )}
             {state?.success && (

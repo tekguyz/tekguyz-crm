@@ -27,7 +27,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 | Build-era addenda (Prompts 11–15b) and the closed 15-phase roadmap | [`docs/addenda/prompts-1-15.md`](addenda/prompts-1-15.md) | 8 |
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
 | Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 47 |
-| Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 26 |
+| Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 27 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---
@@ -155,3 +155,4 @@ repo matches a title in this column.
 | 2026-09-15 — Today redesign Stage 1: two comps, Variant Brief picked, SLA Critical left as Fork A | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-20 — `handoff` becomes `status-sync`, and the paste block is cut | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-21 — CLAUDE.md slimmed from 64 KB to 10 KB (Job 4) | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-09-29 — Each Guest gets their own Demo Org | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |

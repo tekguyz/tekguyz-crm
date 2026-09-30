@@ -50,17 +50,6 @@ if (!DEMO_ORG_NAME || !DEMO_OWNER_EMAIL) {
   bail(`CANNOT PARSE ${SEED_LIB} — DEMO_ORG_NAME / DEMO_OWNER_EMAIL not found. Update this script.`);
 }
 
-// The demo org gained a SECOND permanent member on 2026-09-04: the public
-// read-only demo visitor behind /demo (scripts/seed/lib/demo-visitor.ts). It is
-// seeded, not residue, and its email comes from the environment rather than
-// from source — so it is read from there, and there is no third hardcoded copy.
-//
-// This matters beyond a false positive. Until this was added, the removal SQL
-// this script prints deleted every membership except the owner's, which would
-// have taken the demo visitor with it and broken the public demo the next time
-// a human pasted it.
-const DEMO_VISITOR_EMAIL = process.env.DEMO_VISITOR_EMAIL?.trim() || null;
-
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SECRET_KEY;
 if (!url || !key) {
@@ -82,18 +71,17 @@ async function sel(table, columns, build) {
 // ---------------------------------------------------------------------------
 // A. The demo org should contain exactly what the seed creates.
 //
-// The seed creates exactly TWO memberships and no invites: the demo OWNER
-// (scripts/seed/lib/demo-org.ts) and, since 2026-09-04, the public read-only
-// demo visitor behind /demo (scripts/seed/lib/demo-visitor.ts). Anything else —
-// a third membership, an unexpected role, any invite row — is residue by
-// construction, and `npm run seed:demo` will never clear it. This is the exact
-// shape of the 2026-08-18 finding.
+// The seed creates exactly ONE membership and no invites: the demo OWNER
+// (scripts/seed/lib/demo-org.ts). Anything else — a second membership, an
+// unexpected role, any invite row — is residue by construction, and
+// `npm run seed:demo` will never clear it. This is the exact shape of the
+// 2026-08-18 finding.
 //
-// Note the seed now actively redacts non-@example.com members and invites from
-// the demo org on every run (demo-membership-hygiene.ts), because /demo is
-// public and the app shell renders member emails on every page.
+// Until #31 the seed also made a shared read-only demo visitor as a MEMBER.
+// That account is retired (#29); its membership row is residue until #33
+// deletes the account, and this check says so.
 // ---------------------------------------------------------------------------
-const orgs = await sel("organizations", "id, name");
+const orgs = await sel("organizations", "id, name, is_demo");
 const demo = orgs.find((o) => o.name === DEMO_ORG_NAME);
 
 if (!demo) {
@@ -109,26 +97,19 @@ if (!demo) {
     if (error) bail(`Could not resolve auth user ${m.user_id} — ${error.message}`);
     const email = data?.user?.email ?? "(unknown)";
     const isSeededOwner = email === DEMO_OWNER_EMAIL && m.role === "OWNER";
-    const isSeededVisitor =
-      DEMO_VISITOR_EMAIL && email === DEMO_VISITOR_EMAIL && m.role === "MEMBER";
-    if (!isSeededOwner && !isSeededVisitor) {
+    if (!isSeededOwner) {
       unexpected.push(`${email} (${m.role}, created ${m.created_at})`);
     }
   }
   if (unexpected.length) {
     findings.push(
       `DEMO ORG MEMBERSHIPS: ${unexpected.length} membership row(s) in "${DEMO_ORG_NAME}" that the seed ` +
-        `does not create — ${unexpected.join("; ")}. The seed creates ${DEMO_OWNER_EMAIL} as OWNER` +
-        (DEMO_VISITOR_EMAIL ? ` and ${DEMO_VISITOR_EMAIL} as MEMBER.` : `.`),
+        `does not create — ${unexpected.join("; ")}. The seed creates ${DEMO_OWNER_EMAIL} as OWNER.`,
     );
     // The keep-list names what must survive, never what to drop. A WHERE clause
     // that enumerates what to keep survives a mistake; one that enumerates what
-    // to drop does not. Deleting the demo visitor's row here would break the
-    // public /demo entry point with no error anywhere.
-    const keep = [DEMO_OWNER_EMAIL, DEMO_VISITOR_EMAIL]
-      .filter(Boolean)
-      .map((e) => `'${e}'`)
-      .join(", ");
+    // to drop does not.
+    const keep = `'${DEMO_OWNER_EMAIL}'`;
     findings.push(
       `  Removal (run by hand, per docs/VERIFICATION.md § Test-Data Cleanup):\n` +
         `    SELECT * FROM organization_members WHERE organization_id = '${demo.id}';\n` +
@@ -137,9 +118,7 @@ if (!demo) {
     );
   } else {
     notes.push(
-      `"${DEMO_ORG_NAME}" memberships clean (${members.length} row(s), seeded owner` +
-        (DEMO_VISITOR_EMAIL ? ` and demo visitor` : ``) +
-        ` only)`,
+      `"${DEMO_ORG_NAME}" memberships clean (${members.length} row(s), seeded owner only)`,
     );
   }
 
@@ -169,15 +148,23 @@ if (!demo) {
 // works carries a throwaway address; a real enquiry does not. The demo seed's
 // own leads use realistic company domains, so they are not caught here.
 //
+// A Guest's Demo Org is skipped: a Guest typing a made-up address is the demo
+// working, not test residue, and the daily cleanup cron deletes the whole org
+// after 7 days (#31). "TEKGUYZ Demo" is still checked — it is seeded, not
+// visited.
+//
 // `archived` is deliberately NOT a filter. CLAUDE.md is explicit that archiving
 // is not removal — an archived row still counts, still shows in Contacts, and
 // is exactly how the last batch hid in plain sight.
 // ---------------------------------------------------------------------------
 const SYNTHETIC = ["example.com", "example.org", "example.net", "test.com", "mailinator.com"];
 const orgName = new Map(orgs.map((o) => [o.id, o.name]));
-const suspects = await sel("leads", "id, email, client_name, organization_id, archived, created_at", (q) =>
-  q.or(SYNTHETIC.map((d) => `email.ilike.%@${d}`).join(",")),
-);
+const guestOrgIds = new Set(orgs.filter((o) => o.is_demo && o.name !== DEMO_ORG_NAME).map((o) => o.id));
+const suspects = (
+  await sel("leads", "id, email, client_name, organization_id, archived, created_at", (q) =>
+    q.or(SYNTHETIC.map((d) => `email.ilike.%@${d}`).join(",")),
+  )
+).filter((l) => !guestOrgIds.has(l.organization_id));
 
 if (suspects.length) {
   const byOrg = new Map();

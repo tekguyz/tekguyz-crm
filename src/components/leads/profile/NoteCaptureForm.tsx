@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { IconMicrophone, IconSquare } from "@tabler/icons-react";
 import { addManualNote, addAudioTranscript } from "@/lib/activity/actions";
 import { useAudioRecorder } from "@/lib/hooks/use-audio-recorder";
+import { DEMO_BLOCK_MESSAGE, isDemoBlock } from "@/lib/demo/demo-block-message";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 
@@ -60,7 +61,12 @@ export function NoteCaptureForm({
       } catch (err) {
         onRecordingSettled({
           ok: false,
-          message: err instanceof Error ? err.message : "Failed to transcribe voice note.",
+          // A Demo Block's message is redacted in production; its digest is not.
+          message: isDemoBlock(err)
+            ? DEMO_BLOCK_MESSAGE
+            : err instanceof Error
+              ? err.message
+              : "Failed to transcribe voice note.",
         });
       } finally {
         setIsTranscribing(false);

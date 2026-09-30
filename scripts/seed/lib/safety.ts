@@ -10,7 +10,10 @@ export async function reportNonDemoOrgSafety(label: string): Promise<void> {
   const { data: orgs, error } = await admin
     .from("organizations")
     .select("id, name")
-    .neq("name", DEMO_ORG_NAME);
+    .neq("name", DEMO_ORG_NAME)
+    // Guest Demo Orgs are not real tenants either; listing each one would bury
+    // the real orgs this report exists to show.
+    .eq("is_demo", false);
 
   if (error) {
     console.warn(`[safety:${label}] Could not verify non-demo orgs: ${error.message}`);

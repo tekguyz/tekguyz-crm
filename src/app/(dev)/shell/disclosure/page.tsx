@@ -27,7 +27,7 @@ export default function DisclosureVariantPage() {
       <DesktopFrame label="Desktop — Prospecting open, Work closed">
         <DisclosureSidebar collapsed={false} activeHref="/prospects" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <DisclosureHeader {...USER} isDemo />
+          <DisclosureHeader {...USER} />
           <div className="flex-1 overflow-y-auto p-4">
             <FakeContent title="Prospects" />
           </div>

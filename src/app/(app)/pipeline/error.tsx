@@ -4,8 +4,8 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { DemoReadOnlyNotice } from "@/components/shell/DemoReadOnlyNotice";
-import { isDemoReadOnlyRefusal } from "@/lib/demo/read-only-refusal";
+import { DemoBlockNotice } from "@/components/shell/DemoBlockNotice";
+import { isDemoBlock } from "@/lib/demo/demo-block-message";
 
 // Pipeline gets its own error.tsx rather than relying on (app)/error.tsx's
 // generic copy: a failed getPipelineLeads() call would otherwise leave the
@@ -21,12 +21,12 @@ export default function PipelineError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // Same demo read-only case as (app)/error.tsx. Without it a refused write on
-  // this page would claim the pipeline failed to load, which is false twice.
-  if (isDemoReadOnlyRefusal(error)) {
+  // Same Demo Block case as (app)/error.tsx. Without it a refusal on this page
+  // would claim the pipeline failed to load, which is false twice.
+  if (isDemoBlock(error)) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <DemoReadOnlyNotice reset={reset} />
+        <DemoBlockNotice reset={reset} />
       </div>
     );
   }

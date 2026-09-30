@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { DemoBlockText } from "@/components/shell/DemoBlockText";
 
 const initialState: OrgSettingsFormState = null;
 
@@ -77,7 +78,7 @@ export function OrgDetailsPanel({
     try {
       const result = await rotateWebhookSecret();
       if (result.error) {
-        toast.error(result.error);
+        toast.error(<DemoBlockText message={result.error} />);
         return;
       }
       setCurrentSigningSecret(result.signingSecret ?? null);
@@ -98,7 +99,7 @@ export function OrgDetailsPanel({
         >
           {state?.error && (
             <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-              {state.error}
+              <DemoBlockText message={state.error} />
             </p>
           )}
           <Input

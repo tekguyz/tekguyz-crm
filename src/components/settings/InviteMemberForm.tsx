@@ -7,6 +7,7 @@ import { createInvite, type InviteFormState } from "@/lib/invites/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { DemoBlockText } from "@/components/shell/DemoBlockText";
 
 const initialState: InviteFormState = null;
 
@@ -28,7 +29,7 @@ export function InviteMemberForm() {
     <form action={formAction} className="flex flex-wrap items-end gap-2">
       {state?.error && (
         <p className="text-body-sm w-full rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-          {state.error}
+          <DemoBlockText message={state.error} />
         </p>
       )}
       <div className="min-w-40 flex-1">

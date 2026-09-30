@@ -26,11 +26,18 @@ export async function getOrgSigningKey(organizationId: string): Promise<string |
   const supabase = createWebhookServiceClient();
   const { data, error } = await supabase
     .from("organizations")
-    .select("webhook_secret")
+    .select("webhook_secret, is_demo")
     .eq("id", organizationId)
     .maybeSingle();
 
   if (error || !data?.webhook_secret) {
+    return null;
+  }
+
+  // Demo Block: a Demo Org is never a live webhook endpoint. No key means the
+  // route refuses it exactly like an org that does not exist, so no inbound
+  // lead can spend a spam-shield call or send an alert email for a Guest.
+  if (data.is_demo === true) {
     return null;
   }
 

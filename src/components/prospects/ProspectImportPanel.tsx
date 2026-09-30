@@ -13,6 +13,7 @@ import {
   type ValidatedProspectRow,
 } from "@/lib/validation/csv-prospect-schema";
 import type { ParsedCsvFile } from "@/lib/types/csv-import";
+import { DemoBlockText } from "@/components/shell/DemoBlockText";
 
 // CsvUploadDropzone is reused UNCHANGED — it already parses, guards the row cap
 // and reports header/row problems, and it takes no leads-specific props. This
@@ -152,7 +153,7 @@ export function ProspectImportPanel() {
 
         {result.error && (
           <p className="text-body-md mt-3 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-            {result.error}
+            <DemoBlockText message={result.error} />
           </p>
         )}
 

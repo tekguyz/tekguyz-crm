@@ -1,40 +1,23 @@
-import { createAdminClient } from "./clients";
-import { DEMO_ORG_NAME } from "./demo-org";
-
-function daysFromNow(days: number): string {
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-}
+// Sample Data: the invented leads every new Demo Org starts with (CONTEXT.md).
+// Moved here from scripts/seed/lib/demo-data.ts (#31), so the "start demo"
+// action and the TEKGUYZ Demo seed scripts share one copy. A plain module on
+// purpose — no "server-only", no "@/" imports — because the seed scripts run
+// under tsx and import it by relative path.
+//
+// Dates are offsets from "now", resolved by buildSampleData() at press time,
+// so a Guest's pipeline and follow-ups always look live.
 
 function webhookPayload(payload: Record<string, string>): string {
   return JSON.stringify(payload);
 }
 
-// The demo leads' enquiry text already exists once, inside their WEBHOOK log
-// payloads. Reading it back out here gives each seeded lead_submissions row a
-// real message without a second copy of the same sentence to keep in sync.
-// Seed-only: the live ingest path writes lead_submissions.message directly
-// from the validated payload and never parses a log (that JSON-parsing shape
-// is exactly what lead_submissions exists to replace).
-function webhookMessageOf(logs: DemoLog[] | undefined): string | null {
-  const webhook = logs?.find((log) => log.log_type === "WEBHOOK");
-  if (!webhook) return null;
-
-  try {
-    const parsed: unknown = JSON.parse(webhook.content);
-    const message = (parsed as Record<string, unknown>)?.message;
-    return typeof message === "string" ? message : null;
-  } catch {
-    return null;
-  }
-}
-
-type DemoLog = {
+export type DemoLog = {
   log_type: "WEBHOOK" | "MANUAL_NOTE" | "SYSTEM_ALERT";
   content: string;
   daysAgo: number;
 };
 
-type DemoLead = {
+export type DemoLead = {
   client_name: string;
   email: string;
   phone: string;
@@ -646,127 +629,3 @@ export const DEMO_LEADS: DemoLead[] = [
     ai_brief: null,
   },
 ];
-
-export async function seedDemoLeads(orgId: string): Promise<{ leadCount: number; logCount: number }> {
-  const admin = createAdminClient();
-  let leadCount = 0;
-  let logCount = 0;
-
-  for (const def of DEMO_LEADS) {
-    const { logs, closedDaysAgo, nextActionDays, createdDaysAgo, ...rest } = def;
-
-    const { data: lead, error } = await admin
-      .from("leads")
-      .insert({
-        organization_id: orgId,
-        ...rest,
-        closed_at: closedDaysAgo !== null ? daysFromNow(closedDaysAgo) : null,
-        next_action_at: daysFromNow(nextActionDays),
-        created_at: daysFromNow(-createdDaysAgo),
-      })
-      .select("id")
-      .single();
-
-    if (error || !lead) {
-      throw new Error(
-        `Failed to insert demo lead "${def.client_name}" (${def.company}): ${error?.message ?? "no row returned"}`,
-      );
-    }
-
-    leadCount += 1;
-
-    // Every lead carries at least one lead_submissions row whatever created
-    // it — the demo org included, or the profile sheet's enquiry history would
-    // render empty across all 20 seeded leads and look broken rather than
-    // seeded. Written inline with the admin client for the same reason the
-    // activity_logs insert below is: this script imports relatively and does
-    // not resolve the app's "@/" alias.
-    const { error: submissionError } = await admin.from("lead_submissions").insert({
-      lead_id: lead.id,
-      organization_id: orgId,
-      client_name: def.client_name,
-      email: def.email,
-      phone: def.phone,
-      company: def.company,
-      message: webhookMessageOf(logs),
-      service_category: def.service_category,
-      lead_source: def.lead_source,
-      created_at: daysFromNow(-createdDaysAgo),
-    });
-
-    if (submissionError) {
-      throw new Error(
-        `Failed to insert demo submission for "${def.client_name}": ${submissionError.message}`,
-      );
-    }
-
-    if (logs?.length) {
-      const rows = logs.map((log) => ({
-        lead_id: lead.id,
-        organization_id: orgId,
-        log_type: log.log_type,
-        content: log.content,
-        created_at: daysFromNow(-log.daysAgo),
-      }));
-
-      const { error: logError } = await admin.from("activity_logs").insert(rows);
-      if (logError) {
-        throw new Error(`Failed to insert activity logs for "${def.client_name}": ${logError.message}`);
-      }
-      logCount += rows.length;
-    }
-  }
-
-  return { leadCount, logCount };
-}
-
-export async function countDemoLeads(orgId: string): Promise<number> {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("leads")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", orgId);
-
-  if (error) {
-    throw new Error(`Failed to count demo leads: ${error.message}`);
-  }
-
-  return count ?? 0;
-}
-
-// Deletes every lead in the given org. activity_logs.lead_id and
-// lead_submissions.lead_id both have ON DELETE CASCADE, so those rows are
-// removed automatically — no separate delete.
-export async function wipeDemoLeads(orgId: string): Promise<number> {
-  const admin = createAdminClient();
-
-  // Hard safety check, right before the destructive call, independent of
-  // whatever the caller believes orgId is: refuse to wipe anything unless
-  // this id genuinely resolves to the demo org by name.
-  const { data: org, error: orgError } = await admin
-    .from("organizations")
-    .select("id, name")
-    .eq("id", orgId)
-    .single();
-
-  if (orgError || !org) {
-    throw new Error(`Refusing to wipe: could not verify org ${orgId} (${orgError?.message ?? "not found"})`);
-  }
-  if (org.name !== DEMO_ORG_NAME) {
-    throw new Error(
-      `Refusing to wipe: org ${orgId} is named "${org.name}", not "${DEMO_ORG_NAME}". Aborting to protect real data.`,
-    );
-  }
-
-  const existingCount = await countDemoLeads(orgId);
-  if (existingCount === 0) {
-    return 0;
-  }
-
-  const { error: deleteError } = await admin.from("leads").delete().eq("organization_id", orgId);
-  if (deleteError) {
-    throw new Error(`Failed to delete demo leads: ${deleteError.message}`);
-  }
-
-  return existingCount;
-}

@@ -1065,3 +1065,38 @@ boundary on this path. Verified live: `anon` EXECUTE false, `authenticated`
 true, `demo_readonly` false, `proconfig = {search_path=""}`. Proven by
 `src/lib/prospects/promote-prospect-rpc.rls.test.ts`. Narrative:
 `docs/ADDENDA_LOG.md` § 2026-09-14 — Prospect promotion becomes one transaction.
+
+## Demo Org functions (2026-09-29)
+
+Migration `supabase/migrations/20260929120000_demo_org_per_guest.sql` (#31). Two
+functions and one index. **No table, column or policy changed.** Design:
+`docs/adr/0001-each-guest-gets-their-own-demo-org.md`; words: `CONTEXT.md`.
+
+A **Guest** is an auth user whose email matches `demo-%@tekguyz-crm.test`. Both
+functions recognise a Guest by that pattern only, so neither can put a real
+person into a Demo Org, and the cleanup can never delete an org with a real
+person in it. `src/lib/demo/guest.ts` makes those addresses.
+
+| Function | Who may call | What it does |
+|---|---|---|
+| `public.create_demo_org(p_user_id uuid, p_name text, p_sample jsonb) returns uuid` | `service_role` only (revoked from `public`, `anon`, `authenticated`) | In one transaction: an `organizations` row with `is_demo = true`, the Guest's `OWNER` membership, and every Sample Data row from `p_sample` (leads, lead_submissions, activity_logs, tasks, prospects). `organization_id` is never read from the payload. Raises `DEMO_ORG_NOT_A_GUEST` (42501), `DEMO_ORG_GUEST_HAS_ORG` (23505) or `DEMO_ORG_BAD_NAME` (22023). |
+| `public.delete_expired_demo_orgs(p_cutoff timestamptz, p_limit integer default 100) returns table (guest_user_id uuid)` | `service_role` only | Deletes up to `p_limit` orgs with `is_demo`, `created_at < p_cutoff`, a name other than `TEKGUYZ Demo`, and no member who is not a Guest. Every tenant table cascades. Returns the Guests of those orgs, plus older Guests with no membership left (a failed earlier run), for `/api/cron/demo-cleanup` to delete through the Auth admin API. |
+
+Both are `SECURITY DEFINER` with `search_path = ''`. They bypass RLS on purpose:
+a Guest is not a member until `create_demo_org` makes them one, and the cleanup
+runs with no user.
+
+Index: `organizations_demo_created_at_idx on public.organizations (created_at) where is_demo`.
+Partial, so it holds Demo Orgs only.
+
+**Walls.** No new policy was needed. Every tenant policy scopes by
+`private.current_org_ids()`, and a Guest is a member of exactly one org.
+`src/lib/demo/demo-org.rls.test.ts` proves two Guests cannot see or change each
+other's rows.
+
+**`organizations.is_demo` now marks many orgs**, one per Guest plus TEKGUYZ Demo.
+Nothing may assume a single demo org.
+
+**`demo_readonly` is still live** (§ `demo_readonly` role addendum above). The
+code stopped using it in #31; migration 2 drops it in #33, after that code is
+deployed.
