@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { startDemo, type StartDemoState } from "@/lib/demo/start-demo";
 
 // "Try the demo" — the demo's only door (src/lib/demo/start-demo.ts).
@@ -10,20 +10,15 @@ import { startDemo, type StartDemoState } from "@/lib/demo/start-demo";
 // A form's submit button, never a link: only a press may make a Guest, so no
 // preview, prefetch or crawler ever can. On success the action redirects into
 // the app; the only thing that comes back here is the busy or failed message.
-export function TryDemoButton({
-  className,
-  variant = "secondary",
-  size = "md",
-}: {
-  className?: string;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-}) {
+//
+// No props: it has one caller, the Landing Page, which wants the primary,
+// large call to action.
+export function TryDemoButton() {
   const [state, formAction, isPending] = useActionState<StartDemoState, FormData>(startDemo, null);
 
   return (
-    <form action={formAction} className={className}>
-      <Button type="submit" variant={variant} size={size} loading={isPending}>
+    <form action={formAction}>
+      <Button type="submit" variant="primary" size="lg" loading={isPending}>
         Try the demo
       </Button>
       {state?.error ? (

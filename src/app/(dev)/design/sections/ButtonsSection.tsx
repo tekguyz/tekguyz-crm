@@ -18,6 +18,9 @@ export function ButtonsSection() {
             Small
           </Button>
           <Button variant={variant}>Default</Button>
+          <Button variant={variant} size="lg">
+            Large
+          </Button>
           <Button variant={variant} disabled>
             Disabled
           </Button>

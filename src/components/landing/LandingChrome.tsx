@@ -4,8 +4,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/Button";
 import { BRAND, LANDING } from "@/lib/brand/copy";
 
-// The Landing Page's top bar and footer. Both versions share them, so the
-// comparison is about the middle of the page, not about where Sign in lives.
+// The Landing Page's top bar and footer.
 
 export function LandingHeader() {
   return (

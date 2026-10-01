@@ -3,11 +3,13 @@ import { AppScreenshot } from "@/components/landing/AppScreenshot";
 import { LandingFooter, LandingHeader } from "@/components/landing/LandingChrome";
 import { BRAND, LANDING } from "@/lib/brand/copy";
 
-// THE LANDING PAGE (#32) — Version B, "Split", picked by the owner on
-// 2026-10-01 over Version A, "Stacked" (kept at /shell/landing). Copy on the left, read top to bottom like a short brief:
-// the promise, the button, then the three points as a numbered list. The app
-// sits on the right and runs off the page's edge, so it reads as a window
-// into something bigger rather than a framed picture.
+// THE LANDING PAGE (#32). Picked by the owner on 2026-10-01 from two layouts;
+// this one, "Split", shipped.
+//
+// Copy on the left, read top to bottom like a short brief: the promise, the
+// button, then the three points as a numbered list. The app sits on the right
+// and runs off the page's edge, so it reads as a window into something bigger
+// rather than a framed picture.
 //
 // Below `lg` it stacks: copy, button, screenshot, points — so a phone sees the
 // app before it has to read the list.
@@ -24,7 +26,7 @@ export function LandingPage() {
           <h1 className="text-hero text-balance">{BRAND.tagline}</h1>
           <p className="text-body-md mt-4 text-pretty text-ink-muted">{BRAND.description}</p>
           <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <TryDemoButton variant="primary" size="lg" />
+            <TryDemoButton />
             <p className="text-caption max-w-48 text-ink-muted">{LANDING.demoNote}</p>
           </div>
         </section>
