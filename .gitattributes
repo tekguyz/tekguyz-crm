@@ -1,0 +1,2 @@
+# Test fixtures are byte-exact. Keep them LF on every OS.
+src/**/fixtures/*.csv text eol=lf
