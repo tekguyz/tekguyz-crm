@@ -37,7 +37,7 @@ describe("Button", () => {
 
   it("applies the lg size, taller than md", () => {
     render(<Button size="lg">Try the demo</Button>);
-    expect(screen.getByRole("button")).toHaveClass("h-10", "text-body-md");
+    expect(screen.getByRole("button")).toHaveClass("h-11", "text-body-md");
   });
 
   it("disables when disabled", () => {

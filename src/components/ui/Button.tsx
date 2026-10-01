@@ -22,8 +22,8 @@ const SIZES: Record<ButtonSize, string> = {
   sm: "text-body-sm h-7 gap-1.5 px-2",
   md: "text-body-md h-8 gap-2 px-3",
   // The Landing Page's one call to action. Same type as md; only the target
-  // grows, because a stranger on a phone presses it with a thumb.
-  lg: "text-body-md h-10 gap-2 px-4",
+  // grows, because a stranger on a phone presses it with a thumb (44px).
+  lg: "text-body-md h-11 gap-2 px-4",
 };
 
 export function Button({

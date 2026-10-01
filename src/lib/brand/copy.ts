@@ -26,10 +26,12 @@ export const BRAND = {
 // back. Changing a point means the product changed first.
 export const LANDING = {
   demoNote: "Your own workspace with sample data. No signup, no email.",
+  // The Demo Blocks (PRODUCT.md): said up front, so a visitor is not surprised.
+  demoLimits: "Email, import and invites are switched off in the demo.",
   points: [
     {
       title: "Leads from your website",
-      body: "Your site's enquiry form posts straight into the pipeline over a signed webhook. Nothing is retyped.",
+      body: "Your website's enquiry form sends each lead straight into the pipeline. Nothing is retyped.",
     },
     {
       title: "One pipeline",
@@ -37,7 +39,7 @@ export const LANDING = {
     },
     {
       title: "Follow-ups that stick",
-      body: "Every lead carries its next action. A lead that goes quiet is flagged Going Cold before it is lost.",
+      body: "Every lead carries its next action. A lead that goes quiet gets a dashed border and a Going Cold flag, so you can follow up before it is lost.",
     },
   ],
   builtBy: { label: "Built by TEKGUYZ", href: "https://tekguyz.com" },
