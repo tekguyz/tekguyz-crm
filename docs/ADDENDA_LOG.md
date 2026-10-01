@@ -28,7 +28,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
 | Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 47 |
 | Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 27 |
-| Dated addenda — October 2026 | [`docs/addenda/2026-10.md`](addenda/2026-10.md) | 1 |
+| Dated addenda — October 2026 | [`docs/addenda/2026-10.md`](addenda/2026-10.md) | 3 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---

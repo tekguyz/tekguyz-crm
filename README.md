@@ -19,6 +19,13 @@
 | Next | Owner applies the `demo_readonly` drop (#33). See `docs/INITIATIVES.md`. |
 | Updated | 2026-10-01 |
 
+## Screenshots
+
+<p align="center">
+  <img src="showcase/today-desktop.png" alt="Today: the leads that need a reply" height="480">
+  <img src="showcase/pipeline-desktop.png" alt="Pipeline: every lead by stage" height="480">
+</p>
+
 ## What it does
 
 - Tracks each lead from first enquiry to won, lost or abandoned.

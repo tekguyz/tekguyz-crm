@@ -987,8 +987,9 @@ promotion: the write path into `leads`.
 
 ## `demo_readonly` role addendum (2026-09-04)
 
-> **Retired 2026-10-01 (#33).** The role no longer exists. This section is kept
-> as the record of what it held; see § Retired: the `demo_readonly` role below.
+> **Retiring 2026-10-01 (#33).** The code no longer uses this role, and the drop
+> migration awaits the owner. This section is kept as the record of what it held;
+> see § Retiring: the `demo_readonly` role below.
 
 Migrations `20260904120000_demo_readonly_role.sql` and
 `20260904130000_demo_readonly_members_rpc.sql`. Full rationale:
@@ -1118,15 +1119,16 @@ other's rows.
 **`organizations.is_demo` now marks many orgs**, one per Guest plus TEKGUYZ Demo.
 Nothing may assume a single demo org.
 
-**`demo_readonly` is retired.** The code stopped using it in #31, and migration
-`20261001120000_drop_demo_readonly.sql` (#33) drops the role and its grants.
-See § Retired: the `demo_readonly` role (2026-10-01) below.
+**`demo_readonly` is being retired.** The code stopped using it in #31, and
+migration `20261001120000_drop_demo_readonly.sql` (#33) drops the role and its
+grants once the owner applies it. See § Retiring: the `demo_readonly` role
+(2026-10-01) below.
 
-## Retired: the `demo_readonly` role (2026-10-01)
+## Retiring: the `demo_readonly` role (2026-10-01)
 
 Migration `supabase/migrations/20261001120000_drop_demo_readonly.sql` (#33,
-closes #21), applied by the human after the #31 and #32 code was deployed. It
-revokes every grant listed in § `demo_readonly` role addendum, by name, then
+closes #21), for the human to apply now that the #31 and #32 code is deployed.
+Not applied yet: update this section when it is. It revokes every grant listed in § `demo_readonly` role addendum, by name, then
 runs `drop role demo_readonly`. The role's footprint was read from the live
 catalog first: `SELECT` on nine tables, `EXECUTE` on two functions, `USAGE` on
 three schemas, membership in `authenticator`, no default privileges. The file is
@@ -1134,7 +1136,7 @@ guarded, so a re-run on a database without the role does nothing.
 
 **No table, column, policy or function changed.** `organizations.is_demo` stays.
 The old shared visitor `tekguyz.demo.visitor@example.com` is deleted from
-`auth.users` by the owner (Supabase dashboard, Authentication → Users); its
+`auth.users` by the owner after the apply (Supabase dashboard, Authentication → Users); its
 `MEMBER` row in TEKGUYZ Demo goes with it. `npm run check:residue` confirms.
 
 ## Muse Lead Pack (2026-09-30)
