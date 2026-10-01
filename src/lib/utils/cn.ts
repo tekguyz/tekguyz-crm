@@ -8,7 +8,7 @@ import { extendTailwindMerge } from "tailwind-merge";
 // dropping whichever came first. Left unconfigured,
 // cn("text-accent-fg", "text-body-md") returns just "text-body-md" and every
 // primary button loses its foreground colour with no error anywhere.
-// Registering the eight roles as font-size restores the two independent
+// Registering the nine roles as font-size restores the two independent
 // groups: a role and a colour coexist, while role-vs-role and colour-vs-colour
 // still override last-wins as expected.
 const twMerge = extendTailwindMerge({
@@ -17,6 +17,7 @@ const twMerge = extendTailwindMerge({
       "font-size": [
         {
           text: [
+            "hero",
             "display",
             "h1",
             "h2",

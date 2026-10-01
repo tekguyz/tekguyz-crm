@@ -20,3 +20,25 @@ export const BRAND = {
   // converging into one pipeline.
   tagline: "Every lead, one pipeline.",
 } as const;
+
+// The Landing Page's copy (#32). Every point restates a shipped capability from
+// PRODUCT.md § Positioning — no customer, figure or claim the product cannot
+// back. Changing a point means the product changed first.
+export const LANDING = {
+  demoNote: "Your own workspace with sample data. No signup, no email.",
+  points: [
+    {
+      title: "Leads from your website",
+      body: "Your site's enquiry form posts straight into the pipeline over a signed webhook. Nothing is retyped.",
+    },
+    {
+      title: "One pipeline",
+      body: "Every lead moves through clear stages, from first enquiry to won or lost. Revenue is recorded, not guessed.",
+    },
+    {
+      title: "Follow-ups that stick",
+      body: "Every lead carries its next action. A lead that goes quiet is flagged Going Cold before it is lost.",
+    },
+  ],
+  builtBy: { label: "Built by TEKGUYZ", href: "https://tekguyz.com" },
+} as const;

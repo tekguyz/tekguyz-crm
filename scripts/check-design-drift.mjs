@@ -126,6 +126,7 @@ for (const line of design.split("\n")) {
 
 /* ---------- 2. typography table ---------- */
 const ROLES = {
+  Hero: "hero",
   Display: "display",
   "Heading-1": "h1",
   "Heading-2": "h2",

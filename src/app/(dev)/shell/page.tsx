@@ -97,6 +97,10 @@ export default function ShellVariantsIndex() {
         <Link href="/shell/today" className="text-accent underline underline-offset-2">
           Today redesign — Stage 1 comps →
         </Link>
+        <br />
+        <Link href="/shell/landing" className="text-accent underline underline-offset-2">
+          #32 — Landing Page, two versions →
+        </Link>
       </p>
 
       <div className="grid gap-3 md:grid-cols-3">

@@ -55,6 +55,13 @@
      Tailwind's own text-xs / text-sm / text-base keep their stock meanings.
      Size, line-height, weight and tracking are all baked in, so one utility
      class is complete and the roles cannot drift apart at call sites. */
+  /* The Landing Page's headline, and nothing else. The app itself never goes
+     above Display; a stranger's first screen needs one bigger line. */
+  --text-hero: 36px;
+  --text-hero--line-height: 1.1;
+  --text-hero--font-weight: 700;
+  --text-hero--letter-spacing: -0.025em;
+
   --text-display: 22px;
   --text-display--line-height: 1.2;
   --text-display--font-weight: 700;
@@ -176,6 +183,9 @@
        would flip the blue and teal along with the ink. */
     --brand-mark: url("/brand/icon.svg");
     --brand-mark-reduced: url("/brand/icon-reduced.svg");
+    /* The Landing Page's screenshot of the real app, swapped by theme the same
+       way the mark is. Made from the demo's Sample Data, never a real lead. */
+    --landing-shot: url("/landing/pipeline-light.png");
   }
 
   .dark {
@@ -227,6 +237,7 @@
 
     --brand-mark: url("/brand/icon-on-dark.svg");
     --brand-mark-reduced: url("/brand/icon-reduced-on-dark.svg");
+    --landing-shot: url("/landing/pipeline-dark.png");
   }
 
   body {
