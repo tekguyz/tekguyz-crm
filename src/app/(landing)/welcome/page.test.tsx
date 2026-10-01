@@ -16,7 +16,10 @@ describe("the Landing Page", () => {
     render(<WelcomePage />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(BRAND.tagline);
-    expect(screen.getByRole("button", { name: "Try the demo" })).toHaveAttribute("type", "submit");
+    // Two buttons: the top one, and the one after the points on a stacked layout.
+    for (const button of screen.getAllByRole("button", { name: "Try the demo" })) {
+      expect(button).toHaveAttribute("type", "submit");
+    }
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
   });
 

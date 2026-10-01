@@ -15,7 +15,7 @@ export function LandingHeader() {
         <span className="text-title">{BRAND.name}</span>
       </div>
       {/* A real customer's way in. No sign-up link: accounts are invite-only. */}
-      <Button asChild variant="ghost">
+      <Button asChild variant="ghost" className="max-sm:h-11">
         <Link href="/login">Sign in</Link>
       </Button>
     </header>
@@ -24,11 +24,12 @@ export function LandingHeader() {
 
 export function LandingFooter() {
   return (
-    <footer className="text-caption flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-6 text-ink-muted">
+    <footer className="text-body-sm flex flex-wrap items-center justify-between gap-2 border-t border-hairline text-ink-muted">
       <span>{BRAND.name}</span>
+      {/* min-h-11: a 12px line of text is a 16px target; this makes it a thumb. */}
       <a
         href={LANDING.builtBy.href}
-        className="underline-offset-2 hover:text-ink-main hover:underline"
+        className="inline-flex min-h-11 items-center underline-offset-2 hover:text-ink-main hover:underline"
       >
         {LANDING.builtBy.label}
       </a>

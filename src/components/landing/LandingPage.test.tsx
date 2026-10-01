@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LandingPage } from "@/components/landing/LandingPage";
-import { BRAND } from "@/lib/brand/copy";
+import { BRAND, LANDING } from "@/lib/brand/copy";
 
 vi.mock("@/lib/demo/start-demo", () => ({
   startDemo: vi.fn(),
@@ -39,10 +39,27 @@ describe("LandingPage", () => {
   it("enters the demo by a form's submit button, never a link", () => {
     render(<LandingPage />);
 
-    const button = screen.getByRole("button", { name: "Try the demo" });
-    expect(button).toHaveAttribute("type", "submit");
-    expect(button.closest("form")).not.toBeNull();
+    // Two doors to the same action: the top one, and the one after the points
+    // that only a stacked (phone, tablet) layout shows.
+    const buttons = screen.getAllByRole("button", { name: "Try the demo" });
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute("type", "submit");
+      expect(button.closest("form")).not.toBeNull();
+    }
     expect(screen.queryByRole("link", { name: /demo/i })).toBeNull();
+  });
+
+  it("says plainly what the demo switches off", () => {
+    render(<LandingPage />);
+
+    expect(screen.getByText(LANDING.demoLimits)).toBeInTheDocument();
+  });
+
+  it("keeps developer words out of the points", () => {
+    render(<LandingPage />);
+
+    expect(screen.queryByText(/webhook/i)).toBeNull();
   });
 
   it("links to Sign in and credits TEKGUYZ", () => {

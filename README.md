@@ -16,7 +16,7 @@
 |---|---|
 | Phase | In production. Post-launch feature work. |
 | Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). Landing Page at `/` (#32). |
-| Next | Landing Page design pass, then retire the old demo role (#33). See `docs/INITIATIVES.md`. |
+| Next | Retire the old demo role (#33). See `docs/INITIATIVES.md`. |
 | Updated | 2026-10-01 |
 
 ## What it does
