@@ -8,16 +8,16 @@
 </p>
 
 **A multi-tenant sales CRM: every lead, one pipeline.**
-[Live demo](https://tekguyz-crm.vercel.app/demo) · read-only, sample data
+[Live demo](https://tekguyz-crm.vercel.app) · your own workspace, sample data
 
 ## Status
 
 | Row | |
 |---|---|
 | Phase | In production. Post-launch feature work. |
-| Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). |
-| Next | Demo Landing Page (#32), then retire the old demo role (#33). See `docs/INITIATIVES.md`. |
-| Updated | 2026-09-30 |
+| Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). Landing Page at `/` (#32). |
+| Next | Landing Page design pass, then retire the old demo role (#33). See `docs/INITIATIVES.md`. |
+| Updated | 2026-10-01 |
 
 ## What it does
 

@@ -186,6 +186,7 @@
     /* The Landing Page's screenshot of the real app, swapped by theme the same
        way the mark is. Made from the demo's Sample Data, never a real lead. */
     --landing-shot: url("/landing/pipeline-light.png");
+    --landing-shot-phone: url("/landing/pipeline-phone-light.png");
   }
 
   .dark {
@@ -238,6 +239,7 @@
     --brand-mark: url("/brand/icon-on-dark.svg");
     --brand-mark-reduced: url("/brand/icon-reduced-on-dark.svg");
     --landing-shot: url("/landing/pipeline-dark.png");
+    --landing-shot-phone: url("/landing/pipeline-phone-dark.png");
   }
 
   body {

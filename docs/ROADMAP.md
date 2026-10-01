@@ -73,10 +73,9 @@ commitment; an item moves to `docs/INITIATIVES.md` when its prompt pack starts.
     rejection above — not a closed door. Revisit when the product is actually
     being sold self-serve, with a billing model and ToS behind it; not on "it'd
     be nice".
-  - **Marketing landing page** — *deferred* (2026-09-05). A landing page's job
-    is conversion, and with no self-serve signup there is nothing to convert
-    into. `/demo` plus tekguyz.com's own case study already fill that role.
-    Unblocks when self-serve signup does.
+  - **Marketing landing page** — *shipped 2026-10-01* (#32) as the demo's
+    Landing Page at `/`, for the demo standard rather than for signup. A page
+    that converts into self-serve signup still waits on signup itself.
   - **Onboarding** — *deferred* (2026-09-05). The `/onboarding` route exists
     and was never designed. Deferred until an actual invite is imminent, so it
     is designed against a real first user rather than an imagined one.

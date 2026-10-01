@@ -30,11 +30,12 @@ export const metadata: Metadata = {
   // Relative, so it resolves against metadataBase and stays correct in
   // preview deployments instead of hardcoding the production host.
   alternates: { canonical: "/" },
-  // This is a login-gated internal tool, not a marketing site. There is
-  // nothing here for a search engine to index — every route redirects an
-  // anonymous visitor to /login — and an indexed login page is noise at best.
-  // Note this does NOT affect link previews: Slack, Facebook and iMessage
-  // read the OG tags directly and do not apply robots rules to an unfurl.
+  // noindex for every page EXCEPT the Landing Page at `/`, which overrides it
+  // (src/app/(landing)/welcome/page.tsx). The app, the sign-in screens and
+  // the demo hold nothing for a stranger, and a demo screen in search results
+  // would skip the Landing Page (DEMO-STANDARD.md § Search engines). This does
+  // NOT affect link previews: Slack, Facebook and iMessage read the OG tags
+  // directly and do not apply robots rules to an unfurl.
   robots: { index: false, follow: false },
   icons: {
     icon: [

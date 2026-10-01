@@ -3,14 +3,15 @@ import { AppScreenshot } from "@/components/landing/AppScreenshot";
 import { LandingFooter, LandingHeader } from "@/components/landing/LandingChrome";
 import { BRAND, LANDING } from "@/lib/brand/copy";
 
-// VERSION B — SPLIT. Copy on the left, read top to bottom like a short brief:
+// THE LANDING PAGE (#32) — Version B, "Split", picked by the owner on
+// 2026-10-01 over Version A, "Stacked" (kept at /shell/landing). Copy on the left, read top to bottom like a short brief:
 // the promise, the button, then the three points as a numbered list. The app
 // sits on the right and runs off the page's edge, so it reads as a window
 // into something bigger rather than a framed picture.
 //
 // Below `lg` it stacks: copy, button, screenshot, points — so a phone sees the
 // app before it has to read the list.
-export function SplitLanding() {
+export function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col gap-12 overflow-x-clip bg-canvas-soft px-4 py-4 text-ink-main sm:px-8">
       <LandingHeader />

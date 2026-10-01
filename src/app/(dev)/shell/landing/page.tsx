@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { VariantThumb } from "@/app/(dev)/shell/detail/preview/VariantThumb";
-import { SplitLanding } from "@/app/(dev)/shell/landing/split/SplitLanding";
 import { StackedLanding } from "@/app/(dev)/shell/landing/stacked/StackedLanding";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 // Index for the Landing Page — #32, two versions for the owner to pick from.
 // Dev-only; see ../layout.tsx for all three gates.
@@ -28,7 +28,7 @@ const VARIANTS = [
     name: "Version B — Split",
     nav: "Copy and numbered points left, app runs off the right edge",
     cost: "The screenshot is cropped on the right at every laptop width, so the Active column is only partly seen. The copy column is narrow, so the description wraps sooner.",
-    Component: SplitLanding,
+    Component: LandingPage,
   },
 ];
 
@@ -46,14 +46,22 @@ export default function LandingVariantsIndex() {
         <h1 className="text-display mt-1">Landing Page — two versions</h1>
         <p className="text-body-md mt-1 max-w-[70ch] text-ink-muted">
           Same words, same screenshot, same button. Only the layout changes.
-          Click a tile to open it full size. On a phone both stack to one
+          <strong className="text-ink-main">Picked on 2026-10-01: Version B, Split.</strong>{" "}
+          It ships at <code className="text-body-sm">/</code> for a signed-out
+          visitor; Stacked is kept as the record of what Split was chosen over
+          and is not maintained past this date. Click a tile to open it full size. On a phone both stack to one
           column, and the screenshot shrinks to the phone&apos;s width in both.
         </p>
       </header>
 
       <div className="flex flex-wrap gap-5">
         {VARIANTS.map(({ Component, ...variant }) => (
-          <VariantThumb key={variant.href} {...variant} {...DESKTOP}>
+          <VariantThumb
+            key={variant.href}
+            {...variant}
+            picked={variant.name === "Version B — Split"}
+            {...DESKTOP}
+          >
             <Component />
           </VariantThumb>
         ))}

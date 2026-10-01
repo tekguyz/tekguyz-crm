@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { LandingPage } from "@/components/landing/LandingPage";
 import { BRAND } from "@/lib/brand/copy";
 
-import { SplitLanding } from "./split/SplitLanding";
 import { StackedLanding } from "./stacked/StackedLanding";
 
 vi.mock("@/lib/demo/start-demo", () => ({
@@ -15,7 +15,7 @@ vi.mock("@/lib/demo/start-demo", () => ({
 // in the browser — jsdom lays nothing out.
 const VARIANTS = [
   ["Stacked", StackedLanding],
-  ["Split", SplitLanding],
+  ["Split", LandingPage],
 ] as const;
 
 describe.each(VARIANTS)("Version %s", (_name, Variant) => {
@@ -34,10 +34,14 @@ describe.each(VARIANTS)("Version %s", (_name, Variant) => {
     }
   });
 
-  it("shows one screenshot of the app", () => {
-    render(<Variant />);
+  it("shows the app's screenshot once per screen size: phone and laptop", () => {
+    const { container } = render(<Variant />);
 
-    expect(screen.getAllByRole("img", { name: /pipeline/i })).toHaveLength(1);
+    // jsdom applies no CSS, so both boxes are present here; in a browser the
+    // `sm:` breakpoint displays exactly one of them.
+    const shots = [...container.querySelectorAll("[data-shot]")];
+    expect(shots.map((shot) => shot.getAttribute("data-shot"))).toEqual(["phone", "laptop"]);
+    for (const shot of shots) expect(shot).toHaveAttribute("role", "img");
   });
 
   it("enters the demo by a form's submit button, never a link", () => {

@@ -28,6 +28,7 @@ Originally moved verbatim out of `CLAUDE.md` during the 2026-07-26 restructure (
 | Dated addenda — July 2026 | [`docs/addenda/2026-07.md`](addenda/2026-07.md) | 26 |
 | Dated addenda — August 2026 | [`docs/addenda/2026-08.md`](addenda/2026-08.md) | 47 |
 | Dated addenda — September 2026 | [`docs/addenda/2026-09.md`](addenda/2026-09.md) | 27 |
+| Dated addenda — October 2026 | [`docs/addenda/2026-10.md`](addenda/2026-10.md) | 1 |
 | Archives — Known Gaps history and CLAUDE.md compressions | [`docs/addenda/archives.md`](addenda/archives.md) | 3 |
 
 ---
@@ -157,3 +158,4 @@ repo matches a title in this column.
 | 2026-09-21 — CLAUDE.md slimmed from 64 KB to 10 KB (Job 4) | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-29 — Each Guest gets their own Demo Org | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-09-30 — Muse Lead Packs: any-channel duplicates, and email is optional | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
+| 2026-10-01 — The Landing Page at `/`, and the middleware that never ran in dev | [`docs/addenda/2026-10.md`](addenda/2026-10.md) |
