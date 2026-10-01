@@ -20,8 +20,7 @@ import {
 // getCurrentOrg would redirect, which is wrong for a download — a 401 is the
 // honest answer.
 //
-// Read-only, so the demo tenant's SELECT-only `demo_readonly` role can use it
-// unchanged; nothing here writes, and no grant or policy is involved.
+// Read-only: nothing here writes, and no grant or policy is involved.
 export const dynamic = "force-dynamic";
 
 export async function GET() {

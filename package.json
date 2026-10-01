@@ -18,7 +18,8 @@
     "seed:demo": "tsx --env-file=.env scripts/seed/create-demo-org.ts",
     "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts",
     "supabase": "node scripts/supabase.mts",
-    "db:push": "node scripts/supabase.mts db push --linked"
+    "db:push": "node scripts/supabase.mts db push --linked",
+    "showcase": "node scripts/showcase.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",
@@ -66,6 +67,7 @@
     "eslint-config-next": "15.5.25",
     "jsdom": "^30.0.1",
     "pg": "^8.23.0",
+    "playwright-core": "1.63.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5",

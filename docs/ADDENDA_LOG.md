@@ -160,3 +160,4 @@ repo matches a title in this column.
 | 2026-09-30 — Muse Lead Packs: any-channel duplicates, and email is optional | [`docs/addenda/2026-09.md`](addenda/2026-09.md) |
 | 2026-10-01 — The Landing Page at `/`, and the middleware that never ran in dev | [`docs/addenda/2026-10.md`](addenda/2026-10.md) |
 | 2026-10-01 — The Landing Page design pass | [`docs/addenda/2026-10.md`](addenda/2026-10.md) |
+| 2026-10-01 — Retire the old demo (#33) | [`docs/addenda/2026-10.md`](addenda/2026-10.md) |
