@@ -9,6 +9,15 @@ export async function updateSession(request: NextRequest) {
   // the visitor's cookies.
   if (request.nextUrl.pathname === "/demo") return NextResponse.next({ request });
 
+  // The Landing Page's real file. Its one public address is `/` (rewritten
+  // below), so a direct visit is sent there: one URL to share, to index and to
+  // preview. No auth call, for the same reason as /demo above.
+  if (request.nextUrl.pathname === "/welcome") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -80,6 +89,19 @@ export async function updateSession(request: NextRequest) {
     path === "/sitemap.xml" ||
     path.startsWith("/icons/") ||
     path.startsWith("/brand/");
+
+  // A signed-out `/` is the Landing Page (#32), not the sign-in form: a link
+  // shared by text or WhatsApp must open on something that explains the app.
+  // A REWRITE, so the address stays `/` and a signed-in user's `/` is still
+  // the app. Any cookie getClaims cleared above (a stale session) is carried
+  // onto the rewrite, or the browser would keep sending it.
+  if (!user && path === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/welcome";
+    const rewrite = NextResponse.rewrite(url, { request });
+    for (const cookie of supabaseResponse.cookies.getAll()) rewrite.cookies.set(cookie);
+    return rewrite;
+  }
 
   if (!user && !isAuthRoute && !isApiRoute && !isPublicMetadataRoute) {
     const url = request.nextUrl.clone();

@@ -4,7 +4,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md";
+export type ButtonSize = "sm" | "md" | "lg";
 
 // Design System v2: every variant is Level 0 — hairline border, no shadow.
 // v1 gave buttons a Level-1 shadow; that is deliberately gone. The -fg tokens
@@ -21,6 +21,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
 const SIZES: Record<ButtonSize, string> = {
   sm: "text-body-sm h-7 gap-1.5 px-2",
   md: "text-body-md h-8 gap-2 px-3",
+  // The Landing Page's one call to action. Same type as md; only the target
+  // grows, because a stranger on a phone presses it with a thumb.
+  lg: "text-body-md h-10 gap-2 px-4",
 };
 
 export function Button({

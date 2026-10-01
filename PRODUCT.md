@@ -13,9 +13,10 @@ enquiries from tekguyz.com, cold prospects, follow-ups, won and lost deals.
 Accounts are invite-only: today the founder plus one or two trusted,
 hand-provisioned collaborators (OWNER / ADMIN / MEMBER roles).
 
-**Secondary: a visitor evaluating the product** through the public, read-only
-`/demo` tenant, linked from the case study on tekguyz.com and from `/login`.
-They can look at everything and change nothing.
+**Secondary: a visitor evaluating the product.** They land on the Landing Page
+at `/` and press "Try the demo", which gives them their own Demo Org filled with
+sample data. They can do everything except the Demo Blocks (email, paid AI,
+credentials, invites, import).
 
 **Later, not now:** other small service businesses as paying tenants. The
 architecture is multi-tenant for that reason, but self-serve signup, billing
@@ -62,7 +63,7 @@ Confirmed by the founder, 2026-09-25:
 - **Shipped:** leads with pipeline stages and SLA "Going Cold" flags; tasks;
   contacts directory; prospects with import and one-transaction promotion;
   reports by period with CSV export; team management and per-lead ownership;
-  help drawer; command palette; idle session timeout; read-only public demo.
+  help drawer; command palette; idle session timeout; a Landing Page at `/` and a per-visitor demo.
 - **Terminology:** *lead* (a live sales record), *prospect* (cold-outreach
   staging, not yet a lead), *contact* (every non-archived lead, any outcome),
   *outcome* (WON / LOST / ABANDONED), *Going Cold* (SLA breach),
@@ -75,7 +76,8 @@ Confirmed by the founder, 2026-09-25:
   webhook (direction wanted, nothing specified); notifications, PWA push
   (offline declined), lead enrichment with a human-apply step, 2FA — see
   `docs/ROADMAP.md`. Onboarding is deferred until a real invite is imminent.
-  A marketing landing page is deferred until self-serve signup exists.
+  A Landing Page at `/` shipped 2026-10-01 for the demo; a signup page waits
+  on self-serve signup.
 
 ## Brand Commitments
 
@@ -89,7 +91,8 @@ Confirmed by the founder, 2026-09-25:
 
 ## Evidence on Hand
 
-- The public read-only demo tenant at `/demo`, seeded by `npm run seed:demo`.
+- The Landing Page at `/` and its demo: each visitor gets their own Demo Org
+  with the Sample Data.
 - The case study on tekguyz.com (`C:/Projects/tekguyz-site`).
 - There are **no customers, testimonials, pricing or usage metrics**. Do not
   fabricate any.

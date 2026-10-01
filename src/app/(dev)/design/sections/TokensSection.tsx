@@ -35,6 +35,7 @@ const RADII = [
 ];
 
 const TYPE_ROLES = [
+  { name: "text-hero", className: "text-hero" },
   { name: "text-display", className: "text-display" },
   { name: "text-h1", className: "text-h1" },
   { name: "text-h2", className: "text-h2" },

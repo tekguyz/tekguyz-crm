@@ -54,6 +54,7 @@ this should read as dense utility). Base body size drops one step for density:
 
 | Role | Size | Weight | Tracking |
 |---|---|---|---|
+| Hero | 36px | 700 | -0.025em, Landing Page headline only |
 | Display | 22px | 700 | -0.015em |
 | Heading-1 | 18px | 650 | -0.01em |
 | Heading-2 | 15px | 600 | -0.01em |

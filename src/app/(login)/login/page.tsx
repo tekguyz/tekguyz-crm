@@ -1,6 +1,7 @@
+import Link from "next/link";
+
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { TryDemoButton } from "@/components/demo/TryDemoButton";
 import { BRAND } from "@/lib/brand/copy";
 
 // /login — the /login redesign, Stage 2: Variant Split, wired 2026-09-15.
@@ -51,12 +52,17 @@ export default async function LoginPage({
           <div className="border-t border-hairline pt-6">
             <p className="text-label uppercase text-ink-muted">Just looking?</p>
             <p className="text-body-sm mt-1 text-ink-muted">
-              The demo is your own workspace with sample data. Add and edit
-              leads freely. It needs no account.
+              The demo is your own workspace with sample data. It needs no
+              account.
             </p>
-            {/* Temporary home for the demo's door, until #32 moves it to the
-                Landing Page. A form post, never a link: see TryDemoButton. */}
-            <TryDemoButton className="mt-3" />
+            {/* A plain link, not the demo's door: the door is the Landing
+                Page's button (#32), and a link must never start the demo. */}
+            <Link
+              href="/"
+              className="text-body-sm mt-3 inline-block text-accent underline underline-offset-2"
+            >
+              See what it does →
+            </Link>
           </div>
         </div>
       </section>

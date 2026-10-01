@@ -25,16 +25,13 @@ describe("/login — Variant Split, wired", () => {
     expect(screen.getByText(BRAND.description)).toBeInTheDocument();
   });
 
-  it("offers the demo as a button that posts, never as a link", async () => {
-    // Until #32's Landing Page, this is the demo's door. A link that starts
-    // the demo is what let a prefetch replace a real session on 2026-09-11,
-    // so the door is a form's submit button and nothing else.
+  it("sends a visitor who is just looking to the Landing Page, with no demo door here", async () => {
+    // The demo's one door is the Landing Page's button (#32). /login only
+    // points there, by a plain link to `/` that starts nothing.
     await renderPage();
 
-    const demo = screen.getByRole("button", { name: "Try the demo" });
-    expect(demo).toHaveAttribute("type", "submit");
-    expect(demo.closest("form")).not.toBeNull();
-    expect(screen.queryByRole("link", { name: /demo/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try the demo" })).toBeNull();
+    expect(screen.getByRole("link", { name: /see what it does/i })).toHaveAttribute("href", "/");
   });
 
   it("never offers a sign-up link — accounts are invite-only", async () => {
