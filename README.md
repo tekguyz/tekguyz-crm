@@ -15,8 +15,8 @@
 | Row | |
 |---|---|
 | Phase | In production. Post-launch feature work. |
-| Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). Landing Page at `/` (#32). Old read-only demo retired in code, showcase screenshots in `showcase/` (#33). |
-| Next | Owner applies the `demo_readonly` drop (#33). See `docs/INITIATIVES.md`. |
+| Shipped | Leads and pipeline, tasks, contacts, reports, team roles, command palette. Muse Lead Pack import: email optional, WhatsApp, duplicates matched on any channel (#37). Demo: each Guest gets their own writable Demo Org (#31). Landing Page at `/` (#32). Old read-only demo retired and its role dropped, showcase screenshots in `showcase/` (#33). |
+| Next | See `docs/INITIATIVES.md`. |
 | Updated | 2026-10-01 |
 
 ## Screenshots
