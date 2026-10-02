@@ -36,7 +36,8 @@
 - Reports by period, with CSV export.
 - Has team roles (owner, admin, member) and per-lead owners.
 - Searches everything with a command palette.
-- Offers a read-only public demo.
+- Offers a public demo: one press gives each visitor their own writable
+  copy with sample data.
 
 ## What it never does
 
