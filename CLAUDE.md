@@ -205,6 +205,11 @@ Moved here from the global rules on 2026-10-04 (claude-config#43).
   token from that file.
 - **One migration in flight at a time.** The history is linear: `db push`
   refuses two open branches that each carry a migration.
+- **Auth emails** (confirm sign-up, reset password) are
+  `supabase/templates/*.html`, sent through Resend as
+  `TEKGUYZ CRM <no-reply@tekguyz.com>`. After editing one, run
+  `npm run auth:emails -- --dry-run`, then `npm run auth:emails`. Keep the
+  link `{{ .ConfirmationURL }}`: `/auth/confirm` takes its `?code=`.
 - When a token is new or changed, run `supabase projects list` and check
   this project is in it. A token from another account cannot see it.
 - **Supabase MCP: on, read-only, this project only** (claude-config#44).

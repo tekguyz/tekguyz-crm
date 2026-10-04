@@ -19,6 +19,7 @@
     "seed:demo:reset": "tsx --env-file=.env scripts/seed/reset-demo-org.ts",
     "supabase": "node scripts/supabase.mts",
     "db:push": "node scripts/supabase.mts db push --linked",
+    "auth:emails": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/auth-emails.mts",
     "showcase": "node scripts/showcase.mjs"
   },
   "dependencies": {
