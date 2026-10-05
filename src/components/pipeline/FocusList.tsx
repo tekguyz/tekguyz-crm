@@ -4,9 +4,9 @@ import { useState, useTransition } from "react";
 import { FocusListCard } from "@/components/pipeline/FocusListCard";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { Lead } from "@/lib/leads/queries";
+import { StageBadge } from "@/components/leads/StageBadge";
 import {
   PIPELINE_STATUSES,
-  PIPELINE_STATUS_LABELS,
   groupLeadsByStatus,
   type PipelineStatus,
 } from "@/lib/leads/pipeline";
@@ -50,8 +50,12 @@ export function FocusList({
       {PIPELINE_STATUSES.map((status) => (
         <section key={status} className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-title">{PIPELINE_STATUS_LABELS[status]}</h2>
-            <span className="text-body-sm text-ink-muted">{groups[status].length}</span>
+            {/* The stage's own colour, same pill as everywhere else — the column
+                header is where a board is scanned from. */}
+            <h2 className="text-title">
+              <StageBadge status={status} className="text-body-sm px-2 py-0.5" />
+            </h2>
+            <span className="text-body-sm text-ink-muted tabular-nums">{groups[status].length}</span>
           </div>
 
           {groups[status].length === 0 ? (

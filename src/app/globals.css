@@ -150,23 +150,22 @@
     --cold: oklch(0.68 0.004 260);
     --cold-fg: oklch(0.55 0.004 260);
 
-    /* Decorative pills: same six hues as v1, chroma x0.78 (a ~22% cut).
-       Lightness is untouched in every pair, so existing fg/bg contrast is
-       preserved and only saturation drops. DESIGN.md v2 specifies the cut for
-       light mode only; the same ratio is applied to dark below so the two
-       themes read as one palette. */
-    --pill-purple-bg: oklch(0.94 0.031 300);
-    --pill-purple-fg: oklch(0.45 0.14 300);
-    --pill-pink-bg: oklch(0.94 0.035 350);
-    --pill-pink-fg: oklch(0.5 0.148 350);
-    --pill-orange-bg: oklch(0.94 0.039 55);
-    --pill-orange-fg: oklch(0.48 0.133 45);
-    --pill-teal-bg: oklch(0.94 0.031 195);
-    --pill-teal-fg: oklch(0.45 0.078 195);
-    --pill-green-bg: oklch(0.94 0.039 145);
-    --pill-green-fg: oklch(0.45 0.109 145);
-    --pill-sky-bg: oklch(0.94 0.023 235);
-    --pill-sky-fg: oklch(0.48 0.094 235);
+    /* Pills: the six hues that carry stage, avatar and category colour.
+       Retuned 2026-10-05: the old x0.78 chroma cut read as grey on screen, so
+       chroma is back up. Lightness is untouched in every pair, so fg/bg
+       contrast is unchanged — only saturation rose. */
+    --pill-purple-bg: oklch(0.94 0.045 300);
+    --pill-purple-fg: oklch(0.45 0.17 300);
+    --pill-pink-bg: oklch(0.94 0.05 350);
+    --pill-pink-fg: oklch(0.5 0.18 350);
+    --pill-orange-bg: oklch(0.94 0.055 65);
+    --pill-orange-fg: oklch(0.48 0.15 50);
+    --pill-teal-bg: oklch(0.94 0.045 195);
+    --pill-teal-fg: oklch(0.45 0.1 195);
+    --pill-green-bg: oklch(0.94 0.055 150);
+    --pill-green-fg: oklch(0.45 0.14 150);
+    --pill-sky-bg: oklch(0.94 0.04 240);
+    --pill-sky-fg: oklch(0.48 0.14 250);
 
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06),
@@ -219,18 +218,18 @@
     --cold: oklch(0.42 0.006 260);
     --cold-fg: oklch(0.59 0.006 260);
 
-    --pill-purple-bg: oklch(0.3 0.062 300);
-    --pill-purple-fg: oklch(0.86 0.047 300);
-    --pill-pink-bg: oklch(0.3 0.07 350);
-    --pill-pink-fg: oklch(0.87 0.055 350);
-    --pill-orange-bg: oklch(0.3 0.07 55);
-    --pill-orange-fg: oklch(0.85 0.055 55);
-    --pill-teal-bg: oklch(0.3 0.047 195);
-    --pill-teal-fg: oklch(0.85 0.039 195);
-    --pill-green-bg: oklch(0.3 0.062 145);
-    --pill-green-fg: oklch(0.85 0.047 145);
-    --pill-sky-bg: oklch(0.3 0.039 235);
-    --pill-sky-fg: oklch(0.85 0.039 235);
+    --pill-purple-bg: oklch(0.3 0.08 300);
+    --pill-purple-fg: oklch(0.84 0.1 300);
+    --pill-pink-bg: oklch(0.3 0.085 350);
+    --pill-pink-fg: oklch(0.85 0.1 350);
+    --pill-orange-bg: oklch(0.31 0.075 60);
+    --pill-orange-fg: oklch(0.85 0.11 65);
+    --pill-teal-bg: oklch(0.3 0.06 195);
+    --pill-teal-fg: oklch(0.85 0.08 195);
+    --pill-green-bg: oklch(0.3 0.075 150);
+    --pill-green-fg: oklch(0.85 0.11 150);
+    --pill-sky-bg: oklch(0.3 0.07 250);
+    --pill-sky-fg: oklch(0.84 0.09 245);
 
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.18);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2),

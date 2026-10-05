@@ -25,18 +25,16 @@ export function TodayAgenda({
   currencyFormat: string;
 }) {
   return (
-    // Tasks Due sits full-width above the lead grid rather than becoming a
-    // fourth column: it's org-wide and cross-cutting (explicit user-committed
-    // work), not another per-lead pipeline slice, and a 4th column would
-    // squeeze all four. The existing 3-column grid below is untouched.
-    <div className="flex flex-col gap-6">
-      {/* Above Tasks Due: a lead the shield may have wrongly flagged is the
+    // Four capped panels in a 2x2 grid, so every queue is on the first screen.
+    // Tasks Due leads (top left): it is explicit, user-committed work, and SLA
+    // Critical sits beside it as the other "late" list.
+    <div className="flex flex-col gap-4">
+      {/* Above the grid: a lead the shield may have wrongly flagged is the
           most perishable item on this page. Self-hiding when empty. */}
       <NeedsReviewQueue leads={flaggedLeads} />
 
-      <TasksDueQueue tasks={tasksDue} orgTimezone={orgTimezone} />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TasksDueQueue tasks={tasksDue} orgTimezone={orgTimezone} />
         <SlaCriticalQueue
           leads={slaCriticalLeads}
           orgTimezone={orgTimezone}

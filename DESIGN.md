@@ -5,9 +5,14 @@ implemented as original tokens — no code, CSS, or config copied from Twenty's
 (AGPL-3.0) source. Scoped to TEKGUYZ CRM's actual existing surface area only.
 
 ## Philosophy
-Dense, neutral, monochrome-first data tool. Structure communicated through hairline
-borders and spacing, not shadow. Color is signal, not decoration — reserved almost
-entirely for status/category tags. One accent, used sparingly. Outline iconography,
+Dense, neutral data tool. Structure communicated through hairline borders and
+spacing, not shadow. Color is signal, not decoration — but every signal gets its
+colour. **Revised 2026-10-05:** "monochrome-first" is retired. In practice it left
+Today and Pipeline grey from edge to edge, which is the opposite of how Twenty
+reads. Now: every pipeline stage shows its hue (pill with a dot, column header),
+every person and lead carries a coloured initials avatar, queue headers carry a
+coloured icon, and an overdue date is `--danger` text. Surfaces stay neutral; one
+accent, used sparingly. Outline iconography,
 not filled. This is a utility instrument, not a marketing surface — resist the
 "friendly SaaS" instinct toward soft shadows, big radii, and generous whitespace.
 
@@ -33,7 +38,12 @@ pill palette (purple/pink/orange/teal/green/sky) is retained structurally but
 desaturate each by roughly 20–25% from current values in light mode — Twenty's
 tag chips read muted/pastel, not saturated.
 
-As implemented (2026-08-14), the cut is chroma × 0.78 (a ~22% reduction) with
+**Retuned 2026-10-05:** the ×0.78 cut is reversed and chroma raised past v1 in
+both themes (light fg ≈0.10–0.18, dark fg ≈0.08–0.11; lightness untouched, so
+every fg/bg contrast pair is unchanged). On screen the cut read as grey, not
+pastel. `globals.css` holds the values.
+
+As first implemented (2026-08-14), the cut was chroma × 0.78 (a ~22% reduction) with
 lightness untouched in every pair, so existing fg/bg contrast is preserved and
 only saturation drops. **The same ×0.78 ratio is applied to dark mode**, which
 this draft left unspecified — the two themes have to read as one palette, and
@@ -105,9 +115,14 @@ step zero for the actual current library and full swap mapping.
 These encode real business logic and must survive the re-skin with identical
 behavior, restyled to the new tokens:
 - **Going Cold SLA rule**: `next_action_at` overdue → card border switches to
-  `--cold` dashed (was solid gray dashed, same idea, new hue), badge desaturates.
-- **Decorative pill palette**: still status/category dots only, never borders or
-  primary buttons — recalibrated to the desaturated palette above.
+  `--cold` dashed (was solid gray dashed, same idea, new hue). **Revised
+  2026-10-05:** the stage badge and star no longer desaturate — greying them made
+  every late lead look disabled, and in a pipeline where most leads are late the
+  whole board went grey. The late signal is now `DueLabel`: the date in words
+  ("3d overdue") in `--danger` with an alert icon.
+- **Stage pills** (`StageBadge`, tones from `STATUS_TONE`): New sky, Discovery
+  purple, Quoted orange, Active green. Same pill on Today rows, Pipeline column
+  headers and Focus List headers. Still never borders or primary buttons.
 - **Resurrection Engine, click-to-action shortcuts, drag/reorder**: pure
   behavior, zero visual footprint — untouched by this initiative.
 

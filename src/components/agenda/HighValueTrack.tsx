@@ -1,3 +1,5 @@
+import { IconCurrencyDollar } from "@tabler/icons-react";
+import { AgendaPanel } from "@/components/agenda/AgendaPanel";
 import { LeadCard } from "@/components/agenda/LeadCard";
 import type { Lead } from "@/lib/leads/queries";
 
@@ -11,20 +13,18 @@ export function HighValueTrack({
   currencyFormat: string;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-title">High-Value</h2>
-      {leads.length === 0 ? (
-        <p className="text-body-md text-ink-muted">No active leads yet.</p>
-      ) : (
-        leads.map((lead) => (
-          <LeadCard
-            key={lead.id}
-            lead={lead}
-            orgTimezone={orgTimezone}
-            currencyFormat={currencyFormat}
-          />
-        ))
-      )}
-    </section>
+    <AgendaPanel
+      title="High-Value"
+      icon={<IconCurrencyDollar aria-hidden="true" size={18} stroke={1.75} className="text-pill-green-fg" />}
+      emptyText="No active leads yet."
+      items={leads.map((lead) => (
+        <LeadCard
+          key={lead.id}
+          lead={lead}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+        />
+      ))}
+    />
   );
 }
