@@ -27,7 +27,7 @@ const FIELD_BLOCK_MARKERS = [
   /lead\.company\b/,
   /lead\.is_starred\b/,
   /\bformatCurrency\b/,
-  /\bformatDueAt\b/,
+  /\bDueLabel\b/,
   /\bIconStar\b/,
   /\bAssigneeLabel\b/,
 ];

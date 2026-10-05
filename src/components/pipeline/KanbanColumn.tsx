@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { KanbanCard } from "@/components/pipeline/KanbanCard";
 import type { Lead } from "@/lib/leads/queries";
-import { PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipeline";
+import { StageBadge } from "@/components/leads/StageBadge";
+import type { PipelineStatus } from "@/lib/leads/pipeline";
 
 export function KanbanColumn({
   status,
@@ -44,8 +45,12 @@ export function KanbanColumn({
       }`}
     >
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-title">{PIPELINE_STATUS_LABELS[status]}</h2>
-        <span className="text-body-sm text-ink-muted">{leads.length}</span>
+        {/* The stage's own colour, same pill as everywhere else — the column
+            header is where a board is scanned from. */}
+        <h2 className="text-title">
+          <StageBadge status={status} className="text-body-sm px-2 py-0.5" />
+        </h2>
+        <span className="text-body-sm text-ink-muted tabular-nums">{leads.length}</span>
       </div>
 
       <div className="flex flex-1 flex-col gap-2">

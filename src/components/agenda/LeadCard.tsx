@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { isOverdue, formatDueAt, formatCurrency } from "@/lib/format";
+import { IconStar } from "@tabler/icons-react";
+import { formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { STATUS_TONE } from "@/lib/leads/status-tone";
+import { StageBadge } from "@/components/leads/StageBadge";
+import { DueLabel } from "@/components/leads/DueLabel";
+import { Avatar } from "@/components/ui/Avatar";
 
+// One row in a Today queue (AgendaPanel). It was a full Card per lead, which
+// made each queue several screens long; a row carries the same fields in a
+// third of the height. Going Cold now reads from DueLabel's red "overdue"
+// text — the stage pill keeps its colour either way.
 export function LeadCard({
   lead,
   orgTimezone,
@@ -18,53 +23,43 @@ export function LeadCard({
   currencyFormat: string;
 }) {
   const [open, setOpen] = useState(false);
-  const overdue = isOverdue(lead.next_action_at);
 
   return (
-    <>
-      {/* The native <button> is kept as an outer wrapper rather than moving to
-          Card + role="button": Card renders a <div>, and swapping a real button
-          for a div would be an accessibility downgrade the v2 rollout has no
-          reason to spend. The wrapper carries layout only, no design tokens. */}
+    <li>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="block w-full text-left"
+        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-canvas-soft"
       >
-        {/* Going Cold: `cold` is the same dashed --cold border the hand-rolled
-            ternary drew. v1's hover shadow is gone because v2 cards are Level 0
-            — a canvas-soft wash carries the hover affordance instead. */}
-        <Card cold={overdue} className="p-3 transition-colors hover:bg-canvas-soft">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-body-md truncate font-medium">{lead.client_name}</p>
-              {lead.company && (
-                <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
-              )}
-            </div>
-            {/* The overdue badge stays on the neutral tone, which is the exact
-                token pair the v1 treatment used. It was originally forced here
-                because Badge's `cold` tone failed WCAG AA — that failure is
-                fixed as of 2026-08-17 (`--cold-fg`, 4.58:1 light / 4.84:1 dark,
-                see docs/ADDENDA_LOG.md), so `tone="cold"` is now a legitimate
-                option. Adopting it is a live design change to a business signal
-                and is left as its own decision, not a side effect of the token
-                fix. */}
-            <Badge
-              tone={overdue ? "neutral" : (STATUS_TONE[lead.status] ?? "sky")}
-              className="shrink-0 rounded-full px-2"
-            >
-              {lead.status}
-            </Badge>
+        <Avatar name={lead.client_name} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="text-body-md flex items-center gap-1.5 font-medium">
+            <span className="truncate">{lead.client_name}</span>
+            {lead.is_starred ? (
+              <IconStar
+                role="img"
+                aria-label="Starred"
+                stroke={1.75}
+                className="size-3.5 shrink-0 fill-pill-orange-fg text-pill-orange-fg"
+              />
+            ) : null}
+          </p>
+          {lead.company ? (
+            <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <div className="flex items-center gap-2">
+            <StageBadge status={lead.status} />
+            <span className="text-body-md w-16 text-right font-medium tabular-nums">
+              {formatCurrency(lead.estimated_revenue, currencyFormat)}
+            </span>
           </div>
-          <div className="text-body-sm mt-2 flex items-center justify-between text-ink-muted">
-            <span>{formatCurrency(lead.estimated_revenue, currencyFormat)}</span>
-            <span>{formatDueAt(lead.next_action_at, orgTimezone)}</span>
-          </div>
-        </Card>
+          <DueLabel at={lead.next_action_at} timeZone={orgTimezone} />
+        </div>
       </button>
 
       <EditLeadDrawer lead={lead} open={open} onClose={() => setOpen(false)} />
-    </>
+    </li>
   );
 }

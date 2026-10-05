@@ -120,7 +120,7 @@ is how five `leads` columns were silently NULLed across two incidents.
 
 ## Design system
 
-A dense, neutral, monochrome-first data tool. Structure comes from hairline
+A dense, neutral data tool; every signal gets its colour ("monochrome-first" retired 2026-10-05). Structure comes from hairline
 borders and spacing, not shadow. Colour is signal, not decoration.
 
 - **`src/app/globals.css` is the single source of truth for every token value.**

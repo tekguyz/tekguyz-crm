@@ -1,3 +1,5 @@
+import { IconAlertTriangle } from "@tabler/icons-react";
+import { AgendaPanel } from "@/components/agenda/AgendaPanel";
 import { LeadCard } from "@/components/agenda/LeadCard";
 import type { Lead } from "@/lib/leads/queries";
 
@@ -11,20 +13,18 @@ export function SlaCriticalQueue({
   currencyFormat: string;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-title">SLA Critical</h2>
-      {leads.length === 0 ? (
-        <p className="text-body-md text-ink-muted">Nothing overdue.</p>
-      ) : (
-        leads.map((lead) => (
-          <LeadCard
-            key={lead.id}
-            lead={lead}
-            orgTimezone={orgTimezone}
-            currencyFormat={currencyFormat}
-          />
-        ))
-      )}
-    </section>
+    <AgendaPanel
+      title="SLA Critical"
+      icon={<IconAlertTriangle aria-hidden="true" size={18} stroke={1.75} className="text-danger" />}
+      emptyText="Nothing overdue."
+      items={leads.map((lead) => (
+        <LeadCard
+          key={lead.id}
+          lead={lead}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+        />
+      ))}
+    />
   );
 }

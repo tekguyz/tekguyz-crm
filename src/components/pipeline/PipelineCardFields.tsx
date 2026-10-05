@@ -1,10 +1,11 @@
 "use client";
 
 import { IconStar } from "@tabler/icons-react";
-import { formatCurrency, formatDueAt } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
-import { cn } from "@/lib/utils/cn";
+import { DueLabel } from "@/components/leads/DueLabel";
+import { Avatar } from "@/components/ui/Avatar";
 
 // THE ONE FIELD BLOCK both pipeline cards render — Variant Grouped, picked
 // 2026-09-11 in Shell/IA Stage 1 prompt 3. KanbanCard and FocusListCard each
@@ -26,36 +27,32 @@ import { cn } from "@/lib/utils/cn";
 // A missing company or assignee drops out with its separator, so a sparse lead
 // reads "Sep 14, 2:00 PM" rather than " · Sep 14, 2:00 PM · ".
 //
-// `cold` comes from the card, which computes it once for Card's own `cold`
-// prop — this component never derives it a second time.
+// 2026-10-05: an initials avatar leads the name row, and the date is DueLabel
+// ("3d overdue" in red), so a late lead is named as late instead of being
+// greyed out. The star keeps its colour on a cold card for the same reason.
+// `cold` is still accepted from the cards but no longer changes this block.
 export function PipelineCardFields({
   lead,
-  cold,
   orgTimezone,
   currencyFormat,
 }: {
   lead: Lead;
-  cold: boolean;
+  cold?: boolean;
   orgTimezone: string;
   currencyFormat: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Avatar name={lead.client_name} size="sm" />
           <p className="text-body-md truncate font-medium">{lead.client_name}</p>
           {lead.is_starred && (
-            // Desaturated when cold: the Going Cold rule's "desaturates" half,
-            // now that the card has no status badge for it to act on. Labelled,
-            // unlike the pre-Grouped star, so a screen reader learns it too.
             <IconStar
               role="img"
               aria-label="Starred"
               stroke={1.75}
-              className={cn(
-                "size-4 shrink-0",
-                cold ? "fill-ink-muted text-ink-muted" : "fill-pill-orange-fg text-pill-orange-fg",
-              )}
+              className="-ml-1 size-3.5 shrink-0 fill-pill-orange-fg text-pill-orange-fg"
             />
           )}
         </div>
@@ -71,9 +68,7 @@ export function PipelineCardFields({
             <span aria-hidden="true">·</span>
           </>
         ) : null}
-        <span className="shrink-0 whitespace-nowrap">
-          {formatDueAt(lead.next_action_at, orgTimezone)}
-        </span>
+        <DueLabel at={lead.next_action_at} timeZone={orgTimezone} className="text-caption" />
         {lead.assigned_to ? (
           <>
             <span aria-hidden="true">·</span>

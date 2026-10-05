@@ -1,20 +1,17 @@
 import Link from "next/link";
-import { isOverdue, formatDueAt } from "@/lib/format";
+import { IconChecklist } from "@tabler/icons-react";
 import type { TaskDue } from "@/lib/tasks/queries";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { AgendaPanel } from "@/components/agenda/AgendaPanel";
 import { TaskDismissButton } from "@/components/agenda/TaskDismissButton";
+import { DueLabel } from "@/components/leads/DueLabel";
 
 // Named to match its real siblings (SlaCriticalQueue / HighValueTrack /
 // StarredWorkspace), which use a <Concept><Container> shape with no "Section"
 // suffix.
 //
-// Deliberately does NOT reuse the "Going Cold" SLA treatment (dashed --cold
-// border + grayscale pill) that LeadCard uses. An overdue task and a lead
-// breaching its next_action_at SLA are different concepts, and letting them
-// share a visual language would imply a relationship that doesn't exist — so
-// an overdue task gets a decorative orange status pill instead, per the design
-// system's rule that the decorative palette is for status badges only.
+// One line per task: what to do, for whom, and when. Each used to be a
+// full-width two-line card, so five tasks filled the screen. An overdue task
+// says so in red through DueLabel, the same words a late lead uses.
 export function TasksDueQueue({
   tasks,
   orgTimezone,
@@ -23,56 +20,36 @@ export function TasksDueQueue({
   orgTimezone: string;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-title">Tasks Due</h2>
-      {tasks.length === 0 ? (
-        <p className="text-body-md text-ink-muted">No tasks due.</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {tasks.map((task) => {
-            // isOverdue is a plain instant comparison (see lib/format.ts) —
-            // correct for due_at as-is, despite its lead-oriented param name.
-            const overdue = isOverdue(task.due_at);
-
-            return (
-              // The dismiss control sits OUTSIDE the <Link>, so the row is a
-              // flex pair rather than a bare anchor: a <button> inside an <a>
-              // is invalid HTML.
-              <li key={task.id} className="flex items-center gap-1">
-                {/* Reuses the app-wide ?leadId= deep link that
-                    ProfileSheetController (mounted in AppShell) already
-                    listens for — no second sheet-opening mechanism. */}
-                <Link href={`/?leadId=${task.lead_id}`} className="block min-w-0 flex-1">
-                  {/* Card is Level 0, so v1's elevation-1 → elevation-2 hover
-                      is replaced by a canvas-soft wash, same as the lead
-                      cards. `cold` is deliberately NOT passed — see the note
-                      above on why an overdue task and an SLA-breaching lead
-                      must not share a visual language. */}
-                  <Card className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-canvas-soft">
-                    <div className="min-w-0">
-                      <p className="text-body-md truncate font-medium">{task.title}</p>
-                      <p className="text-body-sm truncate text-ink-muted">
-                        {task.client_name}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {overdue && (
-                        <Badge tone="orange" className="rounded-full px-2">
-                          Overdue
-                        </Badge>
-                      )}
-                      <span className="text-body-sm text-ink-muted">
-                        {formatDueAt(task.due_at, orgTimezone)}
-                      </span>
-                    </div>
-                  </Card>
-                </Link>
-                <TaskDismissButton taskId={task.id} title={task.title} />
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+    <AgendaPanel
+      title="Tasks Due"
+      icon={<IconChecklist aria-hidden="true" size={18} stroke={1.75} className="text-pill-sky-fg" />}
+      emptyText="No tasks due."
+      items={tasks.map((task) => (
+        // The dismiss control sits OUTSIDE the <Link>, so the row is a flex
+        // pair rather than a bare anchor: a <button> inside an <a> is invalid
+        // HTML.
+        <li key={task.id} className="flex items-center pr-1">
+          {/* Reuses the app-wide ?leadId= deep link that
+              ProfileSheetController (mounted in AppShell) already listens
+              for — no second sheet-opening mechanism. */}
+          <Link
+            href={`/?leadId=${task.lead_id}`}
+            className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-canvas-soft"
+          >
+            {/* One line from sm up; on a phone the client drops to a second
+                line instead of being truncated away. */}
+            <span className="text-body-md flex min-w-0 flex-1 flex-col sm:flex-row sm:gap-1">
+              <span className="truncate font-medium sm:shrink-0 sm:max-w-[70%]">{task.title}</span>
+              <span className="text-body-sm sm:text-body-md truncate text-ink-muted">
+                <span aria-hidden="true" className="hidden sm:inline">· </span>
+                {task.client_name}
+              </span>
+            </span>
+            <DueLabel at={task.due_at} timeZone={orgTimezone} />
+          </Link>
+          <TaskDismissButton taskId={task.id} title={task.title} />
+        </li>
+      ))}
+    />
   );
 }
