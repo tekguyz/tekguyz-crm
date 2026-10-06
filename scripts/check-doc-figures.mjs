@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Status-sync audit, check 10 — assertion drift.
+// Doc audit checks, check 10 — assertion drift.
 //
 // Checks 1-8 are CHANGE-driven: they start from a commit, a session's work, or
 // a doc entry and ask "is anything downstream stale?" That leaves a hole. A doc
@@ -54,7 +54,7 @@ if (gaps !== null) {
     const [, claimedTests, claimedSuites] = [m[0], Number(m[1]), Number(m[2])];
 
     // Counting the tests means running them, and running them is ~60s. That is
-    // paid on EVERY `npm run check:docs`, which the status-sync skill runs every
+    // paid on EVERY `npm run check:docs`, which status work runs every
     // time — so a normal day of status syncs spent ten minutes re-deriving a number
     // that changes maybe twice a week. The count is a pure function of the test
     // files and the vitest config, so it is cached against a hash of exactly

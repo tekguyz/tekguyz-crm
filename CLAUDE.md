@@ -266,9 +266,17 @@ terms/decisions resolve. See `docs/agents/domain.md`.
 
 ### Repo skills
 
-- `.claude/skills/status-sync/` — the cheap pass. Audits `docs/INITIATIVES.md`,
-  `docs/ADDENDA_LOG.md`, `docs/KNOWN_GAPS.md` and `docs/SCHEMA_REFERENCE.md`
-  from check-script output. It reports; it never pastes anything anywhere.
-  Renamed from `handoff` 2026-09-20.
+- `status-sync` — the cheap pass. One global skill from `claude-config` since
+  2026-10-06 (claude-config#39); the repo copy is gone. This repo's rules for it
+  are in § Status work.
 - `.claude/skills/doc-audit/` — the heavy pass. Measures the docs against the
   repo, repairs them, and commits.
+
+## Status work
+
+- Run the global `status-sync` skill. Then run `npm run check:docs` and `npm run check:residue`, and read their output, not the docs they check. Exit 2 means a check could not run. That is not a pass.
+- `check:residue` needs `.env`. Run it through the PowerShell tool, not Bash.
+- Before a commit that edits docs, run `npm run check:docs`.
+- Never open `docs/SCHEMA_REFERENCE.md`, `DESIGN.md` or `docs/ADDENDA_LOG.md` for a status sync. Read `docs/INITIATIVES.md` for the initiative status table.
+- Nothing in the "Permanently rejected — never re-list" list in `docs/KNOWN_GAPS.md` is ever raised as a finding.
+- Never repair a doc during a status sync. If a check reports drift, name it and run the `doc-audit` skill.

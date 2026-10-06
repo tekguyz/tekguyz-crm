@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * DESIGN.md <-> globals.css drift check (status-sync skill, Job 1 check 9).
+ * DESIGN.md <-> globals.css drift check (doc audit checks, Job 1 check 9).
  *
  * Cheap and mechanical on purpose. It compares ONLY the values DESIGN.md
  * states in its three token tables against src/app/globals.css, which
