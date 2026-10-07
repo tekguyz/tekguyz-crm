@@ -22,8 +22,8 @@
 ## Screenshots
 
 <p align="center">
-  <img src="showcase/today-desktop.png" alt="Today: the leads that need a reply" height="480">
-  <img src="showcase/pipeline-desktop.png" alt="Pipeline: every lead by stage" height="480">
+  <img src="showcase/today-desktop-light.png" alt="Today: the leads that need a reply" height="480">
+  <img src="showcase/pipeline-desktop-light.png" alt="Pipeline: every lead by stage" height="480">
 </p>
 
 ## What it does
