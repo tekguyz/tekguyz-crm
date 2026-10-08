@@ -33,8 +33,8 @@ export default async function LoginPage({
   const { error, message, next } = await searchParams;
 
   return (
-    <main className="grid min-h-dvh bg-canvas-pure text-ink-main md:grid-cols-2">
-      <section className="hidden flex-col gap-10 border-r border-hairline bg-canvas-soft p-10 md:flex">
+    <main className="grid min-h-dvh bg-canvas-pure text-ink-main md:h-dvh md:grid-cols-2 md:grid-rows-[minmax(0,1fr)]">
+      <section className="hidden flex-col gap-6 overflow-y-auto border-r border-hairline bg-canvas-soft p-10 md:flex">
         <div className="flex items-center gap-2">
           {/* 28px, so BrandMark picks the reduced form on its own. */}
           <BrandMark height={28} />
@@ -43,7 +43,7 @@ export default async function LoginPage({
 
         {/* One centred group, not blocks pushed to the pane's edges: with
             justify-between the demo read as a stray footer at 800px tall. */}
-        <div className="flex max-w-md flex-1 flex-col justify-center gap-8">
+        <div className="flex min-h-0 w-full max-w-lg flex-1 flex-col justify-center gap-6">
           <div>
             <p className="text-display">{BRAND.tagline}</p>
             <p className="text-body-md mt-2 text-ink-muted">{BRAND.description}</p>
@@ -61,17 +61,23 @@ export default async function LoginPage({
           {/* A real capture of the Pipeline (showcase/pipeline-desktop-light,
               1440x900), never a drawn mockup. A background image in a role="img"
               box, as the Landing Page's AppScreenshot does it. */}
-          <div
-            role="img"
-            aria-label="The TEKGUYZ CRM pipeline: leads in stages, each card showing a name, company, value and next date."
-            className="aspect-[1440/900] w-full rounded-lg border border-hairline bg-canvas-pure bg-cover bg-top-left bg-no-repeat"
-            style={{ backgroundImage: "url(/login/pipeline-desktop-light.webp)" }}
-          />
+          {/* The wrapper shrinks when the window is short and the picture is
+              capped to it, so the box gets wider than its capture and bg-cover
+              crops the bottom, not the sides. Both halves then fit one screen:
+              the link below the picture is never scrolled off. */}
+          <div className="min-h-40 shrink">
+            <div
+              role="img"
+              aria-label="The TEKGUYZ CRM pipeline: leads in stages, each card showing a name, value and next date."
+              className="aspect-[1440/900] max-h-full w-full rounded-lg border border-hairline bg-canvas-pure bg-cover bg-top-left bg-no-repeat"
+              style={{ backgroundImage: "url(/login/pipeline-desktop-light.webp)" }}
+            />
+          </div>
 
           {/* No self-serve signup link anywhere on this page: account creation
               is invite-only, and an invitee arrives through /invite/<token>.
               What a stranger gets instead is a way to see the product. */}
-          <div className="border-t border-hairline pt-6">
+          <div className="shrink-0 border-t border-hairline pt-5">
             <p className="text-label uppercase text-ink-muted">Just looking?</p>
             <p className="text-body-sm mt-1 text-ink-muted">
               The demo is your own workspace with sample data. It needs no
@@ -89,7 +95,7 @@ export default async function LoginPage({
         </div>
       </section>
 
-      <section className="flex items-center justify-center p-6 md:p-10">
+      <section className="flex items-center justify-center overflow-y-auto p-6 md:p-10">
         <div className="w-full max-w-sm">
           <h1 className="text-h1">Sign in</h1>
           <p className="text-body-sm mt-1 text-ink-muted">Accounts are by invitation only.</p>
