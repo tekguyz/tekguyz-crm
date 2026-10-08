@@ -1,8 +1,9 @@
+import { IconCheck } from "@tabler/icons-react";
 import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { BRAND } from "@/lib/brand/copy";
+import { BRAND, LANDING } from "@/lib/brand/copy";
 
 // /login — the /login redesign, Stage 2: Variant Split, wired 2026-09-15.
 //
@@ -18,10 +19,12 @@ import { BRAND } from "@/lib/brand/copy";
 // the demo as its own explained block; the form stands alone beside it. Two
 // columns from `md` up.
 //
-// ON A PHONE THE FORM COMES FIRST. The brand pane is first in the DOM, so a
-// screen reader meets the product before the form, but `order-last` moves it
-// under the form below `md` — someone who came to sign in on a phone should
-// not scroll past a pitch to do it. CSS only; no viewport check in JS.
+// ON A PHONE THE FORM IS ALL THERE IS (DEMO-STANDARD.md item 9). The brand pane
+// is `hidden` below `md`, so it is out of the accessibility tree there too —
+// someone who came to sign in on a phone should not scroll past a pitch to do
+// it. CSS only; no viewport check in JS. On desktop the pane carries the
+// product's name and line, the Landing Page's own three points (imported from
+// LANDING, never retyped), one real capture, and the link to the Landing Page.
 export default async function LoginPage({
   searchParams,
 }: {
@@ -31,7 +34,7 @@ export default async function LoginPage({
 
   return (
     <main className="grid min-h-dvh bg-canvas-pure text-ink-main md:grid-cols-2">
-      <section className="order-last flex flex-col gap-10 border-t border-hairline bg-canvas-soft p-6 md:order-first md:border-t-0 md:border-r md:p-10">
+      <section className="hidden flex-col gap-10 border-r border-hairline bg-canvas-soft p-10 md:flex">
         <div className="flex items-center gap-2">
           {/* 28px, so BrandMark picks the reduced form on its own. */}
           <BrandMark height={28} />
@@ -45,6 +48,25 @@ export default async function LoginPage({
             <p className="text-display">{BRAND.tagline}</p>
             <p className="text-body-md mt-2 text-ink-muted">{BRAND.description}</p>
           </div>
+
+          <ul className="flex flex-col gap-2">
+            {LANDING.points.map((point) => (
+              <li key={point.title} className="text-body-sm flex items-center gap-2">
+                <IconCheck className="size-4 shrink-0 text-ink-muted" stroke={1.75} aria-hidden />
+                {point.title}
+              </li>
+            ))}
+          </ul>
+
+          {/* A real capture of the Pipeline (showcase/pipeline-desktop-light,
+              1440x900), never a drawn mockup. A background image in a role="img"
+              box, as the Landing Page's AppScreenshot does it. */}
+          <div
+            role="img"
+            aria-label="The TEKGUYZ CRM pipeline: leads in stages, each card showing a name, company, value and next date."
+            className="aspect-[1440/900] w-full rounded-lg border border-hairline bg-canvas-pure bg-cover bg-top-left bg-no-repeat"
+            style={{ backgroundImage: "url(/login/pipeline-desktop-light.webp)" }}
+          />
 
           {/* No self-serve signup link anywhere on this page: account creation
               is invite-only, and an invitee arrives through /invite/<token>.

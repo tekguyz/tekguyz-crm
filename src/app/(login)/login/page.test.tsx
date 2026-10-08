@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { BRAND } from "@/lib/brand/copy";
+import { BRAND, LANDING } from "@/lib/brand/copy";
 
 vi.mock("@/lib/auth/actions", () => ({
   signIn: vi.fn(),
@@ -23,6 +23,19 @@ describe("/login — Variant Split, wired", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByText(BRAND.tagline)).toBeInTheDocument();
     expect(screen.getByText(BRAND.description)).toBeInTheDocument();
+  });
+
+  it("shows the Landing Page's own points and one real capture, and hides the pane on a phone", async () => {
+    const { container } = await renderPage();
+
+    for (const point of LANDING.points) {
+      expect(screen.getByText(point.title)).toBeInTheDocument();
+    }
+    expect(screen.getByRole("img", { name: /pipeline/i })).toHaveStyle({
+      backgroundImage: "url(/login/pipeline-desktop-light.webp)",
+    });
+    // Phone width shows the form only: the brand pane is display:none below md.
+    expect(container.querySelector("section")).toHaveClass("hidden", "md:flex");
   });
 
   it("sends a visitor who is just looking to the Landing Page, with no demo door here", async () => {
