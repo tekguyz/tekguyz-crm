@@ -246,25 +246,18 @@ Moved here from the global rules on 2026-10-04 (claude-config#43).
   file.** Files run in parallel; two files sweeping delete each other's
   fixtures.
 
-## Agent skills
-
-### Issue tracker
+## Issues and labels
 
 New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and
-`docs/ADDENDA_LOG.md` keep governing existing/deferred items per the rule above
-— this doesn't replace that. See `docs/agents/issue-tracker.md`.
+`docs/ADDENDA_LOG.md` keep governing existing and deferred items, per the rule
+above. Labels: `needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`, and `size:small`, `size:feature`, `size:big`. What
+each `size:` label means is in the global rules.
 
-### Triage labels
+Terms go in `CONTEXT.md` and decisions in `docs/adr/`, at the repo root, created
+lazily as they resolve.
 
-Default five: `needs-triage`, `needs-info`, `ready-for-agent`,
-`ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, created lazily as
-terms/decisions resolve. See `docs/agents/domain.md`.
-
-### Repo skills
+## Repo skills
 
 - `status-sync` — the cheap pass. One global skill from `claude-config` since
   2026-10-06 (claude-config#39); the repo copy is gone. This repo's rules for it
