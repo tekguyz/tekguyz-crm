@@ -41,6 +41,9 @@ export type NewLeadInput = {
   leadSource?: string | null;
   serviceCategory?: string | null;
   estimatedRevenue?: number;
+  // The pipeline stage the lead starts in. Left out, the column's own default
+  // (NEW) applies. The caller validates it against the four pipeline stages.
+  status?: string;
   // createLead passes nothing and stores NULL, because its form has no message
   // field and inventing one would be a fake record of an enquiry that never
   // happened. (Prospect promotion, the one origin with real call notes, now
@@ -90,6 +93,7 @@ export async function insertLeadWithSubmission(
       lead_source: input.leadSource ?? null,
       service_category: input.serviceCategory ?? null,
       estimated_revenue: input.estimatedRevenue ?? 0,
+      ...(input.status ? { status: input.status } : {}),
     })
     .select("id")
     .single();

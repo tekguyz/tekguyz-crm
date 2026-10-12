@@ -1,6 +1,6 @@
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts } from "@/lib/leads/queries";
-import { ContactsGrid } from "@/components/contacts/ContactsGrid";
+import { ContactsList } from "@/components/contacts/ContactsList";
 import { FilterTabs } from "@/components/leads/FilterTabs";
 import { Button } from "@/components/ui/Button";
 import { IconDownload } from "@tabler/icons-react";
@@ -26,7 +26,7 @@ export default async function ContactsPage({
   const showMine = mine === "true";
 
   const { orgId, userId } = await getCurrentOrg();
-  // Filtering happens in the query, not in the grid — assigned_to is indexed
+  // Filtering happens in the query, not in the list — assigned_to is indexed
   // (idx_leads_tenant_assignee) and this keeps the "empty" state honest: the
   // count the user sees is the count the database returned.
   const contacts = await getAllContacts(orgId, showArchived, showMine ? userId : undefined);
@@ -74,7 +74,12 @@ export default async function ContactsPage({
             the whole directory, so it deliberately ignores the filters above:
             a backup that silently omitted the rows you had filtered out would
             be wrong in the one way an export must not be. */}
-        <Button asChild size="sm" variant="secondary" className="ml-auto">
+        {/* The count the database returned for these filters, so an empty or
+            short list is never ambiguous. */}
+        <span className="text-body-sm ml-auto text-ink-muted tabular-nums">
+          {contacts.length} {contacts.length === 1 ? "contact" : "contacts"}
+        </span>
+        <Button asChild size="sm" variant="secondary">
           <a href="/api/leads/export" download>
             <IconDownload size={16} stroke={1.5} aria-hidden="true" />
             Export CSV
@@ -82,7 +87,7 @@ export default async function ContactsPage({
         </Button>
       </div>
 
-      <ContactsGrid
+      <ContactsList
         contacts={contacts}
         emptyMessage={
           showMine

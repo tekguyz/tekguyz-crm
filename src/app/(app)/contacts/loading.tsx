@@ -1,29 +1,34 @@
-import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-function ContactCardSkeleton() {
+// The same panel, row height and two-line phone layout as ContactsList, so
+// nothing jumps when the real rows swap in.
+function ContactRowSkeleton() {
   return (
-    <Card className="flex flex-col gap-3 p-6">
-      <div className="min-w-0 space-y-1.5">
-        <Skeleton className="h-3.5 w-2/3" />
-        <Skeleton className="h-3 w-1/3" />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 lg:flex-nowrap lg:gap-x-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Skeleton className="size-6 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Skeleton className="h-3.5 w-40 max-w-full" />
+          <Skeleton className="h-3 w-28 max-w-full" />
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-6 w-16 rounded-md" />
-        <Skeleton className="h-6 w-16 rounded-md" />
-        <Skeleton className="h-6 w-16 rounded-md" />
+      <Skeleton className="h-5 w-20 rounded-sm" />
+      <span className="basis-full lg:hidden" />
+      <div className="flex min-h-11 flex-1 items-center gap-1 pl-9 lg:min-h-0 lg:w-40 lg:flex-none lg:pl-0">
+        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-8 rounded-md" />
       </div>
-    </Card>
+      <Skeleton className="h-3.5 w-24" />
+    </div>
   );
 }
 
-// Same responsive grid ContactsGrid itself uses, so the column count never
-// shifts when real cards swap in.
 export default function ContactsLoading() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-canvas-pure">
       {Array.from({ length: 8 }).map((_, i) => (
-        <ContactCardSkeleton key={i} />
+        <ContactRowSkeleton key={i} />
       ))}
     </div>
   );

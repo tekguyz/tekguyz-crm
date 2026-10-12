@@ -233,6 +233,25 @@ export async function dismissTask(taskId: string): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+// Undo for dismissTask: the same flag flipped back, the same guards. Offered
+// for a few seconds in the toast that dismissing raises. It touches
+// `dismissed` and nothing else, so a task that was done when it was dismissed
+// comes back done.
+export async function restoreTask(taskId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ dismissed: false })
+    .eq("id", taskId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath("/", "layout");
+}
+
 export async function toggleTaskComplete(taskId: string, completed: boolean): Promise<void> {
   const supabase = await createClient();
 

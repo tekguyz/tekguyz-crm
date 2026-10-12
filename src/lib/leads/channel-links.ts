@@ -4,8 +4,8 @@ import type { Lead } from "@/lib/leads/queries";
 // has, plus the Maps deep link for its address (#37). A channel the lead does
 // not have gives no link, so no surface can render an empty `mailto:`.
 //
-// Shared by the profile header (icon only) and the Contacts card (icon and
-// word), so the two can never disagree about which links a lead has.
+// Shared by the profile header and the Contacts rows (icon only, both), so
+// the two can never disagree about which links a lead has.
 //
 // The link values come from outside the app — the webhook, a CSV, a hand
 // edit — so a web link is only ever http or https. A value with any other

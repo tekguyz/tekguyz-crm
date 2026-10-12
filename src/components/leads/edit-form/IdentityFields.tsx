@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IconBuilding, IconFlag, IconMail, IconPhone, IconTag, IconUser, IconWorld } from "@tabler/icons-react";
 
 import type { Lead } from "@/lib/leads/queries";
 import { Input } from "@/components/ui/Input";
@@ -48,18 +49,18 @@ export function IdentityFields({ lead }: { lead: Lead }) {
 
   return (
     <>
-      <Input label="Client name" {...field("client_name")} required />
+      <Input label="Client name" icon={IconUser} {...field("client_name")} required />
       {/* Optional: a lead needs any one Contact Channel, and updateLead says
           so when none is left (#37). */}
-      <Input label="Email" type="email" {...field("email")} />
+      <Input label="Email" icon={IconMail} type="email" {...field("email")} />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Phone" {...field("phone")} />
-        <Input label="Company" {...field("company")} />
+        <Input label="Phone" icon={IconPhone} {...field("phone")} />
+        <Input label="Company" icon={IconBuilding} {...field("company")} />
       </div>
-      <Input label="Website" {...field("website")} />
+      <Input label="Website" icon={IconWorld} {...field("website")} />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Lead source" {...field("lead_source")} />
-        <Input label="Service category" {...field("service_category")} />
+        <Input label="Lead source" icon={IconFlag} {...field("lead_source")} />
+        <Input label="Service category" icon={IconTag} {...field("service_category")} />
       </div>
     </>
   );

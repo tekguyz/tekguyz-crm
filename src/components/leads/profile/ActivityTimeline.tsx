@@ -1,15 +1,36 @@
 "use client";
 
+import {
+  IconAlertTriangle,
+  IconMicrophone,
+  IconNote,
+  IconTimeline,
+  IconWebhook,
+  type Icon,
+} from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
+import { TimelineMarker, type MarkerTone } from "@/components/leads/profile/TimelineMarker";
+import { WebhookPayload } from "@/components/leads/profile/WebhookPayload";
 import { useEffect, useState } from "react";
 import { fetchActivityLogs } from "@/lib/activity/actions";
 import type { ActivityLog } from "@/lib/activity/queries";
 import { Button } from "@/components/ui/Button";
+import { formatDueAt } from "@/lib/format";
 
 const LOG_TYPE_LABEL: Record<ActivityLog["log_type"], string> = {
   WEBHOOK: "Inbound Webhook",
   MANUAL_NOTE: "Note",
   AUDIO_TRANSCRIPT: "Voice Note",
   SYSTEM_ALERT: "System",
+};
+
+// What each kind of entry looks like on the rail. The word stays in the
+// caption; the icon and tone are for scanning a long timeline.
+const LOG_TYPE_MARK: Record<ActivityLog["log_type"], { icon: Icon; tone: MarkerTone }> = {
+  WEBHOOK: { icon: IconWebhook, tone: "sky" },
+  MANUAL_NOTE: { icon: IconNote, tone: "purple" },
+  AUDIO_TRANSCRIPT: { icon: IconMicrophone, tone: "pink" },
+  SYSTEM_ALERT: { icon: IconAlertTriangle, tone: "orange" },
 };
 
 export type PendingVoiceNote = { status: "transcribing" } | { status: "error"; message: string };
@@ -28,6 +49,7 @@ export function ActivityTimeline({
   pendingEntry,
   onDismissPending,
   onCountChange,
+  timeZone,
 }: {
   leadId: string;
   refreshKey: number;
@@ -38,6 +60,9 @@ export function ActivityTimeline({
   // local state for a transcription that has not been written yet, and the
   // strip should not claim a record the database does not have.
   onCountChange?: (count: number) => void;
+  // The tenant's display zone, so a timestamp reads the same as every other
+  // date in the panel instead of the browser's own zone.
+  timeZone: string;
 }) {
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +93,9 @@ export function ActivityTimeline({
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-label uppercase text-ink-muted">Activity</h3>
+      <PanelSectionHeading icon={IconTimeline} tone="teal" count={logs?.length}>
+        Activity
+      </PanelSectionHeading>
 
       {/* Errors move off --cold onto --danger. --cold is the Going Cold SLA
           signal and must not double as a generic error colour; v2 added
@@ -83,9 +110,9 @@ export function ActivityTimeline({
         <ul className="flex flex-col gap-3 border-l border-hairline pl-4">
           {pendingEntry && (
             <li className="relative">
-              <span className="absolute top-1.5 -left-[18.5px] size-2 animate-pulse rounded-full border border-canvas-pure bg-accent" />
+              <TimelineMarker icon={IconMicrophone} tone="pink" pulse />
               {pendingEntry.status === "transcribing" ? (
-                <p className="text-body-md text-ink-muted">🎙️ Transcribing…</p>
+                <p className="text-body-md text-ink-muted">Transcribing…</p>
               ) : (
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-body-md text-danger">{pendingEntry.message}</p>
@@ -94,7 +121,7 @@ export function ActivityTimeline({
                     variant="ghost"
                     size="sm"
                     onClick={onDismissPending}
-                    className="shrink-0"
+                    className="shrink-0 max-sm:h-11"
                   >
                     Dismiss
                   </Button>
@@ -105,16 +132,22 @@ export function ActivityTimeline({
 
           {logs?.map((log) => (
             <li key={log.id} className="relative">
-              <span className="absolute top-1.5 -left-[18.5px] size-2 rounded-full border border-canvas-pure bg-hairline" />
+              <TimelineMarker {...LOG_TYPE_MARK[log.log_type]} />
               <p className="text-caption text-ink-muted">
-                {LOG_TYPE_LABEL[log.log_type]} · {new Date(log.created_at).toLocaleString()}
+                {LOG_TYPE_LABEL[log.log_type]} · {formatDueAt(log.created_at, timeZone)}
               </p>
-              {/* break-words: a WEBHOOK entry logs the raw JSON payload, which
-                  has no spaces to wrap on and pushed a horizontal scrollbar
-                  across the whole sheet body. */}
-              <p className="text-body-md whitespace-pre-wrap break-words text-ink-main">
-                {log.content}
-              </p>
+              {/* A WEBHOOK entry's content is the raw JSON body, which Enquiry
+                  history already shows in words, so it collapses behind a
+                  button. break-words on the rest: an unbroken string has
+                  nothing to wrap on and pushed a horizontal scrollbar across
+                  the whole sheet body. */}
+              {log.log_type === "WEBHOOK" ? (
+                <WebhookPayload content={log.content} />
+              ) : (
+                <p className="text-body-md whitespace-pre-wrap break-words text-ink-main">
+                  {log.content}
+                </p>
+              )}
               {log.audio_url && (
                 <audio controls src={log.audio_url} className="mt-1 h-8 w-full" />
               )}

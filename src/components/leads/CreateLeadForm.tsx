@@ -1,20 +1,42 @@
 "use client";
 
+import {
+  IconBrandFacebook,
+  IconBrandGoogle,
+  IconBrandInstagram,
+  IconAlertCircle,
+  IconBrandWhatsapp,
+  IconBuilding,
+  IconCurrencyDollar,
+  IconFlag,
+  IconLayoutKanban,
+  IconMail,
+  IconPhone,
+  IconTag,
+  IconUser,
+  IconWorld,
+} from "@tabler/icons-react";
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import {
+  PIPELINE_STATUSES,
+  PIPELINE_STATUS_LABELS,
+  type PipelineStatus,
+} from "@/lib/leads/pipeline";
 import { FormSection } from "@/components/leads/edit-form/FormSection";
 
 // Field parity with createLead() is the whole point of this list: every key
 // below has a matching formData.get() in @/lib/leads/actions.ts, and every
-// formData.get() there has an input here. Twelve each way. website /
+// formData.get() there has an input here. Thirteen each way. website /
 // lead_source / service_category in particular were read-but-never-rendered
 // once already (see ADDENDA_LOG § Silent NULL-on-save).
 //
-// TWELVE, NOT EVERY COLUMN, and that is deliberate. `createLead` accepts these
-// twelve and nothing else; rendering an input for a column it does not read
+// THIRTEEN, NOT EVERY COLUMN, and that is deliberate. `createLead` accepts these
+// thirteen and nothing else; rendering an input for a column it does not read
 // would be a field with no destination, which is the same parity failure in
 // the opposite direction. The rest are set on the edit drawer, against
 // `updateLead`, which does read them. The four social links are here because
@@ -33,6 +55,7 @@ export const CREATE_FIELD_NAMES = [
   "social_instagram",
   "social_whatsapp",
   "estimated_revenue",
+  "status",
 ] as const;
 
 type FieldName = (typeof CREATE_FIELD_NAMES)[number];
@@ -55,11 +78,15 @@ export function CreateLeadForm({
   formAction,
   isPending,
   error,
+  initialStatus = "NEW",
   onCancel,
 }: {
   formAction: (formData: FormData) => void;
   isPending: boolean;
   error?: string;
+  // The stage the Stage select opens on: a Pipeline lane's "+ New" passes its
+  // own, the sidebar button leaves it at NEW.
+  initialStatus?: PipelineStatus;
   onCancel: () => void;
 }) {
   // CONTROLLED, not bare uncontrolled inputs, and that is load-bearing. React 19
@@ -69,7 +96,7 @@ export function CreateLeadForm({
   // operator to change one of them. The real triggers here are the
   // unique_tenant_client_email_ci collision and a lead with no Contact
   // Channel, which both return { error } and leave the drawer open. See CLAUDE.md § Form/Action Field Parity.
-  const [values, setValues] = useState<Values>(EMPTY);
+  const [values, setValues] = useState<Values>(() => ({ ...EMPTY, status: initialStatus }));
   // The number field needs this even though the text fields do not: React
   // restores a controlled text <input> after the post-action form.reset() on
   // its own, but an empty-able numeric one is not reliably restored without a
@@ -90,39 +117,38 @@ export function CreateLeadForm({
         {/* Every group is always open, unlike the edit drawer's. There is
             nothing rarely-touched on a create form, so collapsing one would
             hide something for no gain. */}
-        <FormSection id="identity" label="Identity" count={7} collapsible={false}>
+        <FormSection id="identity" label="Identity" count={9} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Client name" {...field("client_name")} required />
-            <Input label="Company" {...field("company")} />
+            <Input label="Client name" icon={IconUser} {...field("client_name")} required />
+            <Input label="Company" icon={IconBuilding} {...field("company")} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Optional: a lead needs a name and any one Contact Channel,
                 and createLead says so when there is none (#37). */}
-            <Input label="Email" type="email" {...field("email")} />
-            <Input label="Phone" {...field("phone")} />
+            <Input label="Email" icon={IconMail} type="email" {...field("email")} />
+            <Input label="Phone" icon={IconPhone} {...field("phone")} />
           </div>
           {/* Full width: a URL runs past a half column and would truncate for
               no reason. */}
-          <Input label="Website" {...field("website")} />
+          <Input label="Website" icon={IconWorld} {...field("website")} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Lead source" {...field("lead_source")} />
-            <Input label="Service category" {...field("service_category")} />
+            <Input label="Lead source" icon={IconFlag} {...field("lead_source")} />
+            <Input label="Service category" icon={IconTag} {...field("service_category")} />
           </div>
-        </FormSection>
-
-        <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
-          <Input label="Google Business Profile" {...field("social_google_business")} />
+          {/* Stage and Estimated revenue share a row. Estimated revenue used to
+              be a "Pipeline" group of one, and a heading over a single field
+              cost a row of chrome for nothing. Stage is a native select, so
+              the hook above re-asserts it after a post-action form.reset(). */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Facebook" {...field("social_facebook")} />
-            <Input label="Instagram" {...field("social_instagram")} />
-          </div>
-          <Input label="WhatsApp" {...field("social_whatsapp")} placeholder="https://wa.me/…" />
-        </FormSection>
-
-        <FormSection id="pipeline" label="Pipeline" count={1} collapsible={false}>
-          <div className="grid gap-3 sm:grid-cols-2">
+            <Select label="Stage" icon={IconLayoutKanban} {...field("status")}>
+              {PIPELINE_STATUSES.map((stage) => (
+                <option key={stage} value={stage}>
+                  {PIPELINE_STATUS_LABELS[stage]}
+                </option>
+              ))}
+            </Select>
             <Input
-              label="Estimated revenue"
+              label="Estimated revenue" icon={IconCurrencyDollar}
               {...field("estimated_revenue")}
               type="number"
               min="0"
@@ -130,15 +156,28 @@ export function CreateLeadForm({
             />
           </div>
         </FormSection>
+
+        <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
+          <Input label="Google Business Profile" icon={IconBrandGoogle} {...field("social_google_business")} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Facebook" icon={IconBrandFacebook} {...field("social_facebook")} />
+            <Input label="Instagram" icon={IconBrandInstagram} {...field("social_instagram")} />
+          </div>
+          <Input label="WhatsApp" icon={IconBrandWhatsapp} {...field("social_whatsapp")} placeholder="https://wa.me/…" />
+        </FormSection>
       </div>
 
       {/* The pinned action bar, same as the edit drawer's: Save sits outside
           the scrolling element, so it is one click away from anywhere. */}
       <div className="flex shrink-0 flex-col gap-2 border-t border-hairline bg-canvas-pure px-4 py-3">
         {error && (
-          <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-            {error}
-          </p>
+          <p
+          role="alert"
+          className="text-body-sm flex items-start gap-1.5 text-danger"
+                >
+          <IconAlertCircle aria-hidden stroke={1.75} className="mt-0.5 size-4 shrink-0" />
+          {error}
+                </p>
         )}
         <div className="flex items-center gap-2">
           <Button type="submit" variant="primary" loading={isPending}>

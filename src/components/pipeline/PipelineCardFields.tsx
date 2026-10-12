@@ -1,6 +1,6 @@
 "use client";
 
-import { IconStar } from "@tabler/icons-react";
+import { IconBuilding, IconStar } from "@tabler/icons-react";
 import { formatCurrency } from "@/lib/format";
 import type { Lead } from "@/lib/leads/queries";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
@@ -12,20 +12,19 @@ import { Avatar } from "@/components/ui/Avatar";
 // used to carry an identical hand-written copy; card-fields.test.ts fails if
 // either grows one back.
 //
-// Two rows. A header row carries what a column is scanned for (who, and how
-// much); everything else is one muted meta line underneath. No status badge:
-// the Kanban column already says the status, and FocusListCard has its own
-// select for it.
+// Up to three rows. A header row carries what a column is scanned for (who,
+// and how much); under it the company (icon, its own line), then the due date
+// and the owner. No status badge: the Kanban column already says the status,
+// and FocusListCard has its own select for it.
 //
-// The meta line holds up to three values in ~217px (measured, 1440x800). The
-// date never shrinks — a clipped date is worse than anything else clipped. The
-// assignee keeps its natural width up to a 4.5rem cap and truncates past it;
-// the company takes what is left. Two drafts without that cap measured a real
-// field at 1px and 24px, so do not "simplify" it away. The cost is accepted and
-// not hidden: on an assigned lead the company truncates.
+// The company took its own line in #47 step 3. It used to share one muted line
+// with the date and the owner in ~217px, and the assignee cap that squeezed it
+// was a patch on that: 6 of 16 company names still clipped. The date still
+// never shrinks (a clipped date is worse than anything else clipped), and the
+// owner now takes whatever the date leaves.
 //
-// A missing company or assignee drops out with its separator, so a sparse lead
-// reads "Sep 14, 2:00 PM" rather than " · Sep 14, 2:00 PM · ".
+// A missing company or assignee drops out with its row or separator, so a
+// sparse lead reads as a name, an amount and a date.
 //
 // 2026-10-05: an initials avatar leads the name row, and the date is DueLabel
 // ("3d overdue" in red), so a late lead is named as late instead of being
@@ -61,18 +60,22 @@ export function PipelineCardFields({
         </p>
       </div>
 
+      {/* The company has its own line and an icon, like the due date and the
+          owner below it. Sharing one line with them clipped it: 6 of 16
+          company names were cut off at 1440. */}
+      {lead.company ? (
+        <p className="text-caption flex min-w-0 items-center gap-1 text-ink-muted">
+          <IconBuilding aria-hidden stroke={1.75} className="size-3.5 shrink-0" />
+          <span className="truncate">{lead.company}</span>
+        </p>
+      ) : null}
+
       <div className="text-caption flex min-w-0 items-center gap-1.5 text-ink-muted">
-        {lead.company ? (
-          <>
-            <span className="truncate">{lead.company}</span>
-            <span aria-hidden="true">·</span>
-          </>
-        ) : null}
         <DueLabel at={lead.next_action_at} timeZone={orgTimezone} className="text-caption" />
         {lead.assigned_to ? (
           <>
             <span aria-hidden="true">·</span>
-            <span className="flex max-w-18 min-w-0 shrink-0">
+            <span className="flex min-w-0 shrink">
               <AssigneeLabel assignedTo={lead.assigned_to} />
             </span>
           </>

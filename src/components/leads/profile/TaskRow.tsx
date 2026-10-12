@@ -12,6 +12,7 @@ import {
 import type { Task } from "@/lib/tasks/queries";
 import { formatDueAt } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { DueLabel } from "@/components/leads/DueLabel";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -42,11 +43,16 @@ export function TaskRow({
   task,
   timeZone,
   onChanged,
+  onDismissed,
   highlighted = false,
 }: {
   task: Task;
   timeZone: string;
   onChanged: () => void;
+  // Called once a dismiss has been saved, with the task that went. The
+  // section uses it to offer Undo. Optional, so a caller without one is
+  // unchanged.
+  onDismissed?: (task: Task) => void;
   // True for the one row the command palette navigated to, for a couple of
   // seconds after arrival. TasksSection owns the timer and the tab selection;
   // this only renders the marker and scrolls itself into view.
@@ -93,10 +99,14 @@ export function TaskRow({
     });
   }
 
+  // Dismissing hides the row at once, so the section is told which task went:
+  // it holds the Undo for a few seconds. The row cannot hold it, because the
+  // refetch below unmounts the row.
   function handleDismiss() {
     startTransition(async () => {
       await dismissTask(task.id);
       onChanged();
+      onDismissed?.(task);
     });
   }
 
@@ -186,7 +196,7 @@ export function TaskRow({
         checked={task.completed}
         onCheckedChange={handleToggle}
         aria-label={task.completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-        className="mt-0.5"
+        className="relative mt-0.5 before:absolute before:-inset-3.5 before:content-[''] sm:before:hidden"
       />
       <div className="min-w-0 flex-1">
         <p
@@ -197,7 +207,13 @@ export function TaskRow({
         {task.description && (
           <p className="text-body-sm whitespace-pre-line text-ink-muted">{task.description}</p>
         )}
-        <p className="text-body-sm text-ink-muted">{formatDueAt(task.due_at, timeZone)}</p>
+        {/* A done task is not late, so it keeps the plain date: DueLabel would
+            call a ticked-off task "3d overdue" in red. */}
+        {task.completed ? (
+          <p className="text-body-sm text-ink-muted">{formatDueAt(task.due_at, timeZone)}</p>
+        ) : (
+          <DueLabel at={task.due_at} timeZone={timeZone} className="mt-0.5" />
+        )}
       </div>
       {/* Always in the DOM and never hover-gated into existence — a control
           that only exists on hover is unreachable by keyboard. */}
@@ -206,6 +222,7 @@ export function TaskRow({
           type="button"
           variant="ghost"
           size="sm"
+          className="size-7 px-0 max-sm:size-11"
           aria-label={`Edit ${task.title}`}
           onClick={() => setIsEditing(true)}
         >
@@ -217,6 +234,7 @@ export function TaskRow({
           type="button"
           variant="ghost"
           size="sm"
+          className="size-7 px-0 max-sm:size-11"
           aria-label={`Dismiss ${task.title}`}
           onClick={handleDismiss}
         >

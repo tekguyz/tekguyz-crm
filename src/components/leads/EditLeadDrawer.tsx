@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import { IconX } from "@tabler/icons-react";
+import { IconAlertCircle, IconX } from "@tabler/icons-react";
 
 import { updateLead, type LeadFormState } from "@/lib/leads/actions";
 import type { Lead } from "@/lib/leads/queries";
 import { canEditLeadLifecycle } from "@/lib/organizations/roles";
 import { Button } from "@/components/ui/Button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 import { LEAD_PANEL_WIDTH } from "@/components/leads/panel-width";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
@@ -19,6 +19,7 @@ import { AssignmentField } from "@/components/leads/edit-form/AssignmentField";
 import { OutcomeFields } from "@/components/leads/edit-form/OutcomeFields";
 import { ArchiveControls } from "@/components/leads/edit-form/ArchiveControls";
 import { useOrgRole } from "@/components/shell/RoleContext";
+import { EditLeadHeader } from "@/components/leads/EditLeadHeader";
 
 const initialState: LeadFormState = null;
 
@@ -54,10 +55,21 @@ const initialState: LeadFormState = null;
 // profile" and the read panel's Edit control only flip `view` — neither closes
 // the surface — and every close path (X, Cancel, Escape, outside click, the
 // read panel's own close, a successful save) closes the whole slot and resets
-// `view` for next time. Cards open it on "edit", as they always have; the
-// ?leadId= deep link and the command palette open it on "read". There is no
-// second way to open this drawer: every caller still passes `lead`/`open`/
-// `onClose`, and `lead` still reaches the field groups exactly as before.
+// `view` for next time.
+//
+// "VIEW FULL PROFILE" KEEPS THE FORM (#53). The edit sheet used to close when
+// the read panel opened, which unmounted the form and threw away every
+// unsaved edit with no warning. Now the form sheet STAYS OPEN under the read
+// panel (`keepForm`), covered by the panel, so its field state survives and the
+// Edit control brings the same half-typed form back. Only a close path, or a
+// save, ends it. The read panel changes no lead column (tasks and notes are
+// other tables), so a kept form cannot go stale against it. A deep link that
+// starts on "read" never mounts the form until Edit is pressed.
+//
+// Cards open it on "edit", as they always have; the ?leadId= deep link and the
+// command palette open it on "read". There is no second way to open this
+// drawer: every caller still passes `lead`/`open`/`onClose`, and `lead` still
+// reaches the field groups exactly as before.
 export function EditLeadDrawer({
   lead,
   open,
@@ -78,12 +90,17 @@ export function EditLeadDrawer({
   const [state, formAction, isPending] = useActionState(updateLeadWithId, initialState);
   const wasPending = useRef(false);
   const [view, setView] = useState<"edit" | "read">(initialView);
+  // True from the moment the form was left for the read panel until the slot
+  // closes. See the header comment.
+  const [keepForm, setKeepForm] = useState(false);
+  const fullProfileRef = useRef<HTMLButtonElement>(null);
 
   // Reset in the close handler rather than in an effect watching `open`: the
   // view and the slot close in the same commit, so neither sheet flashes the
   // other view on its way out, and the next open starts where its caller asked.
   const close = useCallback(() => {
     setView(initialView);
+    setKeepForm(false);
     onClose();
   }, [initialView, onClose]);
   const [openSections, setOpenSections] = useState({
@@ -112,10 +129,18 @@ export function EditLeadDrawer({
   // MEMBER the group's chrome is dropped and the inputs are rendered bare.
   const showOutcomeGroup = canEditLeadLifecycle(role);
 
+  // The read panel is on top of the form: the form stays mounted (and keeps
+  // its state) but is unreachable. Radix does the covering: it aria-hides the
+  // form for the modal above and traps focus inside that modal. NOT `inert`,
+  // which would blur the "View full profile" button the moment it is pressed,
+  // so the read panel would have no button to hand focus back to on its way
+  // out and a keyboard user would land on <body>.
+  const covered = view === "read";
+
   return (
     <>
       <Sheet
-        open={open && view === "edit"}
+        open={open && (view === "edit" || keepForm)}
         onOpenChange={(next) => {
           if (!next) close();
         }}
@@ -125,19 +150,22 @@ export function EditLeadDrawer({
           className={cn("p-0", LEAD_PANEL_WIDTH)}
           showClose={false}
           aria-describedby={undefined}
+          overlayClassName={cn("transition-opacity", covered && "opacity-0")}
         >
           {/* Header chrome matching the read panel's: hairline bottom border,
               px-4 py-3, a truncating title against shrink-0 controls. */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
-            <SheetTitle className="text-title min-w-0 flex-1 truncate">
-              {lead.client_name}
-            </SheetTitle>
+          <div className="flex shrink-0 items-center gap-3 border-b border-hairline px-4 py-3">
+            <EditLeadHeader lead={lead} />
             <Button
+              ref={fullProfileRef}
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setView("read")}
-              className="shrink-0 text-accent hover:text-accent"
+              onClick={() => {
+                setKeepForm(true);
+                setView("read");
+              }}
+              className="shrink-0 self-start text-accent hover:text-accent max-sm:h-11"
             >
               View full profile
             </Button>
@@ -147,7 +175,7 @@ export function EditLeadDrawer({
               size="sm"
               onClick={close}
               aria-label="Close"
-              className="size-7 shrink-0 px-0"
+              className="size-7 shrink-0 self-start px-0 max-sm:size-11"
             >
               <IconX stroke={1.75} aria-hidden className="size-4" />
             </Button>
@@ -225,7 +253,11 @@ export function EditLeadDrawer({
                 scrolling past every field whether or not you touched one. */}
             <div className="flex shrink-0 flex-col gap-2 border-t border-hairline bg-canvas-pure px-4 py-3">
               {state?.error && (
-                <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
+                <p
+                  role="alert"
+                  className="text-body-sm flex items-start gap-1.5 text-danger"
+                >
+                  <IconAlertCircle aria-hidden stroke={1.75} className="mt-0.5 size-4 shrink-0" />
                   {state.error}
                 </p>
               )}
@@ -243,14 +275,23 @@ export function EditLeadDrawer({
       </Sheet>
 
       {/* OUTSIDE the Sheet, not inside it. Radix unmounts a Sheet's content
-          when it closes, and switching to the read view closes the form sheet
-          in the same click that opens this one - nested, the panel would be
-          torn down the instant it was asked for. */}
+          when it closes, so a panel nested in the form sheet would be torn
+          down with it. Siblings, then: this one opens on top of the form,
+          which stays mounted underneath. */}
       <ProfileSheet
         lead={lead}
         open={open && view === "read"}
         onClose={close}
         onEdit={() => setView("edit")}
+        // Back to the form: put focus on the button that opened the panel, as
+        // the form's own place to resume. When the whole slot closes instead,
+        // `keepForm` is already false and Radix's default (the card that
+        // opened the drawer) applies.
+        onCloseAutoFocus={(event) => {
+          if (!keepForm) return;
+          event.preventDefault();
+          fullProfileRef.current?.focus();
+        }}
         highlightTaskId={highlightTaskId}
       />
     </>

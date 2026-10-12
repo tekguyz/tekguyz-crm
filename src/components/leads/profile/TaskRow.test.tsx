@@ -64,6 +64,16 @@ describe("TaskRow", () => {
     await waitFor(() => expect(dismissTask).toHaveBeenCalledWith("task-1"));
   });
 
+  it("tells the section which task was dismissed, once the dismiss has saved", async () => {
+    const user = userEvent.setup();
+    const onDismissed = vi.fn();
+    render(<TaskRow task={task} timeZone="UTC" onChanged={() => {}} onDismissed={onDismissed} />);
+
+    await user.click(screen.getByRole("button", { name: "Dismiss Send the quote" }));
+
+    await waitFor(() => expect(onDismissed).toHaveBeenCalledWith(task));
+  });
+
   it("keeps both controls in the DOM without hover, so they are keyboard-reachable", () => {
     render(<TaskRow task={task} timeZone="UTC" onChanged={() => {}} />);
 

@@ -66,6 +66,14 @@ export async function createLead(
     return { error: NO_CONTACT_CHANNEL_MESSAGE };
   }
 
+  // The create form renders a Stage select, so `status` is always posted. An
+  // absent or unknown value is refused rather than defaulted: a default here
+  // would quietly file the lead in the wrong lane.
+  const status = String(formData.get("status") ?? "");
+  if (!VALID_STATUSES.has(status)) {
+    return { error: "Pick a stage for the lead." };
+  }
+
   const estimatedRevenueRaw = formData.get("estimated_revenue");
   const estimatedRevenue = estimatedRevenueRaw ? Number(estimatedRevenueRaw) : 0;
 
@@ -94,6 +102,7 @@ export async function createLead(
     leadSource,
     serviceCategory,
     estimatedRevenue,
+    status,
     message: null,
   });
 

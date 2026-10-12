@@ -13,7 +13,7 @@ import {
 import type { ChannelLinkKind } from "@/lib/leads/channel-links";
 
 // One Tabler outline icon per Click-to-Action link (DESIGN.md § Iconography).
-// Shared by the profile header and the Contacts card so a channel looks the
+// Shared by the profile header and the Contacts rows so a channel looks the
 // same everywhere it appears.
 const ICONS = {
   call: IconPhone,

@@ -55,26 +55,30 @@ export function FormSection({
   return (
     <section className="border-b border-hairline">
       {collapsible ? (
-        // Ghost Button, justify-start, full width - a section header is a row,
-        // not a centred control. Nothing here suppresses the global
-        // :focus-visible ring.
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onToggle}
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-label={`${label}, ${count} fields`}
-          className="h-auto w-full justify-start gap-2 rounded-none px-4 py-3 text-ink-main"
-        >
-          <IconChevronDown
-            aria-hidden
-            stroke={1.75}
-            className={cn("size-4 shrink-0 transition-transform", open ? "" : "-rotate-90")}
-          />
-          <span className="text-title min-w-0 truncate">{label}</span>
-          <span className="text-body-sm tabular-nums text-ink-muted">{count}</span>
-        </Button>
+        // A heading holding the toggle button, the standard accordion shape:
+        // a screen-reader user can jump group to group by heading, which a
+        // bare button row does not allow. Ghost Button, justify-start, full
+        // width - a section header is a row, not a centred control. Nothing
+        // here suppresses the global :focus-visible ring.
+        <h3>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-controls={panelId}
+            aria-label={`${label}, ${count} fields`}
+            className="h-auto w-full justify-start gap-2 rounded-none px-4 py-3 text-ink-main"
+          >
+            <IconChevronDown
+              aria-hidden
+              stroke={1.75}
+              className={cn("size-4 shrink-0 transition-transform", open ? "" : "-rotate-90")}
+            />
+            <span className="text-title min-w-0 truncate">{label}</span>
+            <span className="text-body-sm tabular-nums text-ink-muted">{count}</span>
+          </Button>
+        </h3>
       ) : (
         // Same explicit accessible name as the button branch, and for the
         // same reason: two adjacent spans with only a CSS gap between them

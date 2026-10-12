@@ -63,7 +63,7 @@ export function FocusListCard({
               e.stopPropagation();
               onStatusChange(lead.id, e.target.value as PipelineStatus);
             }}
-            className="text-body-sm"
+            className="text-body-sm max-sm:min-h-11"
           >
             {PIPELINE_STATUSES.map((status) => (
               <option key={status} value={status}>

@@ -1,5 +1,7 @@
 "use client";
 
+import { IconCalendarEvent, IconCurrencyDollar, IconLayoutKanban } from "@tabler/icons-react";
+
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
@@ -7,6 +9,7 @@ import type { Lead } from "@/lib/leads/queries";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { DuePresets } from "@/components/leads/profile/DuePresets";
 
 // datetime-local inputs work in the browser's own local timezone, with no
 // offset in the value string. Converting here (client-side) rather than on
@@ -63,6 +66,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
       <div className="grid grid-cols-2 gap-3">
         <Select
           label="Status"
+          icon={IconLayoutKanban}
           name="status"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
@@ -74,6 +78,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         </Select>
         <Input
           label="Estimated revenue"
+          icon={IconCurrencyDollar}
           name="estimated_revenue"
           type="number"
           min="0"
@@ -83,9 +88,11 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         />
       </div>
 
-      <div>
+      <div className="space-y-2">
         <Input
-          label="Follow-up due (Going Cold when overdue)"
+          label="Follow-up due"
+          hint="The lead goes cold when this time passes."
+          icon={IconCalendarEvent}
           type="datetime-local"
           required
           value={nextActionLocal}
@@ -94,6 +101,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         {/* The visible field is local-time and unnamed; this hidden sibling is
             the only next_action_at in the FormData. */}
         <input type="hidden" name="next_action_at" value={nextActionIso} />
+        <DuePresets onPick={(due) => setNextActionLocal(toDatetimeLocalValue(due.toISOString()))} />
       </div>
 
       {/* Form/Action Field Parity: updateLead reads

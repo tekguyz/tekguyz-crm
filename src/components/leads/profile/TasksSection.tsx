@@ -1,14 +1,36 @@
 "use client";
 
+import { IconArrowBackUp, IconCalendarEvent, IconChecklist } from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import { createTask, fetchTasksForLead, type TaskFormState } from "@/lib/tasks/actions";
+import {
+  createTask,
+  fetchTasksForLead,
+  restoreTask,
+  type TaskFormState,
+} from "@/lib/tasks/actions";
 import type { Task } from "@/lib/tasks/queries";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { TaskRow } from "@/components/leads/profile/TaskRow";
+import { DuePresets } from "@/components/leads/profile/DuePresets";
+import { TaskRow, toDatetimeLocalValue } from "@/components/leads/profile/TaskRow";
 import { useArrivalHighlight } from "@/lib/hooks/use-arrival-highlight";
 
 const initialState: TaskFormState = null;
+
+// How long Undo is offered after a dismiss. Long enough for a thumb on a
+// phone to find it, short enough that the line does not linger.
+const UNDO_MS = 8000;
+
+// A new task is due tomorrow at 9:00 unless the operator says otherwise, so
+// the commonest case is title + Add instead of title + native picker + Add.
+// Local wall clock, same as the picker itself.
+function defaultDueLocal(): string {
+  const due = new Date();
+  due.setDate(due.getDate() + 1);
+  due.setHours(9, 0, 0, 0);
+  return toDatetimeLocalValue(due.toISOString());
+}
 
 // Sibling of ActivityTimeline / NoteCaptureForm — ProfileSheet mounts all
 // three directly rather than nesting them.
@@ -40,7 +62,11 @@ export function TasksSection({
   const [error, setError] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [dueLocal, setDueLocal] = useState("");
+  const [dueLocal, setDueLocal] = useState(defaultDueLocal);
+  // The last task dismissed from this list, while Undo is on offer. One slot:
+  // a second dismiss replaces the first, as in a mail client.
+  const [undoable, setUndoable] = useState<Task | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
 
@@ -69,7 +95,7 @@ export function TasksSection({
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) {
       formRef.current?.reset();
-      setDueLocal("");
+      setDueLocal(defaultDueLocal());
       setRefreshKey((k) => k + 1);
     }
     wasPending.current = isPending;
@@ -100,6 +126,27 @@ export function TasksSection({
   // trigger rather than one per action.
   const handleChanged = useCallback(() => setRefreshKey((k) => k + 1), []);
 
+  // Undo lives HERE, in the panel, and not in a toast: the panel is a modal
+  // sheet, so a toast outside it is aria-hidden, cannot take focus and cannot
+  // be clicked while the sheet is open. Inside the list it is reachable by
+  // keyboard and read out through the live region below.
+  const handleDismissed = useCallback((task: Task) => {
+    clearTimeout(undoTimer.current);
+    setUndoable(task);
+    undoTimer.current = setTimeout(() => setUndoable(null), UNDO_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(undoTimer.current), []);
+
+  function handleUndo() {
+    if (!undoable) return;
+    const { id } = undoable;
+    clearTimeout(undoTimer.current);
+    setUndoable(null);
+    restoreTask(id)
+      .then(handleChanged)
+      .catch(() => setError("Couldn't undo. Please try again."));
+  }
+
   const parsedDue = new Date(dueLocal);
   const dueIso = Number.isNaN(parsedDue.getTime()) ? "" : parsedDue.toISOString();
   const visible = tasks?.filter((task) => task.completed === showCompleted) ?? [];
@@ -107,7 +154,13 @@ export function TasksSection({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-label uppercase text-ink-muted">Tasks</h3>
+        <PanelSectionHeading
+          icon={IconChecklist}
+          tone="green"
+          count={tasks ? tasks.filter((task) => !task.completed).length : undefined}
+        >
+          Tasks
+        </PanelSectionHeading>
         {/* Open/Completed is a two-state filter, so the selected tab takes the
             bordered secondary Button and the other takes ghost. v1's
             elevation-1 on the active tab is gone — v2 tabs are Level 0. */}
@@ -116,6 +169,7 @@ export function TasksSection({
             type="button"
             variant={showCompleted ? "ghost" : "secondary"}
             size="sm"
+            className="max-sm:h-11"
             aria-pressed={!showCompleted}
             onClick={() => setShowCompleted(false)}
           >
@@ -125,6 +179,7 @@ export function TasksSection({
             type="button"
             variant={showCompleted ? "secondary" : "ghost"}
             size="sm"
+            className="max-sm:h-11"
             aria-pressed={showCompleted}
             onClick={() => setShowCompleted(true)}
           >
@@ -139,17 +194,40 @@ export function TasksSection({
         <Input name="title" placeholder="Add a task…" required />
         <div className="flex items-end gap-2">
           <Input
+            label="Due"
+            icon={IconCalendarEvent}
             type="datetime-local"
             required
             value={dueLocal}
             onChange={(e) => setDueLocal(e.target.value)}
           />
           <input type="hidden" name="due_at" value={dueIso} />
-          <Button type="submit" variant="primary" disabled={isPending} className="shrink-0">
+          <Button type="submit" variant="primary" disabled={isPending} className="shrink-0 max-sm:h-11">
             {isPending ? "Adding…" : "Add"}
           </Button>
         </div>
+        <DuePresets onPick={(due) => setDueLocal(toDatetimeLocalValue(due.toISOString()))} />
       </form>
+
+      {/* Always in the DOM, so a screen reader is already listening when the
+          text arrives. */}
+      <div role="status">
+        {undoable ? (
+          <div className="text-body-sm flex items-center justify-between gap-2 rounded-md border border-hairline px-2 py-1 text-ink-muted">
+            <span className="min-w-0 truncate">Dismissed “{undoable.title}”</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleUndo}
+              className="shrink-0 text-accent hover:text-accent max-sm:h-11"
+            >
+              <IconArrowBackUp aria-hidden stroke={1.75} className="size-4" />
+              Undo
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       {error && <p className="text-body-md text-danger">{error}</p>}
       {!error && tasks === null && <p className="text-body-md text-ink-muted">Loading…</p>}
@@ -167,6 +245,7 @@ export function TasksSection({
               task={task}
               timeZone={timeZone}
               onChanged={handleChanged}
+              onDismissed={handleDismissed}
               highlighted={task.id === highlightedId}
             />
           ))}

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,8 @@ beforeAll(() => {
 });
 
 const toggleTaskComplete = vi.fn(async () => {});
+const dismissTask = vi.fn(async () => {});
+const restoreTask = vi.fn(async () => {});
 const OPEN_TASK = {
   id: "task-1",
   lead_id: "lead-1",
@@ -44,7 +46,8 @@ vi.mock("@/lib/tasks/actions", () => ({
   // TaskRow, rendered per row by this section, binds updateTask and calls
   // dismissTask — both have to exist on the mocked boundary or the row throws.
   updateTask: Object.assign(vi.fn(), { bind: () => vi.fn(async () => null) }),
-  dismissTask: vi.fn(async () => {}),
+  dismissTask: (...args: unknown[]) => dismissTask(...(args as [])),
+  restoreTask: (...args: unknown[]) => restoreTask(...(args as [])),
   fetchTasksForLead: (...args: unknown[]) => fetchTasksForLead(...(args as [])),
   toggleTaskComplete: (...args: unknown[]) => toggleTaskComplete(...(args as [])),
 }));
@@ -84,6 +87,68 @@ describe("TasksSection — per-task toggle", () => {
     const form = container.querySelector("form")!;
     // due_at's hidden ISO carrier is the only thing this form posts besides
     // the title field.
+    expect([...new FormData(form).keys()].sort()).toEqual(["due_at", "title"]);
+  });
+});
+
+describe("TasksSection — undo a dismiss", () => {
+  beforeEach(() => {
+    dismissTask.mockClear();
+    restoreTask.mockClear();
+    fetchTasksForLead.mockClear();
+  });
+
+  it("offers Undo in the list after a dismiss, and Undo restores the task and refetches", async () => {
+    const user = userEvent.setup();
+    render(<TasksSection leadId="lead-1" />);
+
+    await user.click(await screen.findByRole("button", { name: "Dismiss Send the quote" }));
+
+    const status = screen.getByRole("status");
+    expect(await within(status).findByText(/Dismissed “Send the quote”/)).toBeInTheDocument();
+    expect(restoreTask).not.toHaveBeenCalled();
+    fetchTasksForLead.mockClear();
+
+    await user.click(within(status).getByRole("button", { name: "Undo" }));
+
+    await waitFor(() => expect(restoreTask).toHaveBeenCalledWith("task-1"));
+    await waitFor(() => expect(fetchTasksForLead).toHaveBeenCalledTimes(1));
+    expect(within(status).queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+
+  it("takes the offer away after a few seconds", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<TasksSection leadId="lead-1" />);
+      await user.click(await screen.findByRole("button", { name: "Dismiss Send the quote" }));
+      const status = screen.getByRole("status");
+      await within(status).findByRole("button", { name: "Undo" });
+
+      await act(async () => {
+        vi.advanceTimersByTime(8500);
+      });
+
+      expect(within(status).queryByRole("button", { name: "Undo" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("TasksSection — due-date chips", () => {
+  it("a chip sets the Due field and the posted due_at, and adds no field", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TasksSection leadId="lead-1" />);
+    await screen.findByRole("checkbox", { name: "Complete Send the quote" });
+    const form = container.querySelector("form")!;
+
+    await user.click(screen.getByRole("button", { name: "+3 days" }));
+
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 3);
+    expected.setHours(9, 0, 0, 0);
+    expect(new Date(String(new FormData(form).get("due_at"))).getTime()).toBe(expected.getTime());
     expect([...new FormData(form).keys()].sort()).toEqual(["due_at", "title"]);
   });
 });

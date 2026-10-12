@@ -1,3 +1,4 @@
+import type { Icon } from "@tabler/icons-react";
 import { useId } from "react";
 import type { ComponentProps } from "react";
 
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils/cn";
 // an elevation shadow.
 export function Input({
   label,
+  icon: LabelIcon,
   hint,
   error,
   id,
@@ -15,6 +17,8 @@ export function Input({
   ...props
 }: ComponentProps<"input"> & {
   label?: string;
+  // A Tabler icon before the label, decorative: the label text is the name.
+  icon?: Icon;
   hint?: string;
   error?: string;
 }) {
@@ -25,7 +29,11 @@ export function Input({
   return (
     <div className="flex w-full flex-col gap-1">
       {label ? (
-        <label htmlFor={fieldId} className="text-label text-ink-muted">
+        <label
+          htmlFor={fieldId}
+          className="text-label inline-flex items-center gap-1 text-ink-muted"
+        >
+          {LabelIcon ? <LabelIcon aria-hidden stroke={1.75} className="size-3.5 shrink-0" /> : null}
           {label}
         </label>
       ) : null}

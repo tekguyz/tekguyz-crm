@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { IconMicrophone, IconSquare } from "@tabler/icons-react";
+import { IconMicrophone, IconNotes, IconSquare } from "@tabler/icons-react";
 import { addManualNote, addAudioTranscript } from "@/lib/activity/actions";
 import { useAudioRecorder } from "@/lib/hooks/use-audio-recorder";
 import { DEMO_BLOCK_MESSAGE, isDemoBlock } from "@/lib/demo/demo-block-message";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 
 export type RecordingSettleResult = { ok: true } | { ok: false; message: string };
 
@@ -81,7 +82,10 @@ export function NoteCaptureForm({
   const micBusy = isTranscribing || isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-hairline pt-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <PanelSectionHeading icon={IconNotes} tone="orange">
+        Notes
+      </PanelSectionHeading>
       {/* All three states move off --cold onto --danger: --cold is the Going
           Cold SLA signal, not a generic error colour. */}
       {error && <p className="text-body-sm text-danger">{error}</p>}
@@ -109,7 +113,7 @@ export function NoteCaptureForm({
           onClick={handleMicClick}
           disabled={micBusy}
           aria-label={recorderStatus === "recording" ? "Stop recording" : "Record a voice note"}
-          className="size-8 shrink-0 px-0"
+          className="size-8 shrink-0 px-0 max-sm:size-11"
         >
           {recorderStatus === "recording" ? (
             <IconSquare stroke={1.75} className="size-4" />
@@ -123,7 +127,7 @@ export function NoteCaptureForm({
         type="submit"
         variant="primary"
         disabled={isPending || !content.trim()}
-        className="self-end"
+        className="self-end max-sm:h-11"
       >
         {isPending ? "Saving…" : "Add note"}
       </Button>

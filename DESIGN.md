@@ -129,7 +129,7 @@ behavior, restyled to the new tokens:
 ## Scope — what this system covers
 Applies to every view that currently exists: AppShell nav, Today's Agenda (SLA
 Critical / High-Value / Starred / Tasks Due), Kanban board, Focus List,
-Contacts card grid, Profile Sheet (brief/timeline/notes/tasks), Settings
+Contacts row list (one panel, a row per contact: avatar, name, stage, channels, owner), Profile Sheet (brief/timeline/notes/tasks), Settings
 (org details, account, webhook rotation, API keys), all modals (EditLeadModal,
 CSV Import Wizard, confirmation dialogs), Help drawer + inline tooltips.
 

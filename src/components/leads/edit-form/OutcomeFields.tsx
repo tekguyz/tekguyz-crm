@@ -1,5 +1,7 @@
 "use client";
 
+import { IconCurrencyDollar, IconTrophy } from "@tabler/icons-react";
+
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
@@ -58,6 +60,7 @@ export function OutcomeFields({ lead, role }: { lead: Lead; role: string }) {
     <div ref={anchor} className="flex flex-col gap-2 border-t border-hairline pt-3">
       <Select
         label="Outcome"
+        icon={IconTrophy}
         name="outcome"
         value={outcome}
         onChange={(event) => setOutcome(event.target.value)}
@@ -69,6 +72,7 @@ export function OutcomeFields({ lead, role }: { lead: Lead; role: string }) {
       </Select>
       <Input
         label="Actual revenue (if closed)"
+        icon={IconCurrencyDollar}
         name="actual_revenue"
         type="number"
         min="0"

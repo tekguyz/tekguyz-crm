@@ -41,6 +41,7 @@ export function ProfileSheet({
   onClose,
   highlightTaskId = null,
   onEdit,
+  onCloseAutoFocus,
 }: {
   lead: Lead;
   open: boolean;
@@ -53,6 +54,10 @@ export function ProfileSheet({
   // The header's Edit control. EditLeadDrawer is this sheet's only host and
   // passes it; it switches the shared slot from reading to editing.
   onEdit?: () => void;
+  // Radix's hook for where focus goes when the panel closes. The host uses it
+  // to hand focus back to the control that opened this panel, when the panel
+  // closes by switching to the edit form rather than by closing the slot.
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   return (
     <Sheet
@@ -73,6 +78,7 @@ export function ProfileSheet({
         // sentence - so the association is explicitly cleared rather than
         // filled with a restatement of the title.
         aria-describedby={undefined}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         {/* Radix requires a Title for the dialog's accessible name. The visible
             name lives in the header row next to the avatar, so this is the
