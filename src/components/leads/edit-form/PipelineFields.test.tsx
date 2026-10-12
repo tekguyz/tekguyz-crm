@@ -79,3 +79,29 @@ describe("PipelineFields — Starred checkbox", () => {
     expect(new FormData(form).get("next_action_at")).toBe(lead.next_action_at);
   });
 });
+
+describe("PipelineFields — due-date chips", () => {
+  it("a chip sets Follow-up due and the posted next_action_at, and adds no field", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <PipelineFields lead={lead} />
+      </form>,
+    );
+    const form = container.querySelector("form")!;
+    const keysBefore = [...new FormData(form).keys()].sort();
+
+    await user.click(screen.getByRole("button", { name: "+1 week" }));
+
+    const next = new Date(String(new FormData(form).get("next_action_at")));
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 7);
+    expected.setHours(9, 0, 0, 0);
+    expect(next.getTime()).toBe(expected.getTime());
+    expect(screen.getByLabelText("Follow-up due")).toHaveValue(
+      `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, "0")}-${String(expected.getDate()).padStart(2, "0")}T09:00`,
+    );
+    // A chip is a button with no name: field parity with updateLead is intact.
+    expect([...new FormData(form).keys()].sort()).toEqual(keysBefore);
+  });
+});

@@ -11,22 +11,40 @@ vi.mock("@/lib/leads/actions", () => ({
 // suites; stubbed so this one stays about the edit form.
 //
 // The stub renders only while open and exposes the panel's Edit control, which
-// is all the view-switching suite at the bottom needs from it.
-vi.mock("@/components/leads/profile/ProfileSheet", () => ({
-  ProfileSheet: ({ open, onEdit, onClose }: { open: boolean; onEdit?: () => void; onClose: () => void }) =>
-    open ? (
-      <div data-testid="read-panel">
-        {onEdit ? (
-          <button type="button" onClick={onEdit}>
-            Edit
-          </button>
-        ) : null}
-        <button type="button" onClick={onClose}>
-          Close panel
-        </button>
-      </div>
-    ) : null,
-}));
+// is all the view-switching suite at the bottom needs from it. It portals to
+// <body>, as the real Radix sheet does: rendered inline it would sit inside
+// the page the open edit sheet aria-hides, and no query could reach it.
+vi.mock("@/components/leads/profile/ProfileSheet", async () => {
+  const { createPortal } = await import("react-dom");
+  return {
+    ProfileSheet: ({
+      open,
+      onEdit,
+      onClose,
+    }: {
+      open: boolean;
+      onEdit?: () => void;
+      onClose: () => void;
+    }) =>
+      open
+        ? createPortal(
+            // pointer-events: auto, as Radix gives a modal's content while it
+            // switches <body> to none.
+            <div data-testid="read-panel" style={{ pointerEvents: "auto" }}>
+              {onEdit ? (
+                <button type="button" onClick={onEdit}>
+                  Edit
+                </button>
+              ) : null}
+              <button type="button" onClick={onClose}>
+                Close panel
+              </button>
+            </div>,
+            document.body,
+          )
+        : null,
+  };
+});
 vi.mock("@/components/leads/edit-form/ArchiveControls", () => ({ ArchiveControls: () => null }));
 vi.mock("@/lib/organizations/actions", () => ({
   fetchOrgDisplaySettings: vi.fn(async () => ({ timeZone: "UTC", currencyFormat: "USD" })),
@@ -336,6 +354,63 @@ describe("EditLeadDrawer — one host, two views (the read panel's Edit entry po
 
     expect(await screen.findByTestId("read-panel")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // #53 item 1. The form used to unmount when the read panel opened, so every
+  // unsaved edit was lost. The stub read panel is not a Radix dialog, so this
+  // pins the drawer's own half: the form stays mounted and the same values come
+  // back. The cover (inert, aria-hidden by Radix) is checked in the browser.
+  it("keeps unsaved edits through View full profile and back to Edit", async () => {
+    const user = userEvent.setup();
+    render(<EditLeadDrawer lead={lead} open onClose={() => {}} />);
+
+    await user.clear(screen.getByLabelText("Client name"));
+    await user.paste("Dana Rivers");
+    await user.selectOptions(screen.getByLabelText("Status"), "QUOTED");
+    await user.click(screen.getByRole("button", { name: "Address & social profiles, 5 fields" }));
+    await user.clear(screen.getByLabelText("Physical address"));
+    await user.paste("202 Corrected Road");
+    const formBefore = document.querySelector("form");
+
+    await user.click(screen.getByRole("button", { name: "View full profile" }));
+    expect(await screen.findByTestId("read-panel")).toBeInTheDocument();
+    // Still in the DOM, same element, same values, while the read panel is up.
+    expect(document.querySelector("form")).toBe(formBefore);
+    expect(screen.getByLabelText("Client name")).toHaveValue("Dana Rivers");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    await waitFor(() => expect(screen.queryByTestId("read-panel")).toBeNull());
+    expect(document.querySelector("form")).toBe(formBefore);
+    expect(screen.getByLabelText("Client name")).toHaveValue("Dana Rivers");
+    expect(screen.getByLabelText("Status")).toHaveValue("QUOTED");
+    expect(screen.getByLabelText("Physical address")).toHaveValue("202 Corrected Road");
+    // The group the operator opened is still open: that is state too.
+    expect(
+      screen.getByRole("button", { name: "Address & social profiles, 5 fields" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("drops the kept form when the surface closes, so the next open starts clean", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { rerender } = render(<EditLeadDrawer lead={lead} open onClose={onClose} />);
+
+    await user.clear(screen.getByLabelText("Client name"));
+    await user.paste("Dana Rivers");
+    await user.click(screen.getByRole("button", { name: "View full profile" }));
+    await user.click(await screen.findByRole("button", { name: "Close panel" }));
+    // Not counted: the stub is not a Radix layer, so the form sheet below also
+    // sees this click as "outside" and closes itself. The real stacked layers
+    // ignore it, which the browser check covers.
+    expect(onClose).toHaveBeenCalled();
+
+    // The caller closes, then opens again.
+    rerender(<EditLeadDrawer lead={lead} open={false} onClose={onClose} />);
+    await waitFor(() => expect(document.querySelector("form")).toBeNull());
+    rerender(<EditLeadDrawer lead={lead} open onClose={onClose} />);
+
+    expect(await screen.findByLabelText("Client name")).toHaveValue("Fake Falls Plumbing");
   });
 
   it("closing the read view closes the whole surface, once", async () => {

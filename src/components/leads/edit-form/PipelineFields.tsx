@@ -9,6 +9,7 @@ import type { Lead } from "@/lib/leads/queries";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { DuePresets } from "@/components/leads/profile/DuePresets";
 
 // datetime-local inputs work in the browser's own local timezone, with no
 // offset in the value string. Converting here (client-side) rather than on
@@ -87,7 +88,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         />
       </div>
 
-      <div>
+      <div className="space-y-2">
         <Input
           label="Follow-up due"
           hint="The lead goes cold when this time passes."
@@ -100,6 +101,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         {/* The visible field is local-time and unnamed; this hidden sibling is
             the only next_action_at in the FormData. */}
         <input type="hidden" name="next_action_at" value={nextActionIso} />
+        <DuePresets onPick={(due) => setNextActionLocal(toDatetimeLocalValue(due.toISOString()))} />
       </div>
 
       {/* Form/Action Field Parity: updateLead reads

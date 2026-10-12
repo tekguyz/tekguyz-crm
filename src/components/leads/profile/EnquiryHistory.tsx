@@ -1,7 +1,8 @@
 "use client";
 
-import { IconInbox } from "@tabler/icons-react";
+import { IconInbox, IconMessage2 } from "@tabler/icons-react";
 import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
+import { TimelineMarker } from "@/components/leads/profile/TimelineMarker";
 import { useEffect, useState } from "react";
 import { fetchLeadSubmissions } from "@/lib/submissions/actions";
 import type { LeadSubmission } from "@/lib/submissions/queries";
@@ -79,10 +80,10 @@ export function EnquiryHistory({
         <ul className="flex flex-col gap-3 border-l border-hairline pl-4">
           {submissions.map((submission) => (
             <li key={submission.id} className="relative">
-              {/* Hollow marker, against ActivityTimeline's filled one — the
-                  cheapest honest signal that this column is a different kind
-                  of record, without inventing a new visual language for it. */}
-              <span className="absolute top-1.5 -left-[18.5px] size-2 rounded-full border border-ink-muted bg-canvas-pure" />
+              {/* Sky and a speech bubble: what a visitor said, against the
+                  Activity rail's per-type marks for what staff and the system
+                  did. Same marker, so the two columns read as one family. */}
+              <TimelineMarker icon={IconMessage2} tone="sky" />
               <p className="text-caption text-ink-muted">
                 {formatDueAt(submission.created_at, timeZone)}
                 {submission.lead_source && ` · ${submission.lead_source}`}

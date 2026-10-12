@@ -43,11 +43,16 @@ export function TaskRow({
   task,
   timeZone,
   onChanged,
+  onDismissed,
   highlighted = false,
 }: {
   task: Task;
   timeZone: string;
   onChanged: () => void;
+  // Called once a dismiss has been saved, with the task that went. The
+  // section uses it to offer Undo. Optional, so a caller without one is
+  // unchanged.
+  onDismissed?: (task: Task) => void;
   // True for the one row the command palette navigated to, for a couple of
   // seconds after arrival. TasksSection owns the timer and the tab selection;
   // this only renders the marker and scrolls itself into view.
@@ -94,10 +99,14 @@ export function TaskRow({
     });
   }
 
+  // Dismissing hides the row at once, so the section is told which task went:
+  // it holds the Undo for a few seconds. The row cannot hold it, because the
+  // refetch below unmounts the row.
   function handleDismiss() {
     startTransition(async () => {
       await dismissTask(task.id);
       onChanged();
+      onDismissed?.(task);
     });
   }
 

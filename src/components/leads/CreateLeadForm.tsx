@@ -105,7 +105,7 @@ export function CreateLeadForm({
         {/* Every group is always open, unlike the edit drawer's. There is
             nothing rarely-touched on a create form, so collapsing one would
             hide something for no gain. */}
-        <FormSection id="identity" label="Identity" count={7} collapsible={false}>
+        <FormSection id="identity" label="Identity" count={8} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="Client name" icon={IconUser} {...field("client_name")} required />
             <Input label="Company" icon={IconBuilding} {...field("company")} />
@@ -123,18 +123,9 @@ export function CreateLeadForm({
             <Input label="Lead source" icon={IconFlag} {...field("lead_source")} />
             <Input label="Service category" icon={IconTag} {...field("service_category")} />
           </div>
-        </FormSection>
-
-        <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
-          <Input label="Google Business Profile" icon={IconBrandGoogle} {...field("social_google_business")} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Facebook" icon={IconBrandFacebook} {...field("social_facebook")} />
-            <Input label="Instagram" icon={IconBrandInstagram} {...field("social_instagram")} />
-          </div>
-          <Input label="WhatsApp" icon={IconBrandWhatsapp} {...field("social_whatsapp")} placeholder="https://wa.me/…" />
-        </FormSection>
-
-        <FormSection id="pipeline" label="Pipeline" count={1} collapsible={false}>
+          {/* Estimated revenue used to be a "Pipeline" group of one. A heading
+              over a single field cost a row of chrome for nothing, and it is
+              a thing you know about the lead, so it sits with the rest. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
               label="Estimated revenue" icon={IconCurrencyDollar}
@@ -144,6 +135,15 @@ export function CreateLeadForm({
               step="0.01"
             />
           </div>
+        </FormSection>
+
+        <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
+          <Input label="Google Business Profile" icon={IconBrandGoogle} {...field("social_google_business")} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Facebook" icon={IconBrandFacebook} {...field("social_facebook")} />
+            <Input label="Instagram" icon={IconBrandInstagram} {...field("social_instagram")} />
+          </div>
+          <Input label="WhatsApp" icon={IconBrandWhatsapp} {...field("social_whatsapp")} placeholder="https://wa.me/…" />
         </FormSection>
       </div>
 

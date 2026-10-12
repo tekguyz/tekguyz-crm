@@ -144,3 +144,23 @@ describe("dismissTask", () => {
     await expect(dismissTask("task-1")).rejects.toMatchObject({ message: "No rows" });
   });
 });
+
+describe("restoreTask", () => {
+  it("sets dismissed = false and touches nothing else", async () => {
+    const mock = mockSupabase();
+    const { restoreTask } = await loadActions(mock);
+
+    await restoreTask("task-1");
+
+    // Not `completed`: a task that was done when it was dismissed comes back done.
+    expect(mock.updates).toEqual([{ dismissed: false }]);
+    expect(mock.eqCalls).toEqual([["id", "task-1"]]);
+  });
+
+  it("throws when the write is denied rather than silently no-opping", async () => {
+    const mock = mockSupabase({ error: { message: "No rows" } });
+    const { restoreTask } = await loadActions(mock);
+
+    await expect(restoreTask("task-1")).rejects.toMatchObject({ message: "No rows" });
+  });
+});

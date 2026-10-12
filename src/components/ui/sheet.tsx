@@ -85,14 +85,19 @@ function SheetContent({
   children,
   side = "bottom",
   showClose = side === "bottom",
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: SheetSide;
   showClose?: boolean;
+  // For a sheet that sits UNDER another one (the lead edit form kept alive
+  // beneath the read panel): the top sheet already dims the page, and two
+  // dims stacked read as a muddy black.
+  overlayClassName?: string;
 }) {
   return (
     <SheetPrimitive.Portal>
-      <SheetOverlay />
+      <SheetOverlay className={overlayClassName} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
