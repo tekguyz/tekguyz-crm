@@ -1,6 +1,7 @@
 import "server-only";
 import { GoogleGenAI, Type } from "@google/genai";
 import { GEMINI_SPAM_SHIELD_MODEL } from "@/lib/ai/models";
+import { stripSiteCopy } from "@/lib/ai/site-copy";
 
 const SPAM_SHIELD_TIMEOUT_MS = 8000;
 
@@ -35,7 +36,9 @@ export async function evaluateLeadForSpam(
   const userContent = JSON.stringify({
     name: payload.clientName,
     email: payload.email,
-    message: payload.message ?? "",
+    // The site's own page copy is not the visitor's words (#6). A message that
+    // was only page copy goes to the model as empty, so name and email decide.
+    message: stripSiteCopy(payload.message ?? ""),
   });
 
   const response = await withTimeout(
