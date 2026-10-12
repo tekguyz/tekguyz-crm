@@ -15,7 +15,10 @@ export type BadgeTone =
 // The decorative pill palette is for status badges and category dots ONLY —
 // never layout borders, never primary buttons. "cold" is not decorative: it is
 // the desaturated half of the Going Cold SLA rule (see Card's `cold` prop).
-const TONES: Record<BadgeTone, string> = {
+//
+// Exported so a control that must be the pill itself (the Prospects status
+// select) can wear the same colours instead of keeping a second copy.
+export const BADGE_TONE_CLASSES: Record<BadgeTone, string> = {
   neutral: "bg-canvas-soft text-ink-muted",
   purple: "bg-pill-purple-bg text-pill-purple-fg",
   pink: "bg-pill-pink-bg text-pill-pink-fg",
@@ -39,7 +42,7 @@ export function Badge({
     <span
       className={cn(
         "text-label inline-flex items-center gap-1.5 rounded-sm px-1.5 py-0.5",
-        TONES[tone],
+        BADGE_TONE_CLASSES[tone],
         className,
       )}
       {...props}

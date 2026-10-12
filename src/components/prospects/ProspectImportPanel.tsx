@@ -40,10 +40,12 @@ function StatTile({
 }) {
   return (
     <div className="rounded-md border border-hairline p-3">
-      <Badge tone={tone} className="text-body-md rounded-full px-2 font-semibold">
-        {value.toLocaleString()}
+      {/* The label is the signal, so it wears the pill; the number is plain
+          type, not a pill. */}
+      <Badge tone={tone} dot>
+        {label}
       </Badge>
-      <p className="text-body-md mt-2 font-medium">{label}</p>
+      <p className="text-h1 mt-2 tabular-nums">{value.toLocaleString()}</p>
       {detail && <p className="text-body-sm text-ink-muted">{detail}</p>}
     </div>
   );

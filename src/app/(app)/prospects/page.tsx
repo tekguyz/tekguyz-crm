@@ -33,12 +33,12 @@ export default async function ProspectsPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="sr-only">Prospects</h1>
-          <p className="text-body-md text-ink-muted">
+          <p className="text-body-md max-w-prose text-ink-muted">
             Cold outreach from the leadgen scrape. Ring one, learn an email address, then
             promote it into a real lead.
           </p>
         </div>
-        <Button asChild variant="secondary">
+        <Button asChild variant="secondary" className="max-sm:h-11">
           <Link href="/prospects/import">
             <IconUpload className="size-4" stroke={1.75} aria-hidden="true" />
             Import CSV

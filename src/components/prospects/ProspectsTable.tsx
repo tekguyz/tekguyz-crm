@@ -45,7 +45,13 @@ const COLUMNS: Column[] = [
   { id: "rating", key: "rating", label: "Rating", minWidth: 96 },
   { id: "status", key: "status", label: "Status", minWidth: 136 },
   { id: "notes", key: null, label: "Notes", minWidth: 160 },
-  { id: "actions", key: null, label: "", className: "text-right", resizable: false },
+  {
+    id: "actions",
+    key: null,
+    label: "",
+    className: "text-right",
+    resizable: false,
+  },
 ];
 
 const COLUMN_BY_ID = new Map(COLUMNS.map((column) => [column.id, column]));
@@ -97,6 +103,8 @@ export function ProspectsTable({
     setDirection("asc");
   }
 
+  const tableProps = columnTableProps(layout);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -105,6 +113,7 @@ export function ProspectsTable({
             type="search"
             label="Search"
             placeholder="Name, city, category, phone, notes…"
+            className="max-sm:h-11"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -113,6 +122,7 @@ export function ProspectsTable({
           <Select
             label="Status"
             value={status}
+            className="max-sm:h-11"
             onChange={(event) => setStatus(event.target.value)}
           >
             <option value="ALL">All statuses</option>
@@ -130,68 +140,93 @@ export function ProspectsTable({
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-body-md text-ink-muted rounded-md border border-hairline px-3 py-8 text-center">
+        <p className="text-body-md rounded-lg border border-dashed border-hairline px-3 py-8 text-center text-ink-muted">
           No prospects match this view.
         </p>
       ) : (
-        <Table {...columnTableProps(layout)}>
-          <TableColumnGroup layout={layout} />
-          <TableHead>
-            <TableRow ref={layout.headerRowRef}>
-              {layout.order.map((id) => {
-                const column = COLUMN_BY_ID.get(id)!;
-                const name = column.label || "Actions";
-                const header = columnHeaderProps(layout, id);
-                return (
-                  <TableHeaderCell
-                    key={id}
-                    {...header}
-                    className={cn(header.className, column.className)}
-                  >
-                    <div
+        // One bordered panel, like Contacts and Today's queues. `relative` +
+        // `overflow-hidden` is load-bearing: the table's sr-only spans are
+        // position:absolute, and with no positioned ancestor inside the scroller
+        // they escaped to the shell's <main> and made it scroll sideways.
+        <div className="relative overflow-hidden rounded-lg border border-hairline bg-canvas-pure [&_tbody>tr:last-child]:border-b-0">
+          <Table
+            {...tableProps}
+            className={cn(tableProps.className, "max-sm:block max-sm:w-full!")}
+          >
+            <TableColumnGroup layout={layout} />
+            <TableHead className="max-sm:block">
+              <TableRow
+                ref={layout.headerRowRef}
+                className="max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-1 max-sm:px-2"
+              >
+                {layout.order.map((id) => {
+                  const column = COLUMN_BY_ID.get(id)!;
+                  const name = column.label || "Actions";
+                  const header = columnHeaderProps(layout, id);
+                  return (
+                    <TableHeaderCell
+                      key={id}
+                      {...header}
                       className={cn(
-                        "flex items-center gap-0.5",
-                        column.className === "text-right" && "justify-end",
+                        header.className,
+                        column.className,
+                        // On a phone the header row is only a strip of sort
+                        // buttons: columns with no sort key have nothing to show.
+                        column.key ? "max-sm:p-0" : "max-sm:hidden",
                       )}
                     >
-                      <ColumnReorderHandle layout={layout} id={id} label={name} />
-                      {column.key ? (
-                        // A real <button>, so the header is reachable and operable
-                        // from the keyboard and announces its own sort state.
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Sort by ${column.label}`}
-                          onClick={() => toggleSort(column.key as ProspectSortKey)}
-                        >
-                          {column.label}
-                          <SortIcon active={sortKey === column.key} direction={direction} />
-                        </Button>
-                      ) : (
-                        <span className={column.label ? undefined : "sr-only"}>{name}</span>
+                      <div
+                        className={cn(
+                          "flex items-center gap-0.5",
+                          column.className === "text-right" && "justify-end",
+                        )}
+                      >
+                        {/* Reorder and resize are mouse-and-keyboard tools; a phone
+                          row is a grid whose order is fixed. */}
+                        <div className="contents max-sm:hidden">
+                          <ColumnReorderHandle layout={layout} id={id} label={name} />
+                        </div>
+                        {column.key ? (
+                          // A real <button>, so the header is reachable and operable
+                          // from the keyboard and announces its own sort state.
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="max-sm:h-11"
+                            aria-label={`Sort by ${column.label}`}
+                            onClick={() => toggleSort(column.key as ProspectSortKey)}
+                          >
+                            {column.label}
+                            <SortIcon active={sortKey === column.key} direction={direction} />
+                          </Button>
+                        ) : (
+                          <span className={column.label ? undefined : "sr-only"}>{name}</span>
+                        )}
+                      </div>
+                      {column.resizable === false ? null : (
+                        <div className="contents max-sm:hidden">
+                          <ColumnResizeHandle layout={layout} id={id} label={name} />
+                        </div>
                       )}
-                    </div>
-                    {column.resizable === false ? null : (
-                      <ColumnResizeHandle layout={layout} id={id} label={name} />
-                    )}
-                  </TableHeaderCell>
-                );
-              })}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {visible.map((prospect) => (
-              <ProspectRow
-                key={prospect.id}
-                prospect={prospect}
-                columnOrder={layout.order}
-                onPromote={setPromoting}
-                highlighted={prospect.id === highlightedId}
-              />
-            ))}
-          </TableBody>
-        </Table>
+                    </TableHeaderCell>
+                  );
+                })}
+              </TableRow>
+            </TableHead>
+            <TableBody className="max-sm:block">
+              {visible.map((prospect) => (
+                <ProspectRow
+                  key={prospect.id}
+                  prospect={prospect}
+                  columnOrder={layout.order}
+                  onPromote={setPromoting}
+                  highlighted={prospect.id === highlightedId}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {/* One modal for the whole table, keyed by prospect so its form state and
