@@ -1,5 +1,7 @@
 "use client";
 
+import { IconUserCircle } from "@tabler/icons-react";
+
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
@@ -40,6 +42,7 @@ export function AssignmentField({ lead }: { lead: Lead }) {
     AssignmentField.test.tsx. */}
     <Select
       label="Assigned to"
+      icon={IconUserCircle}
       name="assigned_to"
       value={assignedTo}
       onChange={(event) => setAssignedTo(event.target.value)}

@@ -1,5 +1,20 @@
 "use client";
 
+import {
+  IconBrandFacebook,
+  IconBrandGoogle,
+  IconBrandInstagram,
+  IconAlertCircle,
+  IconBrandWhatsapp,
+  IconBuilding,
+  IconCurrencyDollar,
+  IconFlag,
+  IconMail,
+  IconPhone,
+  IconTag,
+  IconUser,
+  IconWorld,
+} from "@tabler/icons-react";
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
@@ -92,37 +107,37 @@ export function CreateLeadForm({
             hide something for no gain. */}
         <FormSection id="identity" label="Identity" count={7} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Client name" {...field("client_name")} required />
-            <Input label="Company" {...field("company")} />
+            <Input label="Client name" icon={IconUser} {...field("client_name")} required />
+            <Input label="Company" icon={IconBuilding} {...field("company")} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Optional: a lead needs a name and any one Contact Channel,
                 and createLead says so when there is none (#37). */}
-            <Input label="Email" type="email" {...field("email")} />
-            <Input label="Phone" {...field("phone")} />
+            <Input label="Email" icon={IconMail} type="email" {...field("email")} />
+            <Input label="Phone" icon={IconPhone} {...field("phone")} />
           </div>
           {/* Full width: a URL runs past a half column and would truncate for
               no reason. */}
-          <Input label="Website" {...field("website")} />
+          <Input label="Website" icon={IconWorld} {...field("website")} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Lead source" {...field("lead_source")} />
-            <Input label="Service category" {...field("service_category")} />
+            <Input label="Lead source" icon={IconFlag} {...field("lead_source")} />
+            <Input label="Service category" icon={IconTag} {...field("service_category")} />
           </div>
         </FormSection>
 
         <FormSection id="social" label="Social profiles" count={4} collapsible={false}>
-          <Input label="Google Business Profile" {...field("social_google_business")} />
+          <Input label="Google Business Profile" icon={IconBrandGoogle} {...field("social_google_business")} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Facebook" {...field("social_facebook")} />
-            <Input label="Instagram" {...field("social_instagram")} />
+            <Input label="Facebook" icon={IconBrandFacebook} {...field("social_facebook")} />
+            <Input label="Instagram" icon={IconBrandInstagram} {...field("social_instagram")} />
           </div>
-          <Input label="WhatsApp" {...field("social_whatsapp")} placeholder="https://wa.me/…" />
+          <Input label="WhatsApp" icon={IconBrandWhatsapp} {...field("social_whatsapp")} placeholder="https://wa.me/…" />
         </FormSection>
 
         <FormSection id="pipeline" label="Pipeline" count={1} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
-              label="Estimated revenue"
+              label="Estimated revenue" icon={IconCurrencyDollar}
               {...field("estimated_revenue")}
               type="number"
               min="0"
@@ -136,9 +151,13 @@ export function CreateLeadForm({
           the scrolling element, so it is one click away from anywhere. */}
       <div className="flex shrink-0 flex-col gap-2 border-t border-hairline bg-canvas-pure px-4 py-3">
         {error && (
-          <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
-            {error}
-          </p>
+          <p
+          role="alert"
+          className="text-body-sm flex items-start gap-1.5 text-danger"
+                >
+          <IconAlertCircle aria-hidden stroke={1.75} className="mt-0.5 size-4 shrink-0" />
+          {error}
+                </p>
         )}
         <div className="flex items-center gap-2">
           <Button type="submit" variant="primary" loading={isPending}>

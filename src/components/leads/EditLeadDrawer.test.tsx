@@ -28,6 +28,9 @@ vi.mock("@/components/leads/profile/ProfileSheet", () => ({
     ) : null,
 }));
 vi.mock("@/components/leads/edit-form/ArchiveControls", () => ({ ArchiveControls: () => null }));
+vi.mock("@/lib/organizations/actions", () => ({
+  fetchOrgDisplaySettings: vi.fn(async () => ({ timeZone: "UTC", currencyFormat: "USD" })),
+}));
 vi.mock("@/components/shell/RoleContext", () => ({ useOrgRole: () => "OWNER" }));
 vi.mock("@/components/shell/MembersContext", () => ({
   useOrgMembers: () => [{ user_id: "user-1", display_name: "Dana Rivers", email: "d@x.invalid" }],
@@ -89,7 +92,7 @@ describe("EditLeadDrawer — surviving a failed submit across every sibling", ()
     };
     await replace("Client name", "Dana Rivers");
     await replace("Physical address", "202 Corrected Road");
-    await replace("Facebook URL", "facebook.example/dana");
+    await replace("Facebook", "facebook.example/dana");
     await user.selectOptions(screen.getByLabelText("Status"), "QUOTED");
     await replace("Estimated revenue", "2500");
     await user.click(screen.getByLabelText("Starred"));
@@ -110,7 +113,7 @@ describe("EditLeadDrawer — surviving a failed submit across every sibling", ()
     });
     expect(screen.getByLabelText("Client name")).toHaveValue("Dana Rivers");
     expect(screen.getByLabelText("Physical address")).toHaveValue("202 Corrected Road");
-    expect(screen.getByLabelText("Facebook URL")).toHaveValue("facebook.example/dana");
+    expect(screen.getByLabelText("Facebook")).toHaveValue("facebook.example/dana");
     expect(screen.getByLabelText("Status")).toHaveValue("QUOTED");
     expect(screen.getByLabelText("Estimated revenue")).toHaveValue(2500);
     expect(screen.getByLabelText("Assigned to")).toHaveValue("user-1");

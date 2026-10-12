@@ -1,5 +1,7 @@
 "use client";
 
+import { IconCalendarEvent, IconCurrencyDollar, IconLayoutKanban } from "@tabler/icons-react";
+
 import { useRef, useState } from "react";
 
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
@@ -63,6 +65,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
       <div className="grid grid-cols-2 gap-3">
         <Select
           label="Status"
+          icon={IconLayoutKanban}
           name="status"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
@@ -74,6 +77,7 @@ export function PipelineFields({ lead }: { lead: Lead }) {
         </Select>
         <Input
           label="Estimated revenue"
+          icon={IconCurrencyDollar}
           name="estimated_revenue"
           type="number"
           min="0"
@@ -85,7 +89,9 @@ export function PipelineFields({ lead }: { lead: Lead }) {
 
       <div>
         <Input
-          label="Follow-up due (Going Cold when overdue)"
+          label="Follow-up due"
+          hint="The lead goes cold when this time passes."
+          icon={IconCalendarEvent}
           type="datetime-local"
           required
           value={nextActionLocal}

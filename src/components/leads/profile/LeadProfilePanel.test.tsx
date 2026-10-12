@@ -16,6 +16,10 @@ import type { Lead } from "@/lib/leads/queries";
 // infinite loop that hangs the test runner with no output rather than failing.
 // The real sections report from an effect for the same reason; a stub that
 // did otherwise would be testing a component this panel never mounts.
+vi.mock("@/components/shell/MembersContext", () => ({
+  useOrgMembers: () => [],
+  memberLabel: (m: { display_name: string }) => m.display_name,
+}));
 vi.mock("@/lib/organizations/actions", () => ({
   fetchOrgDisplaySettings: vi.fn(async () => ({
     timeZone: "America/Chicago",
@@ -168,7 +172,7 @@ describe("LeadProfilePanel — header and metadata", () => {
     // SVGAnimatedString object, so a string assertion against it silently
     // measures nothing.
     const star = screen.getByRole("img", { name: "Starred" });
-    expect(star.getAttribute("class")).toContain("text-ink-muted");
+    expect(star.getAttribute("class")).toContain("text-pill-orange-fg");
     expect(star.getAttribute("class")).not.toContain("accent");
   });
 
@@ -178,7 +182,7 @@ describe("LeadProfilePanel — header and metadata", () => {
   it("shows the four real lead columns, formatted with the tenant's own settings", async () => {
     renderPanel();
 
-    expect(screen.getByText("QUOTED")).toBeInTheDocument();
+    expect(screen.getByText("Quoted")).toBeInTheDocument();
     expect(screen.getByText("Webhook")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("$31,500")).toBeInTheDocument();
@@ -199,9 +203,20 @@ describe("LeadProfilePanel — header and metadata", () => {
     expect(screen.queryByRole("button", { name: "Edit lead" })).toBeNull();
   });
 
-  it("shows a date rather than the Going Cold badge when the lead is not overdue", () => {
+  it("shows the stage pill and a due label in the header, and no Overdue wording when not late", () => {
     renderPanel();
 
-    expect(screen.queryByText("Overdue")).toBeNull();
+    expect(screen.getByText("Quoted")).toBeInTheDocument();
+    expect(screen.queryByText(/overdue/i)).toBeNull();
+  });
+
+  // The Going Cold signal is red text with an icon, the same label Today and
+  // Contacts print. It used to be a grey "Overdue" badge with no age.
+  it("reads an overdue lead as red \"Nd overdue\" in the header and a red follow-up time", () => {
+    renderPanel({ ...lead, next_action_at: "2020-01-01T15:00:00.000Z" });
+
+    const label = screen.getByText(/d overdue$/);
+    expect(label.getAttribute("class")).toContain("text-danger");
+    expect(screen.getByText("Follow-up").closest("div")?.querySelector("dd span")?.getAttribute("class")).toContain("text-danger");
   });
 });

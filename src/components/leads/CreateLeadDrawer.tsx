@@ -72,7 +72,7 @@ export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}
               size="sm"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="size-7 shrink-0 px-0"
+              className="size-7 shrink-0 px-0 max-sm:size-11"
             >
               <IconX stroke={1.75} aria-hidden className="size-4" />
             </Button>

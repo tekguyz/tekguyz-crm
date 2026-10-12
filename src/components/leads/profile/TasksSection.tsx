@@ -1,14 +1,26 @@
 "use client";
 
+import { IconCalendarEvent, IconChecklist } from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { createTask, fetchTasksForLead, type TaskFormState } from "@/lib/tasks/actions";
 import type { Task } from "@/lib/tasks/queries";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { TaskRow } from "@/components/leads/profile/TaskRow";
+import { TaskRow, toDatetimeLocalValue } from "@/components/leads/profile/TaskRow";
 import { useArrivalHighlight } from "@/lib/hooks/use-arrival-highlight";
 
 const initialState: TaskFormState = null;
+
+// A new task is due tomorrow at 9:00 unless the operator says otherwise, so
+// the commonest case is title + Add instead of title + native picker + Add.
+// Local wall clock, same as the picker itself.
+function defaultDueLocal(): string {
+  const due = new Date();
+  due.setDate(due.getDate() + 1);
+  due.setHours(9, 0, 0, 0);
+  return toDatetimeLocalValue(due.toISOString());
+}
 
 // Sibling of ActivityTimeline / NoteCaptureForm — ProfileSheet mounts all
 // three directly rather than nesting them.
@@ -40,7 +52,7 @@ export function TasksSection({
   const [error, setError] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [dueLocal, setDueLocal] = useState("");
+  const [dueLocal, setDueLocal] = useState(defaultDueLocal);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
 
@@ -69,7 +81,7 @@ export function TasksSection({
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) {
       formRef.current?.reset();
-      setDueLocal("");
+      setDueLocal(defaultDueLocal());
       setRefreshKey((k) => k + 1);
     }
     wasPending.current = isPending;
@@ -107,7 +119,13 @@ export function TasksSection({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-label uppercase text-ink-muted">Tasks</h3>
+        <PanelSectionHeading
+          icon={IconChecklist}
+          tone="green"
+          count={tasks ? tasks.filter((task) => !task.completed).length : undefined}
+        >
+          Tasks
+        </PanelSectionHeading>
         {/* Open/Completed is a two-state filter, so the selected tab takes the
             bordered secondary Button and the other takes ghost. v1's
             elevation-1 on the active tab is gone — v2 tabs are Level 0. */}
@@ -116,6 +134,7 @@ export function TasksSection({
             type="button"
             variant={showCompleted ? "ghost" : "secondary"}
             size="sm"
+            className="max-sm:h-11"
             aria-pressed={!showCompleted}
             onClick={() => setShowCompleted(false)}
           >
@@ -125,6 +144,7 @@ export function TasksSection({
             type="button"
             variant={showCompleted ? "secondary" : "ghost"}
             size="sm"
+            className="max-sm:h-11"
             aria-pressed={showCompleted}
             onClick={() => setShowCompleted(true)}
           >
@@ -139,13 +159,15 @@ export function TasksSection({
         <Input name="title" placeholder="Add a task…" required />
         <div className="flex items-end gap-2">
           <Input
+            label="Due"
+            icon={IconCalendarEvent}
             type="datetime-local"
             required
             value={dueLocal}
             onChange={(e) => setDueLocal(e.target.value)}
           />
           <input type="hidden" name="due_at" value={dueIso} />
-          <Button type="submit" variant="primary" disabled={isPending} className="shrink-0">
+          <Button type="submit" variant="primary" disabled={isPending} className="shrink-0 max-sm:h-11">
             {isPending ? "Adding…" : "Add"}
           </Button>
         </div>

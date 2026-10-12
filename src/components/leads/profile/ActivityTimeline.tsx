@@ -1,9 +1,12 @@
 "use client";
 
+import { IconMicrophone, IconTimeline } from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 import { useEffect, useState } from "react";
 import { fetchActivityLogs } from "@/lib/activity/actions";
 import type { ActivityLog } from "@/lib/activity/queries";
 import { Button } from "@/components/ui/Button";
+import { formatDueAt } from "@/lib/format";
 
 const LOG_TYPE_LABEL: Record<ActivityLog["log_type"], string> = {
   WEBHOOK: "Inbound Webhook",
@@ -28,6 +31,7 @@ export function ActivityTimeline({
   pendingEntry,
   onDismissPending,
   onCountChange,
+  timeZone,
 }: {
   leadId: string;
   refreshKey: number;
@@ -38,6 +42,9 @@ export function ActivityTimeline({
   // local state for a transcription that has not been written yet, and the
   // strip should not claim a record the database does not have.
   onCountChange?: (count: number) => void;
+  // The tenant's display zone, so a timestamp reads the same as every other
+  // date in the panel instead of the browser's own zone.
+  timeZone: string;
 }) {
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +75,9 @@ export function ActivityTimeline({
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-label uppercase text-ink-muted">Activity</h3>
+      <PanelSectionHeading icon={IconTimeline} tone="teal" count={logs?.length}>
+        Activity
+      </PanelSectionHeading>
 
       {/* Errors move off --cold onto --danger. --cold is the Going Cold SLA
           signal and must not double as a generic error colour; v2 added
@@ -85,7 +94,10 @@ export function ActivityTimeline({
             <li className="relative">
               <span className="absolute top-1.5 -left-[18.5px] size-2 animate-pulse rounded-full border border-canvas-pure bg-accent" />
               {pendingEntry.status === "transcribing" ? (
-                <p className="text-body-md text-ink-muted">🎙️ Transcribing…</p>
+                <p className="text-body-md flex items-center gap-1.5 text-ink-muted">
+                  <IconMicrophone aria-hidden stroke={1.75} className="size-4 shrink-0" />
+                  Transcribing…
+                </p>
               ) : (
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-body-md text-danger">{pendingEntry.message}</p>
@@ -94,7 +106,7 @@ export function ActivityTimeline({
                     variant="ghost"
                     size="sm"
                     onClick={onDismissPending}
-                    className="shrink-0"
+                    className="shrink-0 max-sm:h-11"
                   >
                     Dismiss
                   </Button>
@@ -107,7 +119,7 @@ export function ActivityTimeline({
             <li key={log.id} className="relative">
               <span className="absolute top-1.5 -left-[18.5px] size-2 rounded-full border border-canvas-pure bg-hairline" />
               <p className="text-caption text-ink-muted">
-                {LOG_TYPE_LABEL[log.log_type]} · {new Date(log.created_at).toLocaleString()}
+                {LOG_TYPE_LABEL[log.log_type]} · {formatDueAt(log.created_at, timeZone)}
               </p>
               {/* break-words: a WEBHOOK entry logs the raw JSON payload, which
                   has no spaces to wrap on and pushed a horizontal scrollbar

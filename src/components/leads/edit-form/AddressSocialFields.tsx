@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  IconBrandFacebook,
+  IconBrandGoogle,
+  IconBrandInstagram,
+  IconBrandWhatsapp,
+  IconMapPin,
+} from "@tabler/icons-react";
 import { useState } from "react";
 
 import type { Lead } from "@/lib/leads/queries";
@@ -17,8 +24,8 @@ import { Input } from "@/components/ui/Input";
 // uncontrolled field here loses its edit even when every other group is fixed.
 // See CLAUDE.md § Form/Action Field Parity.
 //
-// The four social inputs share one group label, so they carry an aria-label
-// each instead of a visible one — Input renders no <label> when none is passed.
+// The four social inputs have visible labels with their brand icons, the same
+// as the create drawer: a placeholder is not a label once the field has text.
 export function AddressSocialFields({ lead }: { lead: Lead }) {
   const [values, setValues] = useState({
     physical_address: lead.physical_address ?? "",
@@ -37,32 +44,33 @@ export function AddressSocialFields({ lead }: { lead: Lead }) {
 
   return (
     <>
-      <Input label="Physical address" {...field("physical_address")} />
+      <Input label="Physical address" icon={IconMapPin} {...field("physical_address")} />
 
-      <div className="border-t border-hairline pt-3">
-        <p className="text-label mb-1 text-ink-muted">Social profiles</p>
-        <div className="space-y-2">
-          <Input
-            {...field("social_google_business")}
-            aria-label="Google Business Profile URL"
-            placeholder="Google Business Profile URL"
-          />
-          <Input
-            {...field("social_facebook")}
-            aria-label="Facebook URL"
-            placeholder="Facebook URL"
-          />
-          <Input
-            {...field("social_instagram")}
-            aria-label="Instagram URL"
-            placeholder="Instagram URL"
-          />
-          <Input
-            {...field("social_whatsapp")}
-            aria-label="WhatsApp link"
-            placeholder="WhatsApp link (https://wa.me/…)"
-          />
-        </div>
+      <div className="grid gap-3 border-t border-hairline pt-3 sm:grid-cols-2">
+        <Input
+          label="Google Business Profile"
+          icon={IconBrandGoogle}
+          {...field("social_google_business")}
+          placeholder="https://…"
+        />
+        <Input
+          label="Facebook"
+          icon={IconBrandFacebook}
+          {...field("social_facebook")}
+          placeholder="https://facebook.com/…"
+        />
+        <Input
+          label="Instagram"
+          icon={IconBrandInstagram}
+          {...field("social_instagram")}
+          placeholder="https://instagram.com/…"
+        />
+        <Input
+          label="WhatsApp"
+          icon={IconBrandWhatsapp}
+          {...field("social_whatsapp")}
+          placeholder="https://wa.me/…"
+        />
       </div>
     </>
   );

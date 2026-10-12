@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import { IconX } from "@tabler/icons-react";
+import { IconAlertCircle, IconX } from "@tabler/icons-react";
 
 import { updateLead, type LeadFormState } from "@/lib/leads/actions";
 import type { Lead } from "@/lib/leads/queries";
 import { canEditLeadLifecycle } from "@/lib/organizations/roles";
 import { Button } from "@/components/ui/Button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 import { LEAD_PANEL_WIDTH } from "@/components/leads/panel-width";
 import { ProfileSheet } from "@/components/leads/profile/ProfileSheet";
@@ -19,6 +19,7 @@ import { AssignmentField } from "@/components/leads/edit-form/AssignmentField";
 import { OutcomeFields } from "@/components/leads/edit-form/OutcomeFields";
 import { ArchiveControls } from "@/components/leads/edit-form/ArchiveControls";
 import { useOrgRole } from "@/components/shell/RoleContext";
+import { EditLeadHeader } from "@/components/leads/EditLeadHeader";
 
 const initialState: LeadFormState = null;
 
@@ -128,16 +129,14 @@ export function EditLeadDrawer({
         >
           {/* Header chrome matching the read panel's: hairline bottom border,
               px-4 py-3, a truncating title against shrink-0 controls. */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
-            <SheetTitle className="text-title min-w-0 flex-1 truncate">
-              {lead.client_name}
-            </SheetTitle>
+          <div className="flex shrink-0 items-center gap-3 border-b border-hairline px-4 py-3">
+            <EditLeadHeader lead={lead} />
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setView("read")}
-              className="shrink-0 text-accent hover:text-accent"
+              className="shrink-0 self-start text-accent hover:text-accent max-sm:h-11"
             >
               View full profile
             </Button>
@@ -147,7 +146,7 @@ export function EditLeadDrawer({
               size="sm"
               onClick={close}
               aria-label="Close"
-              className="size-7 shrink-0 px-0"
+              className="size-7 shrink-0 self-start px-0 max-sm:size-11"
             >
               <IconX stroke={1.75} aria-hidden className="size-4" />
             </Button>
@@ -225,7 +224,11 @@ export function EditLeadDrawer({
                 scrolling past every field whether or not you touched one. */}
             <div className="flex shrink-0 flex-col gap-2 border-t border-hairline bg-canvas-pure px-4 py-3">
               {state?.error && (
-                <p className="text-body-sm rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
+                <p
+                  role="alert"
+                  className="text-body-sm flex items-start gap-1.5 text-danger"
+                >
+                  <IconAlertCircle aria-hidden stroke={1.75} className="mt-0.5 size-4 shrink-0" />
                   {state.error}
                 </p>
               )}

@@ -1,4 +1,6 @@
 import ReactMarkdown from "react-markdown";
+import { IconSparkles } from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 
 // Markdown drops a single newline: it joins the two lines into one paragraph.
 // A Lead Pack brief is a Day 0 message written line by line (#37), so every
@@ -9,13 +11,14 @@ import ReactMarkdown from "react-markdown";
 const keepLineBreaks = (text: string) =>
   text.replace(/\r\n?/g, "\n").replace(/(?<!\n)\n(?!\n)/g, "  \n");
 
-// `text-label uppercase` is the v2 section-header role, shared verbatim by
-// TasksSection and ActivityTimeline so the three sheet sections read as one
-// stack.
+// PanelSectionHeading is shared by every block in the panel so they read as
+// one stack.
 export function ExecutiveBrief({ brief }: { brief: string | null }) {
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-label uppercase text-ink-muted">Executive Brief</h3>
+      <PanelSectionHeading icon={IconSparkles} tone="purple">
+        Executive Brief
+      </PanelSectionHeading>
       {brief ? (
         <div className="text-body-md space-y-2 text-ink-main [&_h1]:text-h2 [&_h2]:text-title [&_li]:ml-4 [&_ol]:list-decimal [&_strong]:font-semibold [&_ul]:list-disc">
           <ReactMarkdown>{keepLineBreaks(brief)}</ReactMarkdown>

@@ -1,10 +1,12 @@
-import { IconPencil, IconStarFilled, IconX } from "@tabler/icons-react";
+import { IconPencil, IconStar, IconX } from "@tabler/icons-react";
 
 import { channelLinks } from "@/lib/leads/channel-links";
 import type { Lead } from "@/lib/leads/queries";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ChannelIcon } from "@/components/leads/ChannelIcon";
+import { DueLabel } from "@/components/leads/DueLabel";
+import { StageBadge } from "@/components/leads/StageBadge";
 
 // The panel header, wired. Row one: avatar, name (+ starred), company, edit,
 // close. Row two: the Click-to-Action shortcuts, one per channel the lead has.
@@ -31,7 +33,7 @@ function QuickActions({ lead }: { lead: Lead }) {
   return (
     <div className="flex flex-wrap items-center gap-1 pl-[3.25rem]">
       {links.map((link) => (
-        <Button key={link.kind} asChild variant="secondary" size="sm" className="size-7 px-0">
+        <Button key={link.kind} asChild variant="secondary" size="sm" className="size-7 px-0 max-sm:size-11">
           <a
             href={link.href}
             aria-label={link.label}
@@ -53,16 +55,19 @@ function QuickActions({ lead }: { lead: Lead }) {
 // a panel with no such host renders no dead control.
 export function LeadPanelHeader({
   lead,
+  timeZone,
   onClose,
   onEdit,
 }: {
   lead: Lead;
+  // The tenant's display zone, for the due label. Resolved once by the panel.
+  timeZone: string;
   onClose: () => void;
   onEdit?: () => void;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-2 border-b border-hairline px-4 py-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         {/* src/components/ui/Avatar.tsx as shipped, by `name` only. It is not a
           photo and must not become one: there is no column, no bucket and no
           upload path, and Avatar's own comment says the same. Nothing here
@@ -73,22 +78,31 @@ export function LeadPanelHeader({
           <p className="text-title flex items-center gap-1.5 truncate">
             <span className="truncate">{lead.client_name}</span>
             {lead.is_starred ? (
-              // Starred is a real leads column, not decoration, and --accent is
-              // not spent on it: --accent in this panel belongs to the primary
-              // CTA, active nav and the focus ring. role="img" is not redundant
+              // Starred is a real leads column, not decoration. It keeps its
+              // orange (the same star the Today rows and Pipeline cards use);
+              // --accent in this panel belongs to the primary CTA, active nav
+              // and the focus ring. role="img" is not redundant
               // beside aria-label — an <svg> has no implicit role in several
               // engines, and an aria-label on a roleless element is not
               // guaranteed to be announced at all.
-              <IconStarFilled
+              <IconStar
                 role="img"
                 aria-label="Starred"
-                className="size-3.5 shrink-0 text-ink-muted"
+                stroke={1.75}
+                className="size-3.5 shrink-0 fill-pill-orange-fg text-pill-orange-fg"
               />
             ) : null}
           </p>
           {lead.company ? (
             <p className="text-body-sm truncate text-ink-muted">{lead.company}</p>
           ) : null}
+          {/* Where the lead is and what is due next: the two things the panel
+              has to answer before anything else (PRODUCT.md principle 2). Both
+              are the shared parts, so the colour matches Today and Pipeline. */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <StageBadge status={lead.status} />
+            <DueLabel at={lead.next_action_at} timeZone={timeZone} />
+          </div>
         </div>
 
         {onEdit ? (
@@ -107,7 +121,7 @@ export function LeadPanelHeader({
             variant="secondary"
             size="sm"
             onClick={onEdit}
-            className="shrink-0 max-sm:size-7 max-sm:px-0"
+            className="shrink-0 max-sm:size-11 max-sm:px-0"
           >
             <IconPencil stroke={1.75} aria-hidden className="size-4" />
             <span className="sr-only sm:not-sr-only">Edit lead</span>
@@ -120,7 +134,7 @@ export function LeadPanelHeader({
           size="sm"
           onClick={onClose}
           aria-label="Close"
-          className="size-7 shrink-0 px-0"
+          className="size-7 shrink-0 px-0 max-sm:size-11"
         >
           <IconX stroke={1.75} aria-hidden className="size-4" />
         </Button>

@@ -140,7 +140,7 @@ export function LeadProfilePanel({
 
   return (
     <>
-      <LeadPanelHeader lead={lead} onClose={onClose} onEdit={onEdit} />
+      <LeadPanelHeader lead={lead} timeZone={display.timeZone} onClose={onClose} onEdit={onEdit} />
       <LeadMetaStrip
         lead={lead}
         timeZone={display.timeZone}
@@ -160,7 +160,7 @@ export function LeadProfilePanel({
             aria-current={active === section.id ? "true" : undefined}
             aria-label={countedLabel(section.id, section.label, counts[section.id])}
             onClick={() => jumpTo(section.id)}
-            className="shrink-0"
+            className="shrink-0 max-sm:h-11"
           >
             {section.label}
             {typeof counts[section.id] === "number" ? (
@@ -202,7 +202,11 @@ export function LeadProfilePanel({
                 comes before what we did about it, and the two stay separate
                 columns rather than one interleaved stream. */}
             {section.id === "enquiries" && (
-              <EnquiryHistory leadId={lead.id} onCountChange={reportEnquiries} />
+              <EnquiryHistory
+                leadId={lead.id}
+                onCountChange={reportEnquiries}
+                timeZone={display.timeZone}
+              />
             )}
             {section.id === "activity" && (
               <ActivityTimeline
@@ -211,6 +215,7 @@ export function LeadProfilePanel({
                 pendingEntry={pendingVoiceNote}
                 onDismissPending={() => setPendingVoiceNote(null)}
                 onCountChange={reportActivity}
+                timeZone={display.timeZone}
               />
             )}
             {section.id === "notes" && (

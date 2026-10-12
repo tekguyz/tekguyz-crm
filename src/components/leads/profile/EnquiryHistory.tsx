@@ -1,9 +1,12 @@
 "use client";
 
+import { IconInbox } from "@tabler/icons-react";
+import { PanelSectionHeading } from "@/components/leads/profile/PanelSectionHeading";
 import { useEffect, useState } from "react";
 import { fetchLeadSubmissions } from "@/lib/submissions/actions";
 import type { LeadSubmission } from "@/lib/submissions/queries";
 import { Badge } from "@/components/ui/Badge";
+import { formatDueAt } from "@/lib/format";
 
 // Sibling of ActivityTimeline / TasksSection / NoteCaptureForm — ProfileSheet
 // mounts all four directly.
@@ -23,11 +26,14 @@ import { Badge } from "@/components/ui/Badge";
 export function EnquiryHistory({
   leadId,
   onCountChange,
+  timeZone,
 }: {
   leadId: string;
   // How many enquiries this lead has recorded, for the read panel's jump
   // strip. Optional, and never called before the rows load.
   onCountChange?: (count: number) => void;
+  // The tenant's display zone, same as the rest of the panel.
+  timeZone: string;
 }) {
   const [submissions, setSubmissions] = useState<LeadSubmission[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +62,9 @@ export function EnquiryHistory({
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-label uppercase text-ink-muted">Enquiry history</h3>
+      <PanelSectionHeading icon={IconInbox} tone="sky" count={submissions?.length}>
+        Enquiry history
+      </PanelSectionHeading>
 
       {/* --danger, not --cold: --cold is the Going Cold SLA signal and must
           not double as a generic error colour. Same call ActivityTimeline
@@ -76,7 +84,7 @@ export function EnquiryHistory({
                   of record, without inventing a new visual language for it. */}
               <span className="absolute top-1.5 -left-[18.5px] size-2 rounded-full border border-ink-muted bg-canvas-pure" />
               <p className="text-caption text-ink-muted">
-                {new Date(submission.created_at).toLocaleString()}
+                {formatDueAt(submission.created_at, timeZone)}
                 {submission.lead_source && ` · ${submission.lead_source}`}
               </p>
 
