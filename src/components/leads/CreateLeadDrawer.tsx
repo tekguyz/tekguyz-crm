@@ -9,25 +9,26 @@ import { cn } from "@/lib/utils/cn";
 import { LEAD_PANEL_WIDTH } from "@/components/leads/panel-width";
 import { CreateLeadForm } from "@/components/leads/CreateLeadForm";
 import { createLead, type LeadFormState } from "@/lib/leads/actions";
+import type { PipelineStatus } from "@/lib/leads/pipeline";
 
 const initialState: LeadFormState = null;
 
-// The picked Drawer container, holding the create form - so creating a lead
-// and editing one arrive in the same place, at the same width
-// (LEAD_PANEL_WIDTH), with the same group chrome and the same pinned action
-// bar. Edit is Create with values in it; the two should not look like two
-// different products.
+// The sheet and its action wiring, with no trigger of its own, so more than one
+// control can open it: the sidebar's New Lead button below, and the "+ New" at
+// the foot of each Pipeline lane. `status` is the stage the form opens on; the
+// operator can still change it in the form.
 //
-// This file is the container and the action wiring only. The fields, their
-// controlled state and the form-reset machinery live in CreateLeadForm, which
-// mounts and unmounts with the drawer - see that file for why that split is
-// mechanical rather than cosmetic.
-//
-// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
-// sr-only span so the control still has an accessible name. Nothing about the
-// drawer or the form changes with it - only the trigger.
-export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}) {
-  const [open, setOpen] = useState(false);
+// Radix mounts the content only while open, so the form (and the stage it was
+// seeded with) is rebuilt on every open.
+export function CreateLeadSheet({
+  open,
+  onOpenChange,
+  status = "NEW",
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  status?: PipelineStatus;
+}) {
   const [state, formAction, isPending] = useActionState(createLead, initialState);
   const wasPending = useRef(false);
 
@@ -36,16 +37,72 @@ export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}
     // error. Nothing clears the fields here: CreateLeadForm unmounts with the
     // drawer, so its values go with it.
     if (wasPending.current && !isPending && !state?.error) {
-      setOpen(false);
+      onOpenChange(false);
     }
     wasPending.current = isPending;
-  }, [isPending, state]);
+  }, [isPending, state, onOpenChange]);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className={cn("p-0", LEAD_PANEL_WIDTH)}
+        showClose={false}
+        aria-describedby={undefined}
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
+          <SheetTitle className="text-title min-w-0 flex-1 truncate">New lead</SheetTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            aria-label="Close"
+            className="size-7 shrink-0 px-0 max-sm:size-11"
+          >
+            <IconX stroke={1.75} aria-hidden className="size-4" />
+          </Button>
+        </div>
+
+        <CreateLeadForm
+          formAction={formAction}
+          isPending={isPending}
+          error={state?.error}
+          initialStatus={status}
+          onCancel={() => onOpenChange(false)}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// The picked Drawer container, holding the create form - so creating a lead
+// and editing one arrive in the same place, at the same width
+// (LEAD_PANEL_WIDTH), with the same group chrome and the same pinned action
+// bar. Edit is Create with values in it; the two should not look like two
+// different products.
+//
+// This file is the container and the action wiring only (CreateLeadSheet above is the container; this is the sidebar trigger for it). The fields, their
+// controlled state and the form-reset machinery live in CreateLeadForm, which
+// mounts and unmounts with the drawer - see that file for why that split is
+// mechanical rather than cosmetic.
+//
+// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
+// sr-only span so the control still has an accessible name. Nothing about the
+// drawer or the form changes with it - only the trigger.
+// The sidebar's New Lead button and its sheet.
+//
+// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
+// sr-only span so the control still has an accessible name. Nothing about the
+// drawer or the form changes with it - only the trigger.
+export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <>
       {/* primary, not secondary, since Shell/IA Variant C: this is the one
           primary CTA in the shell, which is one of --accent's four sanctioned
-          uses. It is the only trigger of this drawer anywhere. */}
+          uses. */}
       <Button
         type="button"
         variant="primary"
@@ -57,35 +114,7 @@ export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}
         <span className={compact ? "sr-only" : undefined}>New Lead</span>
       </Button>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className={cn("p-0", LEAD_PANEL_WIDTH)}
-          showClose={false}
-          aria-describedby={undefined}
-        >
-          <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
-            <SheetTitle className="text-title min-w-0 flex-1 truncate">New lead</SheetTitle>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-              aria-label="Close"
-              className="size-7 shrink-0 px-0 max-sm:size-11"
-            >
-              <IconX stroke={1.75} aria-hidden className="size-4" />
-            </Button>
-          </div>
-
-          <CreateLeadForm
-            formAction={formAction}
-            isPending={isPending}
-            error={state?.error}
-            onCancel={() => setOpen(false)}
-          />
-        </SheetContent>
-      </Sheet>
+      <CreateLeadSheet open={open} onOpenChange={setOpen} />
     </>
   );
 }

@@ -9,6 +9,7 @@ import {
   IconBuilding,
   IconCurrencyDollar,
   IconFlag,
+  IconLayoutKanban,
   IconMail,
   IconPhone,
   IconTag,
@@ -20,16 +21,22 @@ import { useRef, useState } from "react";
 import { useFormResetRestore } from "@/lib/forms/use-form-reset-restore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import {
+  PIPELINE_STATUSES,
+  PIPELINE_STATUS_LABELS,
+  type PipelineStatus,
+} from "@/lib/leads/pipeline";
 import { FormSection } from "@/components/leads/edit-form/FormSection";
 
 // Field parity with createLead() is the whole point of this list: every key
 // below has a matching formData.get() in @/lib/leads/actions.ts, and every
-// formData.get() there has an input here. Twelve each way. website /
+// formData.get() there has an input here. Thirteen each way. website /
 // lead_source / service_category in particular were read-but-never-rendered
 // once already (see ADDENDA_LOG § Silent NULL-on-save).
 //
-// TWELVE, NOT EVERY COLUMN, and that is deliberate. `createLead` accepts these
-// twelve and nothing else; rendering an input for a column it does not read
+// THIRTEEN, NOT EVERY COLUMN, and that is deliberate. `createLead` accepts these
+// thirteen and nothing else; rendering an input for a column it does not read
 // would be a field with no destination, which is the same parity failure in
 // the opposite direction. The rest are set on the edit drawer, against
 // `updateLead`, which does read them. The four social links are here because
@@ -48,6 +55,7 @@ export const CREATE_FIELD_NAMES = [
   "social_instagram",
   "social_whatsapp",
   "estimated_revenue",
+  "status",
 ] as const;
 
 type FieldName = (typeof CREATE_FIELD_NAMES)[number];
@@ -70,11 +78,15 @@ export function CreateLeadForm({
   formAction,
   isPending,
   error,
+  initialStatus = "NEW",
   onCancel,
 }: {
   formAction: (formData: FormData) => void;
   isPending: boolean;
   error?: string;
+  // The stage the Stage select opens on: a Pipeline lane's "+ New" passes its
+  // own, the sidebar button leaves it at NEW.
+  initialStatus?: PipelineStatus;
   onCancel: () => void;
 }) {
   // CONTROLLED, not bare uncontrolled inputs, and that is load-bearing. React 19
@@ -84,7 +96,7 @@ export function CreateLeadForm({
   // operator to change one of them. The real triggers here are the
   // unique_tenant_client_email_ci collision and a lead with no Contact
   // Channel, which both return { error } and leave the drawer open. See CLAUDE.md § Form/Action Field Parity.
-  const [values, setValues] = useState<Values>(EMPTY);
+  const [values, setValues] = useState<Values>(() => ({ ...EMPTY, status: initialStatus }));
   // The number field needs this even though the text fields do not: React
   // restores a controlled text <input> after the post-action form.reset() on
   // its own, but an empty-able numeric one is not reliably restored without a
@@ -105,7 +117,7 @@ export function CreateLeadForm({
         {/* Every group is always open, unlike the edit drawer's. There is
             nothing rarely-touched on a create form, so collapsing one would
             hide something for no gain. */}
-        <FormSection id="identity" label="Identity" count={8} collapsible={false}>
+        <FormSection id="identity" label="Identity" count={9} collapsible={false}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="Client name" icon={IconUser} {...field("client_name")} required />
             <Input label="Company" icon={IconBuilding} {...field("company")} />
@@ -123,10 +135,18 @@ export function CreateLeadForm({
             <Input label="Lead source" icon={IconFlag} {...field("lead_source")} />
             <Input label="Service category" icon={IconTag} {...field("service_category")} />
           </div>
-          {/* Estimated revenue used to be a "Pipeline" group of one. A heading
-              over a single field cost a row of chrome for nothing, and it is
-              a thing you know about the lead, so it sits with the rest. */}
+          {/* Stage and Estimated revenue share a row. Estimated revenue used to
+              be a "Pipeline" group of one, and a heading over a single field
+              cost a row of chrome for nothing. Stage is a native select, so
+              the hook above re-asserts it after a post-action form.reset(). */}
           <div className="grid gap-3 sm:grid-cols-2">
+            <Select label="Stage" icon={IconLayoutKanban} {...field("status")}>
+              {PIPELINE_STATUSES.map((stage) => (
+                <option key={stage} value={stage}>
+                  {PIPELINE_STATUS_LABELS[stage]}
+                </option>
+              ))}
+            </Select>
             <Input
               label="Estimated revenue" icon={IconCurrencyDollar}
               {...field("estimated_revenue")}

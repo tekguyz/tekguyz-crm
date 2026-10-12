@@ -8,7 +8,7 @@ vi.mock("@/lib/leads/actions", () => ({
   createLead: vi.fn(),
 }));
 
-const { CreateLeadDrawer } = await import("./CreateLeadDrawer");
+const { CreateLeadDrawer, CreateLeadSheet } = await import("./CreateLeadDrawer");
 
 async function openForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "New Lead" }));
@@ -48,6 +48,10 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
     // simulated click fires the whole pointer sequence per field, and paste
     // only needs the field focused. This kept the test under the budget when
     // four social fields joined it.
+    // The Stage select is a native <select>, which form.reset() moves behind
+    // React's back; it is the field this reset test exists to catch.
+    await user.selectOptions(screen.getByLabelText("Stage"), "QUOTED");
+
     for (const [label, value] of [
       ["Client name", "Dana Rivers"],
       ["Email", "dana@example.invalid"],
@@ -88,6 +92,7 @@ describe("CreateLeadDrawer — surviving a failed submit", () => {
     expect(screen.getByLabelText("Instagram")).toHaveValue("https://instagram.com/rivers");
     expect(screen.getByLabelText("WhatsApp")).toHaveValue("https://wa.me/18175550101");
     expect(screen.getByLabelText("Estimated revenue")).toHaveValue(1200);
+    expect(screen.getByLabelText("Stage")).toHaveValue("QUOTED");
   });
 
   // Note the placeholders became real <label>s when this form moved into the
@@ -115,7 +120,7 @@ describe("CreateLeadDrawer — field parity", () => {
     expect(screen.getByLabelText("Email")).not.toBeRequired();
   });
 
-  it("posts exactly the twelve fields createLead reads", async () => {
+  it("posts exactly the thirteen fields createLead reads", async () => {
     const user = userEvent.setup();
     render(<CreateLeadDrawer />);
     await openForm(user);
@@ -132,7 +137,21 @@ describe("CreateLeadDrawer — field parity", () => {
       "social_google_business",
       "social_instagram",
       "social_whatsapp",
+      "status",
       "website",
     ]);
+  });
+
+  it("opens on New, and on the lane's stage when a Pipeline lane opens it", async () => {
+    const user = userEvent.setup();
+    render(<CreateLeadDrawer />);
+    await openForm(user);
+    expect(screen.getByLabelText("Stage")).toHaveValue("NEW");
+    expect(new FormData(document.querySelector("form")!).get("status")).toBe("NEW");
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    render(<CreateLeadSheet open onOpenChange={() => {}} status="DISCOVERY" />);
+    await waitFor(() => expect(screen.getByLabelText("Stage")).toHaveValue("DISCOVERY"));
+    expect(new FormData(document.querySelector("form")!).get("status")).toBe("DISCOVERY");
   });
 });
