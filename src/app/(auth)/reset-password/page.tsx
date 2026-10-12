@@ -21,8 +21,12 @@ export default async function ResetPasswordPage({
       )}
 
       <form action={resetPassword} className="space-y-3">
-        <PasswordInput name="password" placeholder="New password" required minLength={8} />
-        <PasswordInput name="confirmPassword" placeholder="Confirm new password" required minLength={8} />
+        <PasswordInput name="password" placeholder="New password" required minLength={10} />
+        <PasswordInput name="confirmPassword" placeholder="Confirm new password" required minLength={10} />
+        <p className="text-sm text-ink-muted">
+          At least 10 characters, with a lowercase letter, an uppercase letter, a
+          number and a symbol.
+        </p>
         <Button type="submit" variant="primary" className="w-full">
           Update password
         </Button>
