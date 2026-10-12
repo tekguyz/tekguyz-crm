@@ -56,7 +56,11 @@ export default async function SignupPage({
         {/* readOnly and value, never defaultValue: the address is fixed by the
             invite, and the action rejects any other one anyway. */}
         <Input type="email" name="email" value={gate.email} readOnly />
-        <PasswordInput name="password" placeholder="Password" required minLength={6} />
+        <PasswordInput name="password" placeholder="Password" required minLength={10} />
+        <p className="text-sm text-ink-muted">
+          At least 10 characters, with a lowercase letter, an uppercase letter, a
+          number and a symbol.
+        </p>
         <Button type="submit" variant="primary" className="w-full">
           Sign up
         </Button>
