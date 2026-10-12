@@ -20,7 +20,7 @@ import { ChannelIcon } from "@/components/leads/ChannelIcon";
 // are hrefs and a <button> cannot carry one. They go through Button's own
 // `asChild` rather than a hand-copied class string: CLAUDE.md § UI/UX Design
 // System is explicit that restating a primitive's classes in a caller creates
-// a copy that drifts silently. Contacts' ContactCard does the same.
+// a copy that drifts silently. Contacts' ContactRow does the same.
 //
 // Icon-only, so each <a> needs its own accessible name — aria-label carries
 // it and `title` gives a mouse user the same word on hover.
