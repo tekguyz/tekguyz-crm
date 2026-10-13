@@ -19,6 +19,7 @@ describe("Badge", () => {
       ["teal", "bg-pill-teal-bg", "text-pill-teal-fg"],
       ["green", "bg-pill-green-bg", "text-pill-green-fg"],
       ["sky", "bg-pill-sky-bg", "text-pill-sky-fg"],
+      ["red", "bg-pill-red-bg", "text-pill-red-fg"],
     ] as const;
 
     for (const [tone, bg, fg] of cases) {

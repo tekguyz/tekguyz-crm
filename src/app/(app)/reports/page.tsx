@@ -15,7 +15,7 @@ import {
 import { timezoneLabel } from "@/lib/organizations/org-options";
 import { formatPercent } from "@/lib/reports/percent";
 import { Button } from "@/components/ui/Button";
-import { IconDownload } from "@tabler/icons-react";
+import { IconChartBar, IconCurrencyDollar, IconDownload, IconTarget } from "@tabler/icons-react";
 
 // Read-only, whole-tenant. No role gate: every MEMBER already sees every lead
 // in the org (see CLAUDE.md § Multi-Tenant Security Model), so an aggregate of
@@ -68,7 +68,7 @@ export default async function ReportsPage({
             it navigates to a file. Unlike that export, this one DOES follow the
             active period — it is the figures on this screen, so the period the
             reader chose is the period the file holds. */}
-        <Button asChild size="sm" variant="secondary" className="ml-auto">
+        <Button asChild size="sm" variant="secondary" className="ml-auto max-sm:h-11">
           <a
             href={period === "all" ? "/api/reports/export" : `/api/reports/export?period=${period}`}
             download
@@ -81,18 +81,29 @@ export default async function ReportsPage({
 
       {hasAnyLeads ? (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Realized revenue leads: it is the number the page exists to show.
+              On a phone it takes the full row and the other two share the next,
+              so three cards no longer cost 330px of the first screen. */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.5fr_1fr_1fr] sm:gap-4">
             <Figure
+              featured
+              tone="green"
+              icon={<IconCurrencyDollar size={16} stroke={1.75} />}
+              label="Realized revenue"
+              value={formatCurrency(report.realizedRevenue, currencyFormat)}
+              note={`${report.wonCount} ${report.wonCount === 1 ? "lead" : "leads"} won`}
+              className="col-span-2 sm:col-span-1"
+            />
+            <Figure
+              tone="sky"
+              icon={<IconChartBar size={16} stroke={1.75} />}
               label="Open pipeline"
               value={formatCurrency(report.openValue, currencyFormat)}
               note={`${report.openCount} ${report.openCount === 1 ? "lead" : "leads"} still open`}
             />
             <Figure
-              label="Realized revenue"
-              value={formatCurrency(report.realizedRevenue, currencyFormat)}
-              note={`${report.wonCount} ${report.wonCount === 1 ? "lead" : "leads"} won`}
-            />
-            <Figure
+              tone="teal"
+              icon={<IconTarget size={16} stroke={1.75} />}
               label="Win rate"
               value={report.winRate === null ? "—" : formatPercent(report.winRate)}
               note={
