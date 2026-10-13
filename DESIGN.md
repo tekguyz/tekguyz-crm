@@ -123,6 +123,8 @@ behavior, restyled to the new tokens:
 - **Stage pills** (`StageBadge`, tones from `STATUS_TONE`): New sky, Discovery
   purple, Quoted orange, Active green. Same pill on Today rows, Pipeline column
   headers and Focus List headers. Still never borders or primary buttons.
+- **Role pills** (Settings → Team, `RoleBadge`): Owner purple, Admin sky, Member teal.
+  A manager's role select wears the same pill. The word is always in it.
 - **Outcome pills** (Reports → Closed leads): Won green, Lost red, Abandoned neutral.
   Each has an icon and its word, so colour is never the only cue. Red is for the
   Lost outcome only; "late" stays `--danger` text on `DueLabel`.

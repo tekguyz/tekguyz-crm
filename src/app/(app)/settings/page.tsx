@@ -1,6 +1,7 @@
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getWebhookSecret } from "@/lib/organizations/queries";
 import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
+import { IconBuilding, IconKey, IconUserCircle, IconUsers } from "@tabler/icons-react";
 import { HelpTooltip } from "@/components/help/HelpTooltip";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { OrgDetailsPanel } from "@/components/settings/OrgDetailsPanel";
@@ -30,7 +31,11 @@ export default async function SettingsPage() {
 
   return (
     <SettingsSplit>
-      <SettingsSection {...SETTINGS_SECTIONS.organization}>
+      <SettingsSection
+        {...SETTINGS_SECTIONS.organization}
+        icon={<IconBuilding size={18} stroke={1.75} />}
+        tone="sky"
+      >
         <OrgDetailsPanel
           orgName={orgName}
           orgTimezone={orgTimezone}
@@ -40,7 +45,11 @@ export default async function SettingsPage() {
           canEdit={canManageOrg}
         />
       </SettingsSection>
-      <SettingsSection {...SETTINGS_SECTIONS.team}>
+      <SettingsSection
+        {...SETTINGS_SECTIONS.team}
+        icon={<IconUsers size={18} stroke={1.75} />}
+        tone="purple"
+      >
         <TeamPanel
           orgId={orgId}
           canManage={canManageOrg}
@@ -50,6 +59,8 @@ export default async function SettingsPage() {
       </SettingsSection>
       <SettingsSection
         {...SETTINGS_SECTIONS.apiKeys}
+        icon={<IconKey size={18} stroke={1.75} />}
+        tone="orange"
         help={
           <HelpTooltip
             topicId="api-keys"
@@ -59,7 +70,11 @@ export default async function SettingsPage() {
       >
         <ApiKeysPanel canEdit={canManageOrg} />
       </SettingsSection>
-      <SettingsSection {...SETTINGS_SECTIONS.account}>
+      <SettingsSection
+        {...SETTINGS_SECTIONS.account}
+        icon={<IconUserCircle size={18} stroke={1.75} />}
+        tone="green"
+      >
         <AccountPanel
           userEmail={userEmail}
           displayName={displayName}

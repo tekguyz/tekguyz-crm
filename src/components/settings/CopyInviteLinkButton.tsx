@@ -17,7 +17,7 @@ export function CopyInviteLinkButton({ token }: { token: string }) {
       type="button"
       variant="ghost"
       size="sm"
-      className="shrink-0"
+      className="shrink-0 max-sm:h-11"
       onClick={async () => {
         const url = `${window.location.origin}/invite/${token}`;
         await navigator.clipboard.writeText(url);
