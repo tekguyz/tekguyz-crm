@@ -11,7 +11,7 @@ vi.mock("@/lib/leads/actions", () => ({
 const { CreateLeadDrawer, CreateLeadSheet } = await import("./CreateLeadDrawer");
 
 async function openForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "New Lead" }));
+  await user.click(screen.getByRole("button", { name: "New lead" }));
 }
 
 describe("CreateLeadDrawer — surviving a failed submit", () => {

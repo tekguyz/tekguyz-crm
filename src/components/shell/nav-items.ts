@@ -70,7 +70,11 @@ export const ALL_NAV: ShellNavItem[] = [...PRIMARY_NAV, ...SECONDARY_NAV];
 //
 // The mobile tab bar does NOT read these. Its four slots are still PRIMARY_NAV
 // plus More, a standing decision this arrangement does not reopen.
-function byHref(href: string): ShellNavItem {
+//
+// Exported as navItemFor for the page header (PageHeader.tsx), which reads its
+// icon and title from here for the same reason: the header can then never
+// disagree with the sidebar.
+export function navItemFor(href: string): ShellNavItem {
   const item = ALL_NAV.find((i) => i.href === href);
   if (!item) throw new Error(`No shell nav item for ${href}`);
   return item;
@@ -87,8 +91,8 @@ export type ShellNavGroup = {
 // Work is the hourly loop: what is due, the board, a person's number.
 // Prospecting is the weekly loop: load a list, then work it.
 export const NAV_GROUPS: ShellNavGroup[] = [
-  { name: "Work", items: [byHref("/"), byHref("/pipeline"), byHref("/contacts")] },
-  { name: "Prospecting", items: [byHref("/prospects"), byHref("/import")] },
+  { name: "Work", items: [navItemFor("/"), navItemFor("/pipeline"), navItemFor("/contacts")] },
+  { name: "Prospecting", items: [navItemFor("/prospects"), navItemFor("/import")] },
 ];
 
 // Reports and Settings are the step-back destinations, visited weekly rather
@@ -97,27 +101,10 @@ export const NAV_GROUPS: ShellNavGroup[] = [
 // never moved into the avatar menu: it is a real page with org details,
 // members, webhooks and API keys behind it, and a destination buried in an
 // account popover cannot be found or linked.
-export const NAV_FOOTER: ShellNavItem[] = [byHref("/reports"), byHref("/settings")];
+export const NAV_FOOTER: ShellNavItem[] = [navItemFor("/reports"), navItemFor("/settings")];
 
 // Exact match, the same rule the shell has always used. "/" is a real route
 // here, so a prefix match would light Today up on every page.
 export function isNavItemActive(pathname: string, href: string) {
   return pathname === href;
-}
-
-// The header's page title. It is the nav label of the route you are on, so it
-// can never disagree with the sidebar. An exact match wins; otherwise the
-// longest nav href that prefixes the path, so /prospects/import reads
-// "Prospects" — "/" is excluded from the prefix pass or it would title every
-// page "Today". A path no destination owns gets no title rather than a wrong
-// one.
-export function pageTitleFor(pathname: string): string | null {
-  const exact = ALL_NAV.find((item) => item.href === pathname);
-  if (exact) return exact.label;
-
-  const parent = ALL_NAV.filter(
-    (item) => item.href !== "/" && pathname.startsWith(`${item.href}/`),
-  ).sort((a, b) => b.href.length - a.href.length)[0];
-
-  return parent ? parent.label : null;
 }

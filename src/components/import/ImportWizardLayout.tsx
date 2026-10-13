@@ -37,12 +37,9 @@ export function ImportWizardLayout() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="sr-only">Import leads</h1>
-        <p className="text-body-md text-ink-muted">
-          Bring an existing list of leads in from a spreadsheet.
-        </p>
-      </div>
+      <p className="text-body-md text-ink-muted">
+        Bring an existing list of leads in from a spreadsheet.
+      </p>
 
       <ol className="text-body-sm flex flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((s, index) => (

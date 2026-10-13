@@ -49,6 +49,7 @@ export function BoardFrame({
         <main className="relative flex-1 overflow-y-auto p-6">
           <div className="flex h-full flex-col gap-4">
             <FilterTabs
+              label="Owner"
               tabs={[
                 { label: "All leads", href, active: true },
                 { label: "My leads", href: `${href}?mine=true`, active: false },

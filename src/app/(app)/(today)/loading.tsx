@@ -30,6 +30,10 @@ function AgendaColumnSkeleton({ rows }: { rows: number }) {
   );
 }
 
+// In its own (today) route group, not at the (app) root: a loading.tsx at the
+// root of (app) also wraps the layout's @header slot, so this whole skeleton
+// was the header's fallback on every route.
+//
 // Mirrors TodayAgenda's exact 3-column shape (SLA Critical / High Value /
 // Starred), each column filled with LeadCard-shaped rows rather than one
 // generic block, so the loading state doesn't jump/reflow when real data

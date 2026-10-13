@@ -5,7 +5,18 @@ import { getCurrentOrg } from "@/lib/organizations/current";
 import { getTeamMembers } from "@/lib/invites/queries";
 import { SIDEBAR_COOKIE_NAME, parseSidebarState } from "@/lib/shell/sidebar-cookie";
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
+// `header` is the @header parallel-route slot (./@header/): each route's
+// PageHeader, rendered on the left of the shell header. A slot rather than a
+// prop the page passes up, because a page cannot reach its layout — and a
+// slot is still server-rendered with the page, so the count and the action
+// arrive in the first paint.
+export default async function AppLayout({
+  children,
+  header,
+}: {
+  children: ReactNode;
+  header: ReactNode;
+}) {
   // Sidebar collapse state is read here, on the server, so the HTML that
   // arrives already carries the correct width — no flash of an expanded
   // sidebar for someone who prefers the rail. This layout was already dynamic
@@ -26,6 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
+      header={header}
       orgName={orgName}
       userEmail={userEmail}
       displayName={displayName}

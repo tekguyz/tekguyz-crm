@@ -10,8 +10,8 @@ import { PIPELINE_STATUS_LABELS, type PipelineStatus } from "@/lib/leads/pipelin
 // where the operator was looking; it is the board's only way to start a lead
 // in place.
 //
-// Ghost, not primary: --accent in the shell is spent on the one New Lead
-// button, and four more filled buttons would be four more calls to action.
+// Ghost, not primary: --accent on this page is spent on the header's one New
+// lead button, and four more filled buttons would be four more calls to action.
 // The visible word is "New" and the accessible name adds the lane, which
 // contains it, so a speech-control user can still say what they see.
 export function LaneAddButton({

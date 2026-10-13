@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils/cn";
 // does. The padding therefore lives on each row, not on the Card, so the rule
 // reaches both edges.
 export function SettingsSplit({ children }: { children: ReactNode }) {
-  return <Card className="mx-auto w-full max-w-5xl p-0">{children}</Card>;
+  return <Card className="w-full max-w-5xl p-0">{children}</Card>;
 }
 
 // The icon wears a pill hue, spelled out so Tailwind's scanner sees every class.

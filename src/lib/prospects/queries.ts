@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 // One row of public.prospects, in the order 20260826120000_prospects.sql
@@ -54,7 +55,9 @@ export const PROSPECT_COLUMNS =
 // lib/prospects/sort.ts), not here: a tenant's prospect list is low hundreds of
 // rows, it is already fully fetched to render the table, and pushing sort into
 // PostgREST would mean a round trip per column click for no measurable gain.
-export async function getProspects(
+// cache()d per request: the page's @header slot counts these same rows, and
+// must call with the SAME arguments as the page so both share one query.
+export const getProspects = cache(async function getProspects(
   orgId: string,
   showArchived = false,
 ): Promise<Prospect[]> {
@@ -68,7 +71,7 @@ export async function getProspects(
 
   if (error) throw error;
   return data as unknown as Prospect[];
-}
+});
 
 // The CMD+K palette's Prospects group. A deliberately narrow column list, not
 // PROSPECT_COLUMNS: this array is shipped to the browser in full on every

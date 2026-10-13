@@ -14,7 +14,7 @@ import type { PipelineStatus } from "@/lib/leads/pipeline";
 const initialState: LeadFormState = null;
 
 // The sheet and its action wiring, with no trigger of its own, so more than one
-// control can open it: the sidebar's New Lead button below, and the "+ New" at
+// control can open it: the page header's New lead button below, and the "+ New" at
 // the foot of each Pipeline lane. `status` is the stage the form opens on; the
 // operator can still change it in the form.
 //
@@ -82,36 +82,32 @@ export function CreateLeadSheet({
 // bar. Edit is Create with values in it; the two should not look like two
 // different products.
 //
-// This file is the container and the action wiring only (CreateLeadSheet above is the container; this is the sidebar trigger for it). The fields, their
-// controlled state and the form-reset machinery live in CreateLeadForm, which
-// mounts and unmounts with the drawer - see that file for why that split is
-// mechanical rather than cosmetic.
+// This file is the container and the action wiring only (CreateLeadSheet above
+// is the container; this is the page header's trigger for it). The fields,
+// their controlled state and the form-reset machinery live in CreateLeadForm,
+// which mounts and unmounts with the drawer - see that file for why that split
+// is mechanical rather than cosmetic.
 //
-// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
-// sr-only span so the control still has an accessible name. Nothing about the
-// drawer or the form changes with it - only the trigger.
-// The sidebar's New Lead button and its sheet.
-//
-// `compact` is the collapsed sidebar rail's shape: icon only, label kept as an
-// sr-only span so the control still has an accessible name. Nothing about the
-// drawer or the form changes with it - only the trigger.
-export function CreateLeadDrawer({ compact = false }: { compact?: boolean } = {}) {
+// The trigger is the page's action in the shell header (Today, Pipeline,
+// Contacts). It left the sidebar on 2026-10-13 (issue #47 step 8): a phone has
+// no sidebar, so a phone had no way to add a lead short of the foot of a
+// Pipeline lane. Below `sm` it is a 44px icon button; the label stays its
+// accessible name.
+export function CreateLeadDrawer() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* primary, not secondary, since Shell/IA Variant C: this is the one
-          primary CTA in the shell, which is one of --accent's four sanctioned
-          uses. */}
+      {/* primary: the page's one primary CTA, one of --accent's four
+          sanctioned uses. */}
       <Button
         type="button"
         variant="primary"
         onClick={() => setOpen(true)}
-        title={compact ? "New Lead" : undefined}
-        className={compact ? "w-full px-0" : "w-full"}
+        className="max-sm:size-11 max-sm:px-0"
       >
-        <IconPlus className="size-5" stroke={1.75} />
-        <span className={compact ? "sr-only" : undefined}>New Lead</span>
+        <IconPlus aria-hidden="true" className="size-4" stroke={1.75} />
+        <span className="max-sm:sr-only">New lead</span>
       </Button>
 
       <CreateLeadSheet open={open} onOpenChange={setOpen} />

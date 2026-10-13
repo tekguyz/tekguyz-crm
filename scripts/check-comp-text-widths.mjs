@@ -131,7 +131,7 @@ const OPEN_CREATE_DRAWER = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 60; i += 1) {
     const trigger = [...document.querySelectorAll("button")]
-      .find((b) => b.textContent.trim() === "New Lead");
+      .find((b) => b.textContent.trim() === "New lead");
     if (trigger) { trigger.click(); break; }
     await sleep(250);
   }

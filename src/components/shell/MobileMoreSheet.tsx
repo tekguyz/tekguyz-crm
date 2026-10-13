@@ -26,8 +26,8 @@ import {
 // navigation.
 //
 // It is also where workspace identity lives on mobile, since the sidebar's
-// WorkspaceBlock is not displayed below md and the header is deliberately
-// limited to two concerns.
+// WorkspaceBlock is not displayed below md and the header is the page's strip,
+// not the app's (DESIGN.md § The Application Shell, decision 2).
 export function MobileMoreSheet({ orgName, userEmail }: { orgName: string; userEmail: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
