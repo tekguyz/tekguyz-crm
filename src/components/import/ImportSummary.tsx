@@ -60,21 +60,25 @@ export function ImportSummary({
     .filter(Boolean)
     .join(" · ");
 
+  // A plain <section>, not a bordered card: the panels inside it are the
+  // surfaces (see IssuePanel).
   return (
-    <section className="rounded-lg border border-hairline bg-canvas-pure p-4">
-      <h2 className="text-h2 mb-1">Import complete</h2>
-      <p className="text-body-sm mb-4 text-ink-muted">
-        {result.imported.toLocaleString()} new{" "}
-        {result.imported === 1 ? "lead is" : "leads are"} now in your pipeline.
-      </p>
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-h2 mb-1">Import complete</h2>
+        <p className="text-body-sm text-ink-muted">
+          {result.imported.toLocaleString()} new{" "}
+          {result.imported === 1 ? "lead is" : "leads are"} now in your pipeline.
+        </p>
+      </div>
 
       {result.error && (
-        <p className="text-body-md mb-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
+        <p className="text-body-md rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           <DemoBlockText message={result.error} />
         </p>
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile value={result.imported} label="Imported" tone="green" />
         <StatTile
           value={result.existingDuplicates}
@@ -92,7 +96,7 @@ export function ImportSummary({
       </div>
 
       {result.failedChunks > 0 && (
-        <p className="text-body-md mb-4 rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
+        <p className="text-body-md rounded-xs border border-hairline bg-pill-orange-bg px-3 py-2 text-pill-orange-fg">
           {result.failedChunks} batch(es) covering {result.failedChunkRows.toLocaleString()} rows
           failed to process — retry recommended for those rows.
         </p>
@@ -106,12 +110,12 @@ export function ImportSummary({
       <SkippedRowsTable skipped={result.skippedRows} labels={labels} />
 
       {result.existingArchived > 0 && (
-        <p className="text-body-sm mb-4 text-ink-muted">
+        <p className="text-body-sm text-ink-muted">
           Archived duplicates were skipped, not restored. Use Contacts → Archived to bring one back.
         </p>
       )}
 
-      <Button type="button" variant="secondary" onClick={onImportAnother}>
+      <Button type="button" variant="secondary" className="max-sm:h-11" onClick={onImportAnother}>
         Import another file
       </Button>
     </section>

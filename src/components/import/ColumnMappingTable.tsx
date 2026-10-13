@@ -93,20 +93,29 @@ export function ColumnMappingTable({
         <TableHead>
           <TableRow>
             <TableHeaderCell>CSV column</TableHeaderCell>
-            <TableHeaderCell>First value</TableHeaderCell>
+            <TableHeaderCell className="hidden sm:table-cell">First value</TableHeaderCell>
             <TableHeaderCell>Maps to</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {file.headers.map((header) => (
             <TableRow key={header} className="last:border-0">
-              <TableCell className="max-w-48 truncate font-medium">{header}</TableCell>
-              <TableCell className="max-w-48 truncate text-ink-muted">
+              <TableCell className="max-w-32 sm:max-w-48">
+                <span className="block truncate font-medium">{header}</span>
+                {/* Phone: the First value column is hidden (the table was wider
+                    than the screen and pushed the select off it), so the value
+                    sits under the column name instead. */}
+                <span className="text-caption block truncate text-ink-muted sm:hidden">
+                  {file.rows[0]?.[header]?.trim() || "—"}
+                </span>
+              </TableCell>
+              <TableCell className="hidden max-w-48 truncate text-ink-muted sm:table-cell">
                 {file.rows[0]?.[header]?.trim() || "—"}
               </TableCell>
               <TableCell>
                 <Select
                   aria-label={`Map ${header} to`}
+                  className="max-sm:h-11"
                   value={mapping[header] ?? "ignore"}
                   onChange={(e) =>
                     onChange({ ...mapping, [header]: e.target.value as MappableField })
@@ -141,10 +150,16 @@ export function ColumnMappingTable({
       )}
 
       <div className="mt-4 flex items-center gap-2">
-        <Button type="button" variant="secondary" onClick={onBack}>
+        <Button type="button" variant="secondary" className="max-sm:h-11" onClick={onBack}>
           Back
         </Button>
-        <Button type="button" variant="primary" onClick={onContinue} disabled={blocked}>
+        <Button
+          type="button"
+          variant="primary"
+          className="max-sm:h-11"
+          onClick={onContinue}
+          disabled={blocked}
+        >
           Continue
         </Button>
       </div>

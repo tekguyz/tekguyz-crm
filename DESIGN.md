@@ -123,6 +123,9 @@ behavior, restyled to the new tokens:
 - **Stage pills** (`StageBadge`, tones from `STATUS_TONE`): New sky, Discovery
   purple, Quoted orange, Active green. Same pill on Today rows, Pipeline column
   headers and Focus List headers. Still never borders or primary buttons.
+- **Import row status** (`RowStatus`): Skipped and Refused pink, Duplicate orange,
+  Cell emptied orange. Icon and word on every pill. Each list is one `IssuePanel`
+  (icon, title, count, divided rows, cap of 5).
 - **Resurrection Engine, click-to-action shortcuts, drag/reorder**: pure
   behavior, zero visual footprint — untouched by this initiative.
 

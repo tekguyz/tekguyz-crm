@@ -1,5 +1,7 @@
 "use client";
 
+import { IconCheck } from "@tabler/icons-react";
+
 import { CsvUploadDropzone } from "@/components/import/CsvUploadDropzone";
 import { ColumnMappingTable } from "@/components/import/ColumnMappingTable";
 import { ValidationResultsTable } from "@/components/import/ValidationResultsTable";
@@ -44,7 +46,11 @@ export function ImportWizardLayout() {
 
       <ol className="text-body-sm flex flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((s, index) => (
-          <li key={s.id} className="flex items-center gap-2">
+          <li
+            key={s.id}
+            className="flex items-center gap-2"
+            aria-current={index === activeIndex ? "step" : undefined}
+          >
             <span
               className={
                 index === activeIndex
@@ -54,9 +60,21 @@ export function ImportWizardLayout() {
                     : "text-ink-muted"
               }
             >
+              {index < activeIndex && (
+                <IconCheck
+                  aria-hidden="true"
+                  size={12}
+                  stroke={2}
+                  className="mr-1 inline text-pill-green-fg"
+                />
+              )}
               {s.label}
             </span>
-            {index < STEPS.length - 1 && <span className="text-ink-muted">/</span>}
+            {index < STEPS.length - 1 && (
+              <span aria-hidden="true" className="text-ink-muted">
+                /
+              </span>
+            )}
           </li>
         ))}
       </ol>
