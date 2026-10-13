@@ -10,6 +10,7 @@ export type BadgeTone =
   | "teal"
   | "green"
   | "sky"
+  | "red"
   | "cold";
 
 // The decorative pill palette is for status badges and category dots ONLY —
@@ -26,6 +27,9 @@ export const BADGE_TONE_CLASSES: Record<BadgeTone, string> = {
   teal: "bg-pill-teal-bg text-pill-teal-fg",
   green: "bg-pill-green-bg text-pill-green-fg",
   sky: "bg-pill-sky-bg text-pill-sky-fg",
+  // Outcome only (Lost). Never a stage, and never the "late" signal, which is
+  // DueLabel's --danger text.
+  red: "bg-pill-red-bg text-pill-red-fg",
   // --cold-fg, not --cold: --cold is tuned for the dashed border role and fails
   // AA as 11px text (2.72:1 light / 2.35:1 dark).
   cold: "bg-canvas-soft text-cold-fg",

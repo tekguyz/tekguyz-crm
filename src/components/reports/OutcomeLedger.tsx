@@ -1,6 +1,10 @@
+import type { ReactNode } from "react";
+import { IconCircleCheck, IconCircleMinus, IconCircleX, IconFlag } from "@tabler/icons-react";
+
 import { formatCurrency } from "@/lib/format";
-import type { OutcomeRow } from "@/lib/leads/report-queries";
-import { Card } from "@/components/ui/Card";
+import type { OutcomeKey, OutcomeRow } from "@/lib/leads/report-queries";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { ReportPanel } from "@/components/reports/ReportPanel";
 import {
   Table,
   TableBody,
@@ -10,16 +14,20 @@ import {
   TableRow,
 } from "@/components/ui/TableRow";
 
-const OUTCOME_LABEL: Record<string, string> = {
-  WON: "Won",
-  LOST: "Lost",
-  ABANDONED: "Abandoned",
+const ICON_PROPS = { "aria-hidden": true, size: 14, stroke: 1.75 } as const;
+
+// Won is green, Lost is red, Abandoned stays neutral. An outcome is a signal
+// like a stage is, so it gets its hue (revised 2026-10-12; the old rule gave
+// closed leads no colour at all). Each pill also carries an icon and its word,
+// so the difference is never colour alone, and the icon shapes keep these
+// apart from the stage pills, which wear a dot. Abandoned is neutral on
+// purpose: nobody decided it, so it is neither a win nor a loss.
+const OUTCOME: Record<OutcomeKey, { label: string; tone: BadgeTone; icon: ReactNode }> = {
+  WON: { label: "Won", tone: "green", icon: <IconCircleCheck {...ICON_PROPS} /> },
+  LOST: { label: "Lost", tone: "red", icon: <IconCircleX {...ICON_PROPS} /> },
+  ABANDONED: { label: "Abandoned", tone: "neutral", icon: <IconCircleMinus {...ICON_PROPS} /> },
 };
 
-// Won / Lost / Abandoned deliberately get NO green/red treatment. This design
-// system spends colour on state you must act on (the Going Cold rule) and on
-// the stage language; a closed lead needs neither. The counts and the money
-// carry the story on their own.
 export function OutcomeLedger({
   outcomes,
   currencyFormat,
@@ -27,39 +35,65 @@ export function OutcomeLedger({
   outcomes: OutcomeRow[];
   currencyFormat: string;
 }) {
-  return (
-    <Card className="p-0">
-      <div className="border-b border-hairline px-4 py-3">
-        <h2 className="text-h2">Closed leads</h2>
-        <p className="text-body-sm text-ink-muted">
-          Every lead with an outcome, archived or not. Revenue is the amount actually
-          recorded on the lead, so only won leads carry one.
-        </p>
-      </div>
+  const closedCount = outcomes.reduce((sum, row) => sum + row.count, 0);
 
-      <Table>
+  return (
+    <ReportPanel
+      id="outcome-ledger"
+      icon={
+        <IconFlag aria-hidden="true" size={18} stroke={1.75} className="text-ink-muted" />
+      }
+      title="Closed leads"
+      count={closedCount}
+      countLabel="closed leads"
+      description="Every lead with an outcome, archived or not. Revenue is the amount actually recorded on the lead, so only won leads carry one."
+    >
+      <Table aria-labelledby="outcome-ledger-title">
         <TableHead>
           <TableRow>
-            <TableHeaderCell className="px-4">Outcome</TableHeaderCell>
-            <TableHeaderCell className="text-right">Leads</TableHeaderCell>
-            <TableHeaderCell className="px-4 text-right">Revenue</TableHeaderCell>
+            <TableHeaderCell scope="col" className="px-4">
+              Outcome
+            </TableHeaderCell>
+            <TableHeaderCell scope="col" className="text-right">
+              Leads
+            </TableHeaderCell>
+            <TableHeaderCell scope="col" className="px-4 text-right">
+              Revenue
+            </TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {outcomes.map((row, index) => (
-            <TableRow
-              key={row.outcome}
-              className={index === outcomes.length - 1 ? "border-b-0" : undefined}
-            >
-              <TableCell className="px-4">{OUTCOME_LABEL[row.outcome] ?? row.outcome}</TableCell>
-              <TableCell className="text-right tabular-nums">{row.count}</TableCell>
-              <TableCell className="px-4 text-right tabular-nums">
-                {row.revenue > 0 ? formatCurrency(row.revenue, currencyFormat) : "—"}
-              </TableCell>
-            </TableRow>
-          ))}
+          {outcomes.map((row, index) => {
+            const outcome = OUTCOME[row.outcome];
+            return (
+              <TableRow
+                key={row.outcome}
+                className={index === outcomes.length - 1 ? "border-b-0" : undefined}
+              >
+                <TableHeaderCell
+                  scope="row"
+                  className="px-4 py-2.5 align-middle font-normal text-ink-main"
+                >
+                  <Badge tone={outcome.tone}>
+                    {outcome.icon}
+                    {outcome.label}
+                  </Badge>
+                </TableHeaderCell>
+                <TableCell className="py-2.5 text-right align-middle tabular-nums">
+                  {row.count}
+                </TableCell>
+                <TableCell
+                  className={`px-4 py-2.5 text-right align-middle tabular-nums ${
+                    row.revenue > 0 ? "text-title text-pill-green-fg" : "text-ink-muted"
+                  }`}
+                >
+                  {row.revenue > 0 ? formatCurrency(row.revenue, currencyFormat) : "—"}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
-    </Card>
+    </ReportPanel>
   );
 }
