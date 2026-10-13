@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { IconAlertTriangle } from "@tabler/icons-react";
+
+import { IssuePanel, IssueRow } from "@/components/import/IssuePanel";
+import { RowStatus } from "@/components/import/RowStatus";
 import type { SkippedRow } from "@/lib/import/insert-chunks";
 import type { RowLabel } from "@/lib/import/validate-rows";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
-} from "@/components/ui/TableRow";
 
 // The RPC's reject codes, plus the Server Action's own re-check, in words.
 const REJECT_REASON: Record<string, string> = {
@@ -37,35 +33,28 @@ function Why({ row, labels }: { row: SkippedRow; labels: RowLabel[] }) {
 }
 
 // Every row that did not import, by its spreadsheet row, and why (#37). A
-// duplicate names the lead it matched, so the user can open it.
+// duplicate names the lead it matched, so the user can open it. A duplicate is
+// an orange no-op; a refusal is pink, like a failed validation.
+//
+// Still named a Table so its importers and the docs keep pointing at it; it is
+// a panel of rows now (see IssuePanel).
 export function SkippedRowsTable({ skipped, labels }: { skipped: SkippedRow[]; labels: RowLabel[] }) {
   if (skipped.length === 0) return null;
 
   return (
-    <div className="mb-4">
-      <p className="text-body-sm mb-2 text-ink-muted">
-        {skipped.length.toLocaleString()} {skipped.length === 1 ? "row was" : "rows were"} not imported:
-      </p>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableHeaderCell>Row</TableHeaderCell>
-            <TableHeaderCell>Lead</TableHeaderCell>
-            <TableHeaderCell>Why</TableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {skipped.map((row) => (
-            <TableRow key={row.index} className="last:border-0">
-              <TableCell className="text-ink-muted">{labels[row.index]?.lineNumber ?? "?"}</TableCell>
-              <TableCell className="max-w-48 truncate">{labels[row.index]?.preview}</TableCell>
-              <TableCell className="text-ink-muted">
-                <Why row={row} labels={labels} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <IssuePanel
+      title="Rows not imported"
+      icon={<IconAlertTriangle aria-hidden="true" size={18} stroke={1.75} className="text-pill-orange-fg" />}
+      items={skipped.map((row) => (
+        <IssueRow
+          key={row.index}
+          lineNumber={labels[row.index]?.lineNumber ?? "?"}
+          name={labels[row.index]?.preview ?? "Unnamed row"}
+          status={<RowStatus kind={row.kind === "REJECTED" ? "refused" : "duplicate"} />}
+        >
+          <Why row={row} labels={labels} />
+        </IssueRow>
+      ))}
+    />
   );
 }

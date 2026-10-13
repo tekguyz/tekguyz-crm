@@ -25,9 +25,10 @@ describe("SkippedRowsTable", () => {
       />,
     );
 
-    const rows = screen.getAllByRole("row").slice(1);
-    expect(rows.map((row) => within(row).getAllByRole("cell")[0].textContent)).toEqual(["3", "5", "6", "7"]);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows.map((row) => /Row (\d+)/.exec(row.textContent ?? "")?.[1])).toEqual(["3", "5", "6", "7"]);
     expect(rows[0]).toHaveTextContent("Same business as row 2");
+    expect(rows[0]).toHaveTextContent("Duplicate");
     expect(within(rows[1]).getByRole("link", { name: "Already in the CRM" })).toHaveAttribute(
       "href",
       "/?leadId=lead-1",
@@ -37,6 +38,7 @@ describe("SkippedRowsTable", () => {
       "/?leadId=lead-2",
     );
     expect(rows[3]).toHaveTextContent("No contact channel");
+    expect(rows[3]).toHaveTextContent("Refused");
   });
 
   it("renders nothing when every row imported", () => {
