@@ -34,7 +34,7 @@ the derivation and the contrast audit.
 
 Hue `260` (cool neutral) replaces the old `60` (warm) across the board — this is
 the single biggest lever in reading as "Twenty" rather than "Notion." Decorative
-pill palette (purple/pink/orange/teal/green/sky) is retained structurally but
+pill palette (purple/pink/orange/teal/green/sky, plus red for the Lost outcome only) is retained structurally but
 desaturate each by roughly 20–25% from current values in light mode — Twenty's
 tag chips read muted/pastel, not saturated.
 
@@ -126,6 +126,11 @@ behavior, restyled to the new tokens:
 - **Import row status** (`RowStatus`): Skipped and Refused pink, Duplicate orange,
   Cell emptied orange. Icon and word on every pill. Each list is one `IssuePanel`
   (icon, title, count, divided rows, cap of 5).
+- **Role pills** (Settings → Team, `RoleBadge`): Owner purple, Admin sky, Member teal.
+  A manager's role select wears the same pill. The word is always in it.
+- **Outcome pills** (Reports → Closed leads): Won green, Lost red, Abandoned neutral.
+  Each has an icon and its word, so colour is never the only cue. Red is for the
+  Lost outcome only; "late" stays `--danger` text on `DueLabel`.
 - **Resurrection Engine, click-to-action shortcuts, drag/reorder**: pure
   behavior, zero visual footprint — untouched by this initiative.
 

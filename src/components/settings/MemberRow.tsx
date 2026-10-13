@@ -16,7 +16,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge, BADGE_TONE_CLASSES } from "@/components/ui/Badge";
+import { RoleBadge, roleTone } from "@/components/settings/RoleBadge";
+import { cn } from "@/lib/utils/cn";
 import { changeMemberRole, removeMember } from "@/lib/organizations/team-actions";
 import { canManageTeam } from "@/lib/organizations/roles";
 import type { TeamMember } from "@/lib/invites/queries";
@@ -130,29 +133,38 @@ export function MemberRow({
   }
 
   return (
-    <div className="text-body-md flex flex-wrap items-center justify-between gap-2">
-      <span className="flex min-w-0 items-center gap-2">
+    <div className="text-body-md flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2.5 max-sm:min-h-11">
+      <span className="flex min-w-0 items-center gap-2.5">
+        {/* "tekguyz.demo.owner" -> "TO". The email is all a member row has to
+            name a person, and its separators are not part of the name. */}
+        <Avatar name={member.email.split("@")[0].replace(/[._-]+/g, " ")} />
         <span className="truncate text-ink-main">{member.email}</span>
         {/* `neutral`, not `cold` — Badge's cold tone is the Going Cold SLA
             signal and is never repurposed for styling. */}
         {isSelf && <Badge tone="neutral">You</Badge>}
       </span>
 
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         {canManage ? (
+          // The select wears the role's pill, so a manager and a plain member
+          // see the same coloured role. Same recipe as the Prospects status
+          // select; the field set is unchanged.
           <Select
             aria-label={`Role for ${member.email}`}
             value={role}
             disabled={pendingRole}
             onChange={(e) => handleRoleChange(e.target.value)}
-            className="w-32"
+            className={cn(
+              "w-32 rounded-sm border-transparent font-medium max-sm:h-11",
+              BADGE_TONE_CLASSES[roleTone(role)],
+            )}
           >
             <option value="OWNER">Owner</option>
             <option value="ADMIN">Admin</option>
             <option value="MEMBER">Member</option>
           </Select>
         ) : (
-          <span className="text-label text-ink-muted">{member.role}</span>
+          <RoleBadge role={member.role} />
         )}
 
         {/* Shown when you can manage the team, and additionally on your own row
@@ -161,7 +173,7 @@ export function MemberRow({
         {(canManage || isSelf) && (
           <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="ghost" size="sm">
+              <Button type="button" variant="ghost" size="sm" className="max-sm:h-11">
                 {isSelf ? "Leave" : "Remove"}
               </Button>
             </AlertDialogTrigger>

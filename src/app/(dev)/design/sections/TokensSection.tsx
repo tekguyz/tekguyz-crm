@@ -24,6 +24,7 @@ const PILLS = [
   { name: "teal", className: "bg-pill-teal-bg text-pill-teal-fg" },
   { name: "green", className: "bg-pill-green-bg text-pill-green-fg" },
   { name: "sky", className: "bg-pill-sky-bg text-pill-sky-fg" },
+  { name: "red", className: "bg-pill-red-bg text-pill-red-fg" },
 ];
 
 const RADII = [

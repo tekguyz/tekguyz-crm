@@ -1,9 +1,10 @@
+import { IconLayoutKanban } from "@tabler/icons-react";
+
 import { formatCurrency } from "@/lib/format";
 import { formatPercent } from "@/lib/reports/percent";
 import type { StageRow } from "@/lib/leads/report-queries";
-import { Badge } from "@/components/ui/Badge";
-import { STATUS_TONE } from "@/lib/leads/status-tone";
-import { Card } from "@/components/ui/Card";
+import { StageBadge } from "@/components/leads/StageBadge";
+import { ReportPanel } from "@/components/reports/ReportPanel";
 import {
   Table,
   TableBody,
@@ -14,16 +15,33 @@ import {
 } from "@/components/ui/TableRow";
 
 // The bar in the SHARE column, in the stage's own pill foreground. It is the
-// one place this view spends colour, and it earns it: the percentage is
-// already printed beside it, so the bar exists to make the shape of the
-// pipeline readable in one glance rather than four comparisons. Kept to 4px so
-// it reads as structure next to the hairline rules, not as a chart.
+// one place this view spends colour beyond the pill, and it earns it: the
+// percentage is already printed beside it, so the bar exists to make the shape
+// of the pipeline readable in one glance rather than four comparisons.
 const BAR_COLOR: Record<string, string> = {
   NEW: "bg-pill-sky-fg",
   DISCOVERY: "bg-pill-purple-fg",
   QUOTED: "bg-pill-orange-fg",
   ACTIVE: "bg-pill-green-fg",
 };
+
+// aria-hidden: the percentage next to it is the accessible value, so a screen
+// reader hears the number once.
+function ShareBar({ status, share }: { status: string; share: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div aria-hidden="true" className="h-1.5 min-w-0 flex-1 rounded-full bg-canvas-soft">
+        <div
+          className={`h-1.5 rounded-full ${BAR_COLOR[status] ?? "bg-ink-muted"}`}
+          style={{ width: formatPercent(share) }}
+        />
+      </div>
+      <span className="text-body-sm w-10 shrink-0 text-right tabular-nums text-ink-muted">
+        {formatPercent(share)}
+      </span>
+    </div>
+  );
+}
 
 export function StageLedger({
   stages,
@@ -37,65 +55,75 @@ export function StageLedger({
   currencyFormat: string;
 }) {
   return (
-    <Card className="p-0">
-      <div className="border-b border-hairline px-4 py-3">
-        <h2 className="text-h2">Pipeline by stage</h2>
-        <p className="text-body-sm text-ink-muted">
-          Estimated revenue of every lead still open. Archived leads are not counted.
-        </p>
-      </div>
-
-      <Table>
+    <ReportPanel
+      id="stage-ledger"
+      icon={
+        <IconLayoutKanban
+          aria-hidden="true"
+          size={18}
+          stroke={1.75}
+          className="text-pill-teal-fg"
+        />
+      }
+      title="Pipeline by stage"
+      count={openCount}
+      countLabel="open leads"
+      description="Estimated revenue of every lead still open. Archived leads are not counted."
+    >
+      <Table aria-labelledby="stage-ledger-title">
         <TableHead>
           <TableRow>
-            <TableHeaderCell className="px-4">Stage</TableHeaderCell>
-            <TableHeaderCell className="text-right">Leads</TableHeaderCell>
-            <TableHeaderCell className="text-right">Value</TableHeaderCell>
-            <TableHeaderCell className="w-[38%] px-4">Share</TableHeaderCell>
+            <TableHeaderCell scope="col" className="px-4">
+              Stage
+            </TableHeaderCell>
+            <TableHeaderCell scope="col" className="text-right">
+              Leads
+            </TableHeaderCell>
+            <TableHeaderCell scope="col" className="px-4 text-right sm:px-3">
+              Value
+            </TableHeaderCell>
+            <TableHeaderCell scope="col" className="hidden w-[38%] px-4 sm:table-cell">
+              Share
+            </TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {stages.map((stage) => (
             <TableRow key={stage.status}>
-              <TableCell className="px-4">
-                <Badge tone={STATUS_TONE[stage.status] ?? "neutral"} className="rounded-full px-2">
-                  {stage.label}
-                </Badge>
+              <TableHeaderCell
+                scope="row"
+                className="px-4 py-2.5 align-middle font-normal text-ink-main"
+              >
+                <StageBadge status={stage.status} />
+                {/* Phone: the Share column is gone (its track was 6px wide), so
+                    the bar runs full width under the stage name instead. */}
+                <div className="mt-2 sm:hidden">
+                  <ShareBar status={stage.status} share={stage.share} />
+                </div>
+              </TableHeaderCell>
+              <TableCell className="py-2.5 text-right align-middle tabular-nums">
+                {stage.count}
               </TableCell>
-              <TableCell className="text-right tabular-nums">{stage.count}</TableCell>
-              <TableCell className="text-right tabular-nums">
+              <TableCell className="px-4 py-2.5 text-right align-middle tabular-nums sm:px-3">
                 {formatCurrency(stage.value, currencyFormat)}
               </TableCell>
-              <TableCell className="px-4">
-                <div className="flex items-center gap-3">
-                  {/* aria-hidden: the percentage next to it is the accessible
-                      value, so a screen reader hears the number once. */}
-                  <div
-                    aria-hidden="true"
-                    className="h-1 min-w-0 flex-1 rounded-full bg-canvas-soft"
-                  >
-                    <div
-                      className={`h-1 rounded-full ${BAR_COLOR[stage.status] ?? "bg-ink-muted"}`}
-                      style={{ width: formatPercent(stage.share) }}
-                    />
-                  </div>
-                  <span className="text-body-sm w-10 shrink-0 text-right tabular-nums text-ink-muted">
-                    {formatPercent(stage.share)}
-                  </span>
-                </div>
+              <TableCell className="hidden px-4 py-2.5 align-middle sm:table-cell">
+                <ShareBar status={stage.status} share={stage.share} />
               </TableCell>
             </TableRow>
           ))}
-          <TableRow className="border-b-0">
-            <TableCell className="text-title px-4">Open pipeline</TableCell>
-            <TableCell className="text-title text-right tabular-nums">{openCount}</TableCell>
-            <TableCell className="text-title text-right tabular-nums">
+          <TableRow className="border-b-0 bg-canvas-soft">
+            <TableHeaderCell scope="row" className="text-title px-4 py-2.5">
+              Open pipeline
+            </TableHeaderCell>
+            <TableCell className="text-title py-2.5 text-right tabular-nums">{openCount}</TableCell>
+            <TableCell className="text-title px-4 py-2.5 text-right tabular-nums sm:px-3">
               {formatCurrency(openValue, currencyFormat)}
             </TableCell>
-            <TableCell className="px-4" />
+            <TableCell className="hidden px-4 sm:table-cell" />
           </TableRow>
         </TableBody>
       </Table>
-    </Card>
+    </ReportPanel>
   );
 }
