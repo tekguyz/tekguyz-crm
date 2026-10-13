@@ -41,6 +41,8 @@
   --color-pill-green-fg: var(--pill-green-fg);
   --color-pill-sky-bg: var(--pill-sky-bg);
   --color-pill-sky-fg: var(--pill-sky-fg);
+  --color-pill-red-bg: var(--pill-red-bg);
+  --color-pill-red-fg: var(--pill-red-fg);
 
   /* Border radius (DESIGN.md v2). Overrides Tailwind's stock scale under the
      same utility names — rounded-md here is 6px. Never reason from Tailwind
@@ -166,6 +168,10 @@
     --pill-green-fg: oklch(0.45 0.14 150);
     --pill-sky-bg: oklch(0.94 0.04 240);
     --pill-sky-fg: oklch(0.48 0.14 250);
+    /* Red: the Lost outcome only (Reports). Not in Avatar's palette, and not
+       --danger, which means "late". */
+    --pill-red-bg: oklch(0.94 0.04 25);
+    --pill-red-fg: oklch(0.5 0.19 25);
 
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06),
@@ -230,6 +236,8 @@
     --pill-green-fg: oklch(0.85 0.11 150);
     --pill-sky-bg: oklch(0.3 0.07 250);
     --pill-sky-fg: oklch(0.84 0.09 245);
+    --pill-red-bg: oklch(0.3 0.08 25);
+    --pill-red-fg: oklch(0.85 0.1 25);
 
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.18);
     --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2),
