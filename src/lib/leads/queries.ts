@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type Lead = {
@@ -85,7 +86,9 @@ export async function getStarredLeads(orgId: string): Promise<Lead[]> {
 // scope above is still what decides who may read what. Passing undefined (the
 // default, and what every caller did before ownership existed) returns the
 // whole tenant's pipeline exactly as before.
-export async function getPipelineLeads(orgId: string, assignedTo?: string): Promise<Lead[]> {
+// cache()d per request: the page's @header slot counts these same rows, and
+// must call with the SAME arguments as the page so both share one query.
+export const getPipelineLeads = cache(async function getPipelineLeads(orgId: string, assignedTo?: string): Promise<Lead[]> {
   const supabase = await createClient();
   let query = supabase
     .from("leads")
@@ -100,7 +103,7 @@ export async function getPipelineLeads(orgId: string, assignedTo?: string): Prom
 
   if (error) throw error;
   return data;
-}
+});
 
 // Scoped by RLS alone (no explicit organization_id filter needed) — used by
 // the ?leadId= deep-link controller, where the caller only has an id, not
@@ -137,7 +140,9 @@ const CONTACT_COLUMNS = LEAD_COLUMNS;
 // `assignedTo` stacks on top of `archived` rather than replacing it — the two
 // answer different questions ("is this contact still live" vs "is it mine"),
 // so Active/Archived and All/Mine are two independent toggles in the UI.
-export async function getAllContacts(
+// cache()d per request: the page's @header slot counts these same rows, and
+// must call with the SAME arguments as the page so both share one query.
+export const getAllContacts = cache(async function getAllContacts(
   orgId: string,
   archived = false,
   assignedTo?: string,
@@ -155,4 +160,4 @@ export async function getAllContacts(
 
   if (error) throw error;
   return data;
-}
+});

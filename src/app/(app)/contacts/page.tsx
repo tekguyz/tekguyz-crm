@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
+
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts } from "@/lib/leads/queries";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { FilterTabs } from "@/components/leads/FilterTabs";
 import { Button } from "@/components/ui/Button";
 import { IconDownload } from "@tabler/icons-react";
+
+export const metadata: Metadata = { title: "Contacts" };
 
 // Preserves whichever filters are NOT being changed, so Archived + My Leads
 // combine instead of resetting each other. Both are omitted when off rather
@@ -35,6 +39,7 @@ export default async function ContactsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <FilterTabs
+          label="Status"
           tabs={[
             {
               label: "Active",
@@ -52,6 +57,7 @@ export default async function ContactsPage({
             whether a contact is still live, so the two stack rather than being
             four mutually exclusive tabs. */}
         <FilterTabs
+          label="Owner"
           tabs={[
             {
               label: "All leads",
@@ -74,12 +80,9 @@ export default async function ContactsPage({
             the whole directory, so it deliberately ignores the filters above:
             a backup that silently omitted the rows you had filtered out would
             be wrong in the one way an export must not be. */}
-        {/* The count the database returned for these filters, so an empty or
-            short list is never ambiguous. */}
-        <span className="text-body-sm ml-auto text-ink-muted tabular-nums">
-          {contacts.length} {contacts.length === 1 ? "contact" : "contacts"}
-        </span>
-        <Button asChild size="sm" variant="secondary">
+        {/* The count the database returned for these filters is in the page
+            header (@header/contacts), beside the title. */}
+        <Button asChild size="sm" variant="secondary" className="ml-auto">
           <a href="/api/leads/export" download>
             <IconDownload size={16} stroke={1.5} aria-hidden="true" />
             Export CSV

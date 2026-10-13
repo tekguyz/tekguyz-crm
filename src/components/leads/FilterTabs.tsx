@@ -19,9 +19,14 @@ export type FilterTab = {
 // takes one token override — ghost is border-transparent, and these tabs read
 // as a group only if every tab keeps its hairline — which is a single-property
 // adjustment to the primitive, not a restatement of its variant.
-export function FilterTabs({ tabs }: { tabs: FilterTab[] }) {
+//
+// A named group, not a <nav>: these filter one list, they do not move between
+// destinations, and Contacts' two unnamed <nav>s were announced as two more
+// "navigation" landmarks beside the real one. `label` names what the group
+// filters by ("Status", "Owner", "Period").
+export function FilterTabs({ label, tabs }: { label: string; tabs: FilterTab[] }) {
   return (
-    <nav className="flex items-center gap-2">
+    <div role="group" aria-label={label} className="flex items-center gap-2">
       {tabs.map((tab) => (
         <Button
           key={tab.href}
@@ -37,6 +42,6 @@ export function FilterTabs({ tabs }: { tabs: FilterTab[] }) {
           </Link>
         </Button>
       ))}
-    </nav>
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { getCurrentOrg } from "@/lib/organizations/current";
 import {
   getSlaCriticalLeads,
@@ -7,6 +9,8 @@ import {
 import { getTasksDueForOrg } from "@/lib/tasks/queries";
 import { getLeadsUnderSpamReview } from "@/lib/leads/spam-review";
 import { TodayAgenda } from "@/components/agenda/TodayAgenda";
+
+export const metadata: Metadata = { title: "Today" };
 
 export default async function TodayPage() {
   const { orgId, orgTimezone, currencyFormat } = await getCurrentOrg();

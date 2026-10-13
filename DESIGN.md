@@ -167,20 +167,37 @@ shortcut works from every route whether or not the affordance is on screen. The
 keycap hint is `hidden md:inline`: a phone has no ⌘, and printing a shortcut
 nobody can press is noise. **Search never moves into the sidebar.**
 
-### 2. The header is the page's strip — title left, four controls right (revised 2026-09-13)
+### 2. The header is the page's strip — page header left, three controls right (revised 2026-10-13)
 
 Shell/IA **Variant C — Quiet** (picked 2026-09-07, wired 2026-09-13) replaced
 "the header holds exactly two things". The header is **48px** (`h-12`; it was
 56px) and holds, left to right, at every width:
 
-- **The page title** (`PageTitle`) — the nav label of the current route, from
-  `pageTitleFor` in `src/components/shell/nav-items.ts`, so it can never
-  disagree with the sidebar. A nested route takes its parent destination's
-  label (`/prospects/import` reads "Prospects"); a path no destination owns
-  gets no title rather than a wrong one. It is a `<p>`, **not a heading**: four
-  pages already render their own `<h1>` and four render none, and a header
-  heading would change every page's outline. The demo `Read-only` badge sits
-  beside it, for the demo tenant only.
+- **The page header** (`PageHeader`, issue #47 step 8, 2026-10-13, Twenty
+  style) — the destination's Tabler icon in a pill hue, its name as the page's
+  one **`<h1>`**, a record count, and the page's own action on its right. Each
+  route fills it from its **`@header` parallel-route slot**
+  (`src/app/(app)/@header/`), so the count and the action are server-rendered
+  with the page: no portal, no client effect, no flash. Icon and name come from
+  `navItemFor` in `src/components/shell/nav-items.ts`, so they can never
+  disagree with the sidebar.
+  - **Count** on the record lists only: Pipeline (open leads), Contacts,
+    Prospects. It streams in its own `<Suspense>`, and the slot calls the same
+    `cache()`d query as the page with the same arguments, so the two share one
+    query and the number is the list's own.
+  - **Action:** New lead (primary) on Today, Pipeline and Contacts; Import CSV
+    (primary) on Prospects. Reports, Settings and Import have none. Export CSV
+    is a view action, not a page action: it stays beside the filters (step 9's
+    view bar owns it next).
+  - Below `sm` the title steps down to `text-title` and an action shows its
+    icon only (44px, label kept as the accessible name).
+  - A nested route names itself and links back: `/prospects/import` reads
+    "Prospects › Import prospects".
+  - Every `(app)` page exports `metadata.title`, so the tab reads
+    "Contacts · TEKGUYZ CRM", not the bare brand.
+  - **No `loading.tsx` at the root of `(app)`.** A loading boundary there also
+    wraps the `@header` slot, which made Today's whole skeleton the header's
+    fallback. Today's page and skeleton live in the `(today)` route group.
 - **Help** (`HelpTrigger`) — an icon button. It is the one control a first-week
   user reaches for, and a menu hid it behind a click.
 - **Search** (`CommandTrigger`) — the glyph plus the `⌘K` keycap. "Search" is
@@ -188,8 +205,10 @@ Shell/IA **Variant C — Quiet** (picked 2026-09-07, wired 2026-09-13) replaced
   would overflow a narrow bar. Decision 1 is otherwise unchanged.
 - A hairline seam, then **identity**, hard right.
 
-Four controls in a bar 8px shorter than the one that held two, because one of
-them is text and two of them are 32px glyphs.
+The bar stays 48px with the page header in it.
+
+**Skip to content** is the first stop in the tab order (`AppShell`), parked
+above the viewport until focused; it moves focus to `<main id="main">`.
 
 **The avatar menu is account-scoped only:** who you are signed in as, theme,
 sign out. Its trigger is the shipped `Avatar` (`size="sm"`) plus a chevron — no
@@ -220,7 +239,7 @@ line.
 ### 3. Sidebar navigation is grouped by position — no captions, no disclosure (revised 2026-09-13)
 
 Variant C replaced "flat — permanently". Top to bottom the rail holds: the
-workspace row (carrying the collapse chevron), the **New Lead** CTA, two groups —
+workspace row (carrying the collapse chevron), two groups —
 **Work** (Today, Pipeline, Contacts) and **Prospecting** (Prospects, Import) — and
 a pinned footer pair, **Reports** and **Settings**.
 
@@ -244,8 +263,9 @@ a pinned footer pair, **Reports** and **Settings**.
   pinned footer.
 - Expanded rows are `py-1.5` (32px), one step denser than `NavItem`'s own `row`;
   the rail keeps its square cell.
-- **New Lead leads the rail as a `primary` Button** — the one primary CTA in the
-  shell — instead of sitting in a footer band.
+- **New Lead left the rail on 2026-10-13** (issue #47 step 8). It is the page
+  header's action on Today, Pipeline and Contacts: one primary button per
+  screen, and a phone, which has no rail, gets it too.
 - The workspace row is `h-12`, matching the header, so the two bottom hairlines
   run as one line.
 

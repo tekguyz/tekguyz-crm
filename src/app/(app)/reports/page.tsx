@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getPipelineReport } from "@/lib/leads/report-queries";
 import { formatCurrency } from "@/lib/format";
@@ -16,6 +18,8 @@ import { timezoneLabel } from "@/lib/organizations/org-options";
 import { formatPercent } from "@/lib/reports/percent";
 import { Button } from "@/components/ui/Button";
 import { IconChartBar, IconCurrencyDollar, IconDownload, IconTarget } from "@tabler/icons-react";
+
+export const metadata: Metadata = { title: "Reports" };
 
 // Read-only, whole-tenant. No role gate: every MEMBER already sees every lead
 // in the org (see CLAUDE.md § Multi-Tenant Security Model), so an aggregate of
@@ -43,9 +47,10 @@ export default async function ReportsPage({
   const hasAnyLeads = report.openCount > 0 || decided > 0 || report.abandonedCount > 0;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-4">
+    // Left-aligned, not mx-auto: the title in the shell header starts at the
+    // content's left edge, and a centred column left it floating 64px off.
+    <div className="flex max-w-5xl flex-col gap-4">
       <div>
-        <h1 className="sr-only">Reports</h1>
         <p className="text-body-sm text-ink-muted">
           {period === "all"
             ? `Every lead ${orgName} has ever recorded.`
@@ -57,6 +62,7 @@ export default async function ReportsPage({
 
       <div className="flex flex-wrap items-center gap-2">
         <FilterTabs
+          label="Period"
           tabs={REPORT_PERIODS.map((value) => ({
             label: REPORT_PERIOD_LABELS[value],
             href: value === "all" ? "/reports" : `/reports?period=${value}`,

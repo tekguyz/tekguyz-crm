@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
+
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getPipelineLeads } from "@/lib/leads/queries";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { FocusList } from "@/components/pipeline/FocusList";
 import { FilterTabs } from "@/components/leads/FilterTabs";
+
+export const metadata: Metadata = { title: "Pipeline" };
 
 export default async function PipelinePage({
   searchParams,
@@ -23,6 +27,7 @@ export default async function PipelinePage({
   return (
     <div className="flex h-full flex-col gap-4">
       <FilterTabs
+        label="Owner"
         tabs={[
           { label: "All leads", href: "/pipeline", active: !showMine },
           { label: "My leads", href: "/pipeline?mine=true", active: showMine },

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getWebhookSecret } from "@/lib/organizations/queries";
 import { trimTrailingSlash } from "@/lib/utils/trim-trailing-slash";
@@ -10,7 +12,9 @@ import { AccountPanel } from "@/components/settings/AccountPanel";
 import { SettingsSection, SettingsSplit } from "@/components/settings/SettingsSection";
 import { SETTINGS_SECTIONS } from "@/components/settings/sections";
 
-// No <h1> here: the Quiet shell header already renders the page title.
+export const metadata: Metadata = { title: "Settings" };
+
+// No <h1> here: the page header (@header/settings) is the page's <h1>.
 export default async function SettingsPage() {
   const { orgId, orgName, orgTimezone, currencyFormat, role, userId, userEmail, displayName, notifyNewLead, notifyWeeklyReport } =
     await getCurrentOrg();

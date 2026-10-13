@@ -29,7 +29,7 @@ function FieldRows({ count }: { count: number }) {
 
 export default function SettingsLoading() {
   return (
-    <Card className="mx-auto w-full max-w-5xl p-0">
+    <Card className="w-full max-w-5xl p-0">
       <RowSkeleton>
         <FieldRows count={2} />
       </RowSkeleton>

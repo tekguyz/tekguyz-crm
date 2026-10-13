@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 // jumps position when the data lands.
 export default function ReportsLoading() {
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-4">
+    <div className="flex max-w-5xl flex-col gap-4">
       <div className="space-y-1.5">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-3 w-64" />

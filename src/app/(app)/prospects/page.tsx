@@ -1,11 +1,11 @@
-import Link from "next/link";
-import { IconUpload } from "@tabler/icons-react";
+import type { Metadata } from "next";
 
 import { ProspectsTable } from "@/components/prospects/ProspectsTable";
 import { FilterTabs } from "@/components/leads/FilterTabs";
-import { Button } from "@/components/ui/Button";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getProspects } from "@/lib/prospects/queries";
+
+export const metadata: Metadata = { title: "Prospects" };
 
 // The cold-outreach call list. Deliberately NOT folded into the generalized
 // Table View initiative in docs/KNOWN_GAPS.md — that one is about saved views
@@ -30,23 +30,15 @@ export default async function ProspectsPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="sr-only">Prospects</h1>
-          <p className="text-body-md max-w-prose text-ink-muted">
-            Cold outreach from the leadgen scrape. Ring one, learn an email address, then
-            promote it into a real lead.
-          </p>
-        </div>
-        <Button asChild variant="secondary" className="max-sm:h-11">
-          <Link href="/prospects/import">
-            <IconUpload className="size-4" stroke={1.75} aria-hidden="true" />
-            Import CSV
-          </Link>
-        </Button>
-      </div>
+      {/* The title, the count and Import CSV are in the page header
+          (@header/prospects). */}
+      <p className="text-body-md max-w-prose text-ink-muted">
+        Cold outreach from the leadgen scrape. Ring one, learn an email address, then promote it
+        into a real lead.
+      </p>
 
       <FilterTabs
+        label="Status"
         tabs={[
           { label: "Active", href: "/prospects", active: !showArchived },
           { label: "Archived", href: "/prospects?archived=true", active: showArchived },

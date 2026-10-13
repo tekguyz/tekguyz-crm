@@ -3,7 +3,6 @@
 import { useShell } from "@/components/shell/ShellContext";
 import { SidebarCollapseToggle } from "@/components/shell/SidebarCollapseToggle";
 import { SidebarNav } from "@/components/shell/SidebarNav";
-import { SidebarQuickAction } from "@/components/shell/SidebarQuickAction";
 import { WorkspaceBlock } from "@/components/shell/WorkspaceBlock";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
@@ -71,10 +70,12 @@ export function Sidebar({ orgName }: { orgName: string }) {
           )}
         >
           {/* Shell/IA Variant C, "Quiet". Top to bottom: the workspace row
-              (carrying the collapse chevron while expanded), the New Lead CTA
-              (preceded by the expand chevron while collapsed), the grouped
-              destinations, and the pinned Reports/Settings pair. h-12 matches
-              the header so the two bottom hairlines run as one line. */}
+              (carrying the collapse chevron while expanded), the expand
+              chevron while collapsed, the grouped destinations, and the pinned
+              Reports/Settings pair. h-12 matches the header so the two bottom
+              hairlines run as one line. New Lead left the rail for the page
+              header on 2026-10-13 (issue #47 step 8): one primary button per
+              screen, and a phone has no rail. */}
           <div className="relative shrink-0">
             <WorkspaceBlock
               orgName={orgName}
@@ -83,10 +84,11 @@ export function Sidebar({ orgName }: { orgName: string }) {
             />
             {collapsed ? null : <SidebarCollapseToggle />}
           </div>
-          <div className="shrink-0 space-y-1 px-2 pt-2">
-            {collapsed ? <SidebarCollapseToggle /> : null}
-            <SidebarQuickAction />
-          </div>
+          {collapsed ? (
+            <div className="shrink-0 px-2 pt-2">
+              <SidebarCollapseToggle />
+            </div>
+          ) : null}
           <SidebarNav collapsed={collapsed} />
         </div>
       </aside>

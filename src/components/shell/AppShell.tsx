@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { Sidebar } from "@/components/shell/Sidebar";
+import { Button } from "@/components/ui/Button";
 import { Header } from "@/components/shell/Header";
 import { MobileTabBar } from "@/components/shell/MobileTabBar";
 import { ShellProvider } from "@/components/shell/ShellContext";
@@ -17,6 +18,7 @@ import type { TeamMember } from "@/lib/invites/queries";
 
 export function AppShell({
   children,
+  header,
   orgName,
   userEmail,
   displayName,
@@ -26,6 +28,9 @@ export function AppShell({
   isDemo,
 }: {
   children: ReactNode;
+  // The route's @header slot (src/app/(app)/@header/): its PageHeader, which
+  // the Header renders on its left. See Header.tsx.
+  header: ReactNode;
   orgName: string;
   userEmail: string;
   displayName: string | null;
@@ -68,6 +73,18 @@ export function AppShell({
                 in-flow spacer here to keep the content column clear of it. See
                 Sidebar.tsx for the two-layer mechanism. */}
             <div className="relative flex h-dvh bg-canvas-soft text-ink-main">
+              {/* First in the tab order, parked above the viewport until
+                  focused: without it a keyboard user crosses the whole rail
+                  and the header (14 stops on desktop) before reaching any
+                  content. A translate, not sr-only: not-sr-only zeroes the
+                  padding and height Button gives it. */}
+              <Button
+                asChild
+                variant="secondary"
+                className="absolute top-2 left-2 z-50 -translate-y-20 focus:translate-y-0"
+              >
+                <a href="#main">Skip to content</a>
+              </Button>
               <Sidebar orgName={orgName} />
               {/* Before <main> in the DOM even though it is painted at the bottom
                   of the screen: navigation should come before content in the tab
@@ -77,7 +94,9 @@ export function AppShell({
               <MobileTabBar orgName={orgName} userEmail={userEmail} />
               <div className="flex min-w-0 flex-1 flex-col">
                 {isDemo ? <DemoBanner /> : null}
-                <Header userEmail={userEmail} displayName={displayName} />
+                <Header userEmail={userEmail} displayName={displayName}>
+                  {header}
+                </Header>
                 {/* pb-24 below md clears the fixed bottom tab bar; above md the
                     bar is not displayed and the padding returns to the shell's
                     normal 6.
@@ -93,7 +112,13 @@ export function AppShell({
                     `.sr-only` span (Tailwind's uses position:absolute) and
                     Radix Checkbox's hidden bubble <input> escaped this way.
                     Measured on /prospects and /settings before the fix. */}
-                <main className="relative flex-1 overflow-y-auto p-4 pb-24 md:p-6">{children}</main>
+                <main
+                  id="main"
+                  tabIndex={-1}
+                  className="relative flex-1 overflow-y-auto p-4 pb-24 focus:outline-none md:p-6"
+                >
+                  {children}
+                </main>
               </div>
               <Suspense fallback={<ProfileSheetSkeleton />}>
                 <ProfileSheetController />
