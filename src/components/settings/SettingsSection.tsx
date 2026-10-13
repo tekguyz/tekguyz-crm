@@ -17,15 +17,28 @@ export function SettingsSplit({ children }: { children: ReactNode }) {
   return <Card className="mx-auto w-full max-w-5xl p-0">{children}</Card>;
 }
 
+// The icon wears a pill hue, spelled out so Tailwind's scanner sees every class.
+const ICON_TONE = {
+  sky: "text-pill-sky-fg",
+  purple: "text-pill-purple-fg",
+  orange: "text-pill-orange-fg",
+  green: "text-pill-green-fg",
+} as const;
+
 export function SettingsSection({
   label,
   blurb,
   help,
+  icon,
+  tone,
   children,
   className,
 }: {
   label: string;
   blurb: string;
+  /** A Tabler icon element before the heading, coloured by `tone`. */
+  icon?: ReactNode;
+  tone?: keyof typeof ICON_TONE;
   /** An optional HelpTooltip, rendered beside the heading. */
   help?: ReactNode;
   children: ReactNode;
@@ -34,7 +47,7 @@ export function SettingsSection({
   return (
     <section
       className={cn(
-        "flex flex-col gap-4 border-b border-hairline px-4 py-6 last:border-b-0 md:flex-row md:gap-8 md:px-6",
+        "flex flex-col gap-4 border-b border-hairline px-4 py-5 last:border-b-0 md:flex-row md:gap-8 md:px-6",
         className,
       )}
     >
@@ -43,6 +56,11 @@ export function SettingsSection({
           collapses the text toward one word per line as the window narrows. */}
       <div className="min-w-0 md:w-64 md:shrink-0">
         <h2 className="text-title flex items-center gap-1.5">
+          {icon ? (
+            <span aria-hidden="true" className={cn("shrink-0", tone && ICON_TONE[tone])}>
+              {icon}
+            </span>
+          ) : null}
           {label}
           {help}
         </h2>
