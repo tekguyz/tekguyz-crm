@@ -112,7 +112,7 @@ function SheetContent({
         {showClose ? (
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            className="absolute top-4 right-4 flex size-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
+            className="absolute top-4 right-4 flex size-7 max-sm:size-11 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
           >
             <IconX className="size-4" stroke={1.75} />
             <span className="sr-only">Close</span>

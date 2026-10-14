@@ -23,4 +23,11 @@ describe("EmptyViewMessage", () => {
     render(<EmptyViewMessage page="pipeline" view={view} text="No open leads match this view." />);
     expect(screen.getByRole("link", { name: "Show all" })).toHaveAttribute("href", "/pipeline?view=table");
   });
+
+  it("says Show active on the archived contacts view, which lands on active ones", () => {
+    const view = { ...defaultView("contacts"), archived: true };
+    render(<EmptyViewMessage page="contacts" view={view} text="No archived contacts." />);
+    expect(screen.getByRole("link", { name: "Show active" })).toHaveAttribute("href", "/contacts");
+    expect(screen.queryByRole("link", { name: "Show all" })).toBeNull();
+  });
 });

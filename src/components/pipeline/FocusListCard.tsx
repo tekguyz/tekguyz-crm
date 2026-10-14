@@ -40,7 +40,7 @@ export function FocusListCard({
           type="button"
           aria-label={`Open ${lead.client_name}`}
           onClick={() => setOpen(true)}
-          className="absolute inset-0 rounded-lg"
+          className="absolute inset-0 cursor-pointer rounded-lg"
         />
 
         {/* The same two Grouped rows KanbanCard renders — this is that card's
