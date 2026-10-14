@@ -39,9 +39,9 @@ primitive, so call sites need nothing.
   trigger are 44px square (or 44px tall) below `sm`.
 - **Icon-only buttons** that square a Button off by hand (`w-8 px-0` and the
   like) also get `max-sm:min-w-11`, where they show on a phone.
-- Existing call-site `max-sm:min-h-11` / `max-sm:size-11` classes become
-  redundant. Remove them only where the primitive now gives the same result;
-  leave any that also set width.
+- Existing call-site `max-sm:h-11` / `max-sm:size-11` classes stay. They are
+  harmless next to the primitive's `min-h`, and touching 47 call sites is
+  churn this pass does not need.
 
 This covers `FilterTabs`, Today's Dismiss and "Show all", the Settings forms,
 Import's "Choose a file", the lead drawers and the demo banner, because they
