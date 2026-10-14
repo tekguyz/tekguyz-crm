@@ -208,6 +208,12 @@ const ROUTES = [
   // only renders below `lg`. Its meta line is where prompt 3's two rejected
   // drafts collapsed a real field, so this is the one that matters.
   "/pipeline",
+  // The Contacts and Pipeline lead tables, since #47 step 9 (DataTable and
+  // the view bar). Both viewports are lg and up, so these measure the table,
+  // not the phone row list. The view bar's name truncates on purpose; the
+  // check is that no header label or cell value is squeezed to nothing.
+  "/contacts",
+  "/pipeline?view=table",
   // The real Settings page, since Variant Split was wired 2026-09-13. The comp
   // was only ever picked against Org Profile; this is the check that Split's
   // fixed 16rem explanation column does not squeeze Team's member rows or API
