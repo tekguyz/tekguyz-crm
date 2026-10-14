@@ -58,6 +58,11 @@ describe("Input", () => {
     expect(screen.getByLabelText("Email")).toHaveClass("border-hairline");
   });
 
+  it("is at least 44px tall on a phone", () => {
+    render(<Input label="Name" />);
+    expect(screen.getByLabelText("Name")).toHaveClass("max-sm:min-h-11");
+  });
+
   it("forwards native props", () => {
     render(<Input label="Email" type="email" required />);
     const field = screen.getByLabelText("Email");

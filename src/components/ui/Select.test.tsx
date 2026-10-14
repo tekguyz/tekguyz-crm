@@ -50,6 +50,11 @@ describe("Select", () => {
     expect(chevron).toHaveClass("pointer-events-none");
   });
 
+  it("is at least 44px tall on a phone", () => {
+    render(<Select label="Status">{options()}</Select>);
+    expect(screen.getByLabelText("Status")).toHaveClass("max-sm:min-h-11");
+  });
+
   it("forwards native props", () => {
     render(
       <Select label="Status" defaultValue="won" required>

@@ -26,6 +26,11 @@ describe("Textarea", () => {
     );
   });
 
+  it("is at least 44px tall on a phone", () => {
+    render(<Textarea label="Notes" />);
+    expect(screen.getByLabelText("Notes")).toHaveClass("max-sm:min-h-11");
+  });
+
   it("forwards native props", () => {
     render(<Textarea label="Notes" rows={6} />);
     expect(screen.getByLabelText("Notes")).toHaveAttribute("rows", "6");

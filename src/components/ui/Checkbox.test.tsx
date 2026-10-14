@@ -78,6 +78,12 @@ describe("Checkbox", () => {
     expect(new FormData(form).get("notify_new_lead")).toBeNull();
   });
 
+  it("keeps the 16px box but has a 24px hit area, 44px on a phone", () => {
+    render(<Checkbox aria-label="Alerts" />);
+    const box = screen.getByRole("checkbox", { name: "Alerts" });
+    expect(box).toHaveClass("size-4", "relative", "after:absolute", "after:-inset-1", "max-sm:after:-inset-3.5");
+  });
+
   it("merges a caller className", () => {
     render(<Checkbox aria-label="Alerts" className="mt-0.5" />);
     expect(screen.getByRole("checkbox", { name: "Alerts" })).toHaveClass("mt-0.5");
