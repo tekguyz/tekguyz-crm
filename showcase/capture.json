@@ -1,6 +1,6 @@
 {
   "app": "tekguyz-crm",
-  "takenAt": "2026-10-07T01:11:00.687Z",
+  "takenAt": "2026-10-14T17:49:51.472Z",
   "pictures": [
     "today-desktop-light",
     "pipeline-desktop-light",
@@ -8,6 +8,10 @@
     "reports-desktop-light",
     "today-phone-light",
     "pipeline-phone-light",
-    "contacts-phone-light"
+    "contacts-phone-light",
+    "today-feed-light",
+    "pipeline-feed-light",
+    "today-stories-light",
+    "pipeline-stories-light"
   ]
 }
