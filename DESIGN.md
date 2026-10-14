@@ -173,6 +173,43 @@ Issue #47 step 9. Contacts and Pipeline share both parts.
   columns live once in `src/components/leads/lead-columns.tsx`.
 - **Phone:** Contacts keeps its two-line row list and Pipeline its Focus List
   below `lg`. Saved Views and Group-by are not built.
+- **A filtered empty state has a way back** (2026-10-14, #68). When a filter
+  hides every record ("No contacts are assigned to you."), the message ends
+  with a "Show all" link (`EmptyViewMessage`) that clears the filters and
+  keeps the sort and the Board / Table layout. With no filter on, the message
+  is plain text.
+
+
+---
+
+## Touch targets and the final pass (2026-10-14)
+
+Issue #47 step 10.
+
+- **The 44px phone floor lives in the primitives.** Below `sm` (640px)
+  `Button` (`sm` and `md`), `Input`, `Select` and `Textarea` carry
+  `max-sm:min-h-11`. It is a minimum, so a caller's own phone size
+  (`max-sm:size-11` on an icon-only button) still wins. Call sites need
+  nothing; desktop sizes do not change. An icon-only button is 44×44 on a
+  phone, not 44 tall and 32 wide: square it with `max-sm:size-11`.
+- **Small glyphs keep their look and grow an invisible hit area.** The
+  `Checkbox` box and the 16px "What's this?" glyph (`HelpTooltip`) stay 16px;
+  a `::after` around them is the target: 24px on desktop (WCAG 2.5.8), 44px on
+  a phone. The glyph opts out of Button's phone floor with `max-sm:min-h-0`,
+  or every label row it sits in would grow to 44px.
+- **Kanban lanes are at least 192px** (`min-w-48`, was 256px), so all four fit
+  beside the sidebar from about 1100px. Below that the board scrolls. Card
+  names truncate; the amount and the due label stay whole.
+- **An empty lane shows only "+ New".** The "No leads" line above it said the
+  same thing twice. Same on the phone Focus List.
+- **A card with a control in it is not a button.** The phone Focus List card
+  opens from one real `<button>` stretched over it (the `DataTable` row
+  pattern); the stage select sits above it and keeps its own clicks and keys.
+  A `role="button"` wrapper around a select is nested interactive, and Space
+  on the select opened the card.
+- **A focusable resize handle always says its width.** `ColumnResizeHandle`
+  reports `aria-valuenow` from the dragged width, else the column's measured
+  width.
 
 
 ---
@@ -193,8 +230,14 @@ not have — whereas one button works at every width.
 
 The `⌘K` / `Ctrl-K` listener lives in `ShellContext`, not in the header, so the
 shortcut works from every route whether or not the affordance is on screen. The
-keycap hint is `hidden md:inline`: a phone has no ⌘, and printing a shortcut
-nobody can press is noise. **Search never moves into the sidebar.**
+keycap hint is `hidden md:inline`: a phone has no modifier key, and printing a
+shortcut nobody can press is noise. **Search never moves into the sidebar.**
+
+**The keycap names the key the person has** (2026-10-14, #66): `⌘K` on Apple,
+`Ctrl K` everywhere else. The `(app)` layout decides it on the server from the
+request (`sec-ch-ua-platform`, then the user agent; `src/lib/shell/platform.ts`)
+and passes it down, so the first paint is already right and nothing flips after
+hydration. When the request says nothing, it is `Ctrl K`.
 
 ### 2. The header is the page's strip — page header left, three controls right (revised 2026-10-13)
 
@@ -229,7 +272,8 @@ Shell/IA **Variant C — Quiet** (picked 2026-09-07, wired 2026-09-13) replaced
     fallback. Today's page and skeleton live in the `(today)` route group.
 - **Help** (`HelpTrigger`) — an icon button. It is the one control a first-week
   user reaches for, and a menu hid it behind a click.
-- **Search** (`CommandTrigger`) — the glyph plus the `⌘K` keycap. "Search" is
+- **Search** (`CommandTrigger`) — the glyph plus the keycap (`⌘K` or `Ctrl K`,
+  decision 1). "Search" is
   the accessible name, not visible text, because it is the first thing that
   would overflow a narrow bar. Decision 1 is otherwise unchanged.
 - A hairline seam, then **identity**, hard right.
