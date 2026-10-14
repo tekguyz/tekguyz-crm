@@ -77,19 +77,17 @@ export function FocusList({
             </div>
 
             <div className="flex flex-col gap-2">
-              {groups[status].length === 0 ? (
-                <p className="text-body-sm px-1 text-ink-muted">No leads</p>
-              ) : (
-                groups[status].map((lead) => (
-                  <FocusListCard
-                    key={lead.id}
-                    lead={lead}
-                    orgTimezone={orgTimezone}
-                    currencyFormat={currencyFormat}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))
-              )}
+              {groups[status].map((lead) => (
+                <FocusListCard
+                  key={lead.id}
+                  lead={lead}
+                  orgTimezone={orgTimezone}
+                  currencyFormat={currencyFormat}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+              {/* An empty lane shows only "+ New": "No leads" above it said the
+                  same thing twice (#68). */}
               <LaneAddButton status={status} onAdd={setAddingIn} />
             </div>
           </section>
