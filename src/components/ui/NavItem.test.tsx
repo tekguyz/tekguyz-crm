@@ -82,6 +82,21 @@ describe("NavItem", () => {
     expect(screen.getByRole("link")).not.toHaveClass("text-accent");
   });
 
+  // Every control is 44px tall on a phone (#47 step 10). Checked in all three
+  // layouts: the mobile "More" sheet uses row, the bottom tab bar uses tab.
+  it.each(["row", "rail", "tab"] as const)(
+    "is at least 44px tall on a phone in the %s layout",
+    (layout) => {
+      const { unmount } = render(
+        <NavItem href="/pipeline" icon={StubIcon} layout={layout}>
+          Pipeline
+        </NavItem>,
+      );
+      expect(screen.getByRole("link")).toHaveClass("max-sm:min-h-11");
+      unmount();
+    },
+  );
+
   // The collapsed rail hides the label rather than dropping it. If this ever
   // regresses to rendering no label at all, the rail becomes a column of
   // unnamed icons for anyone using a screen reader.
