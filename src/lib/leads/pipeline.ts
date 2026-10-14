@@ -31,7 +31,12 @@ export function comparePipelinePriority(a: Lead, b: Lead): number {
   return new Date(a.next_action_at).getTime() - new Date(b.next_action_at).getTime();
 }
 
-export function groupLeadsByStatus(leads: Lead[]): Record<PipelineStatus, Lead[]> {
+// `compare` orders the cards inside each lane. Priority is the default; the
+// view bar's Sort passes another (lib/leads/sort.ts).
+export function groupLeadsByStatus(
+  leads: Lead[],
+  compare: (a: Lead, b: Lead) => number = comparePipelinePriority,
+): Record<PipelineStatus, Lead[]> {
   const groups = Object.fromEntries(
     PIPELINE_STATUSES.map((status) => [status, [] as Lead[]]),
   ) as Record<PipelineStatus, Lead[]>;
@@ -42,7 +47,7 @@ export function groupLeadsByStatus(leads: Lead[]): Record<PipelineStatus, Lead[]
   }
 
   for (const status of PIPELINE_STATUSES) {
-    groups[status].sort(comparePipelinePriority);
+    groups[status].sort(compare);
   }
 
   return groups;
