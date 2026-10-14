@@ -58,7 +58,7 @@ export function Modal({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="rounded-md p-1 text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink-main"
+          className="flex items-center justify-center rounded-md p-1 text-ink-muted max-sm:size-11 transition-colors hover:bg-canvas-soft hover:text-ink-main"
         >
           <IconX className="size-4" />
         </button>

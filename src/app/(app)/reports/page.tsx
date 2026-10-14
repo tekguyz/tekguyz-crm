@@ -73,8 +73,10 @@ export default async function ReportsPage({
         {/* A plain <a>, not a Link, for the same reason as the Contacts export:
             it navigates to a file. Unlike that export, this one DOES follow the
             active period — it is the figures on this screen, so the period the
-            reader chose is the period the file holds. */}
-        <Button asChild size="sm" variant="secondary" className="ml-auto max-sm:h-11">
+            reader chose is the period the file holds. Below sm the four 44px
+            tabs fill the row, so Export sits under them on the left edge
+            instead of floating right alone. */}
+        <Button asChild size="sm" variant="secondary" className="ml-auto max-sm:ml-0 max-sm:h-11">
           <a
             href={period === "all" ? "/api/reports/export" : `/api/reports/export?period=${period}`}
             download

@@ -68,7 +68,8 @@ export function NavItem({
       ref={ref}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative transition-colors",
+        // max-sm:min-h-11: 44px on a phone, #47 step 10. Min-height, so the caller's own size still wins.
+        "relative transition-colors max-sm:min-h-11",
         LAYOUTS[layout],
         active
           ? cn("bg-canvas-soft font-medium text-accent", MARKERS[layout])

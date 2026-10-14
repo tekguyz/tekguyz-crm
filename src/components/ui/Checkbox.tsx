@@ -43,7 +43,10 @@ function Checkbox({
       id={fieldId}
       data-slot="checkbox"
       className={cn(
-        "size-4 shrink-0 rounded-xs border border-hairline bg-canvas-pure transition-colors",
+        // The box stays 16px; the ::after is its hit area: 24px on desktop
+        // (WCAG 2.5.8), 44px on a phone. It belongs to the <button>, so a tap
+        // on it toggles the box.
+        "relative size-4 shrink-0 rounded-xs border border-hairline bg-canvas-pure transition-colors after:absolute after:-inset-1 after:content-[''] max-sm:after:-inset-3.5",
         "data-[state=unchecked]:hover:bg-canvas-soft",
         "data-[state=checked]:border-transparent data-[state=checked]:bg-accent data-[state=checked]:text-accent-fg data-[state=checked]:hover:opacity-90",
         "disabled:cursor-not-allowed disabled:opacity-50",

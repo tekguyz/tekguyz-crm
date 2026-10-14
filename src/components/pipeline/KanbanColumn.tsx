@@ -50,8 +50,9 @@ export function KanbanColumn({
       // handlers sit on), but its frame is transparent until a card is being
       // dragged: then every lane shows a dashed outline, and the one under the
       // pointer takes the accent.
+      // min-w-48 (192px): four lanes fit beside the sidebar from about 1100px (#54).
       className={cn(
-        "flex min-w-64 flex-1 flex-col gap-2 rounded-lg border p-2 transition-colors",
+        "flex min-w-48 flex-1 flex-col gap-2 rounded-lg border p-2 transition-colors",
         isOver
           ? "border-accent bg-canvas-soft"
           : draggingLeadId
@@ -70,21 +71,19 @@ export function KanbanColumn({
       </div>
 
       <div className="flex flex-col gap-2">
-        {leads.length === 0 ? (
-          <p className="text-body-sm px-1 text-ink-muted">No leads</p>
-        ) : (
-          leads.map((lead) => (
-            <KanbanCard
-              key={lead.id}
-              lead={lead}
-              orgTimezone={orgTimezone}
-              currencyFormat={currencyFormat}
-              dragging={draggingLeadId === lead.id}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
-          ))
-        )}
+        {leads.map((lead) => (
+          <KanbanCard
+            key={lead.id}
+            lead={lead}
+            orgTimezone={orgTimezone}
+            currencyFormat={currencyFormat}
+            dragging={draggingLeadId === lead.id}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+          />
+        ))}
+        {/* An empty lane shows only "+ New": "No leads" above it said the same
+            thing twice (#68). */}
         <LaneAddButton status={status} onAdd={onAdd} />
       </div>
     </section>

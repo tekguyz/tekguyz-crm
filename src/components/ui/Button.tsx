@@ -18,9 +18,12 @@ const VARIANTS: Record<ButtonVariant, string> = {
   danger: "border-transparent bg-danger text-danger-fg hover:opacity-90",
 };
 
+// max-sm:min-h-11: every control is 44px tall on a phone (#47 step 10). It is
+// min-height, so a caller's own phone size (max-sm:size-11) still wins, and an
+// inline glyph can opt out with max-sm:min-h-0.
 const SIZES: Record<ButtonSize, string> = {
-  sm: "text-body-sm h-7 gap-1.5 px-2",
-  md: "text-body-md h-8 gap-2 px-3",
+  sm: "text-body-sm h-7 gap-1.5 px-2 max-sm:min-h-11",
+  md: "text-body-md h-8 gap-2 px-3 max-sm:min-h-11",
   // The Landing Page's one call to action. Same type as md; only the target
   // grows, because a stranger on a phone presses it with a thumb (44px).
   lg: "text-body-md h-11 gap-2 px-4",

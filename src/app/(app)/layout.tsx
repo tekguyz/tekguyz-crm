@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { AppShell } from "@/components/shell/AppShell";
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getTeamMembers } from "@/lib/invites/queries";
+import { isApplePlatform, shortcutLabel } from "@/lib/shell/platform";
 import { SIDEBAR_COOKIE_NAME, parseSidebarState } from "@/lib/shell/sidebar-cookie";
 
 // `header` is the @header parallel-route slot (./@header/): each route's
@@ -21,11 +22,15 @@ export default async function AppLayout({
   // arrives already carries the correct width — no flash of an expanded
   // sidebar for someone who prefers the rail. This layout was already dynamic
   // (getCurrentOrg reads the Supabase auth cookies), so reading one more
-  // cookie costs nothing.
-  const [{ orgId, orgName, userEmail, displayName, role, isDemo }, cookieStore] = await Promise.all([
-    getCurrentOrg(),
-    cookies(),
-  ]);
+  // cookie costs nothing. The request headers are read for the same reason:
+  // the search keycap prints Ctrl K or ⌘K, and deciding that here means it is
+  // right in the first paint.
+  const [{ orgId, orgName, userEmail, displayName, role, isDemo }, cookieStore, headerStore] =
+    await Promise.all([getCurrentOrg(), cookies(), headers()]);
+
+  const shortcut = shortcutLabel(
+    isApplePlatform(headerStore.get("sec-ch-ua-platform"), headerStore.get("user-agent")),
+  );
 
   // Sequential rather than inside the Promise.all above: it needs orgId, which
   // only exists once getCurrentOrg has resolved. One indexed RPC
@@ -44,6 +49,7 @@ export default async function AppLayout({
       role={role}
       members={members}
       isDemo={isDemo}
+      shortcut={shortcut}
       sidebar={parseSidebarState(cookieStore.get(SIDEBAR_COOKIE_NAME)?.value)}
     >
       {children}

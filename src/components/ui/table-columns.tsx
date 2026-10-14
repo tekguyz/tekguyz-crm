@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -277,7 +278,22 @@ export function ColumnResizeHandle<K extends string>({
   id: K;
   label: string;
 }) {
-  const width = layout.widths?.[id];
+  // A focusable separator is a widget, so it must always say where it is
+  // (axe aria-required-attr). Until the first drag the table is auto layout
+  // and `widths` is null, so the value is the header cell's measured width.
+  const ref = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState(0);
+  useLayoutEffect(() => {
+    const cell = ref.current?.closest("th");
+    if (!cell) return;
+    const read = () => setMeasured(Math.round(cell.getBoundingClientRect().width));
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(read);
+    observer.observe(cell);
+    return () => observer.disconnect();
+  }, []);
+  const width = Math.round(layout.widths?.[id] ?? measured);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -288,6 +304,7 @@ export function ColumnResizeHandle<K extends string>({
 
   return (
     <div
+      ref={ref}
       role="separator"
       aria-orientation="vertical"
       aria-label={`Resize ${label} column`}

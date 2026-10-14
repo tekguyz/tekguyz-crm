@@ -26,6 +26,7 @@ export function AppShell({
   members,
   sidebar,
   isDemo,
+  shortcut,
 }: {
   children: ReactNode;
   // The route's @header slot (src/app/(app)/@header/): its PageHeader, which
@@ -50,6 +51,8 @@ export function AppShell({
   // The Demo Block's real boundary is on the server (src/lib/demo/demo-block.ts),
   // whether or not this prop is ever passed correctly.
   isDemo: boolean;
+  // The search keycap's label, read from the request in the (app) layout.
+  shortcut: "⌘K" | "Ctrl K";
 }) {
   return (
     // HelpProvider wraps the whole shell so the identity menu's Help item, the
@@ -94,7 +97,7 @@ export function AppShell({
               <MobileTabBar orgName={orgName} userEmail={userEmail} />
               <div className="flex min-w-0 flex-1 flex-col">
                 {isDemo ? <DemoBanner /> : null}
-                <Header userEmail={userEmail} displayName={displayName}>
+                <Header userEmail={userEmail} displayName={displayName} shortcut={shortcut}>
                   {header}
                 </Header>
                 {/* pb-24 below md clears the fixed bottom tab bar; above md the

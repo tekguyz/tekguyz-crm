@@ -91,7 +91,8 @@ const VIEWPORTS = [
 const OPEN_EDIT_DRAWER = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 60; i += 1) {
-    const card = document.querySelector('div[role="button"].cursor-pointer');
+    // A Contacts table row's open button (#47 step 9 replaced the cards).
+    const card = document.querySelector('table tbody tr button');
     if (card) { card.click(); break; }
     await sleep(250);
   }
@@ -106,7 +107,8 @@ const OPEN_EDIT_DRAWER = `(async () => {
 const OPEN_READ_PANEL = `(async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 60; i += 1) {
-    const card = document.querySelector('div[role="button"].cursor-pointer');
+    // A Contacts table row's open button (#47 step 9 replaced the cards).
+    const card = document.querySelector('table tbody tr button');
     if (card) { card.click(); break; }
     await sleep(250);
   }

@@ -22,7 +22,7 @@ export function HelpTrigger() {
       onClick={() => openHelp()}
       aria-label="Help"
       title="Help"
-      className="w-8 px-0"
+      className="w-8 px-0 max-sm:size-11"
     >
       <IconHelpCircle className="size-5" stroke={1.75} />
     </Button>

@@ -46,7 +46,7 @@ export function Select({
           aria-invalid={error ? true : undefined}
           aria-describedby={error || hint ? messageId : undefined}
           className={cn(
-            "text-body-md w-full appearance-none rounded-xs border bg-canvas-pure py-1 pr-7 pl-2 text-ink-main",
+            "text-body-md w-full appearance-none rounded-xs border bg-canvas-pure py-1 pr-7 pl-2 text-ink-main max-sm:min-h-11",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error ? "border-danger" : "border-hairline",
             className,

@@ -56,6 +56,12 @@ describe("KanbanBoard — lanes", () => {
     }
   });
 
+  it("shows only '+ New' in an empty lane, no 'No leads' line", () => {
+    renderBoard();
+    expect(screen.queryByText("No leads")).toBeNull();
+    expect(screen.getByRole("button", { name: "New lead in Discovery" })).toBeInTheDocument();
+  });
+
   it("opens the create drawer on the lane's own stage", async () => {
     const user = userEvent.setup();
     renderBoard();

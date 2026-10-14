@@ -40,6 +40,21 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveClass("h-11", "text-body-md");
   });
 
+  it("is at least 44px tall on a phone at the sm and md sizes", () => {
+    for (const size of ["sm", "md"] as const) {
+      const { unmount } = render(<Button size={size}>Save</Button>);
+      expect(screen.getByRole("button")).toHaveClass("max-sm:min-h-11");
+      unmount();
+    }
+  });
+
+  it("lets a caller cancel the phone floor for an inline glyph", () => {
+    render(<Button className="max-sm:min-h-0">?</Button>);
+    const btn = screen.getByRole("button");
+    expect(btn).toHaveClass("max-sm:min-h-0");
+    expect(btn).not.toHaveClass("max-sm:min-h-11");
+  });
+
   it("disables when disabled", () => {
     render(<Button disabled>Save</Button>);
     expect(screen.getByRole("button")).toBeDisabled();

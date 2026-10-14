@@ -25,6 +25,7 @@ export function TaskDismissButton({ taskId, title }: { taskId: string; title: st
       type="button"
       variant="ghost"
       size="sm"
+      className="max-sm:size-11"
       disabled={isPending}
       aria-label={`Dismiss ${title}`}
       onClick={() => {

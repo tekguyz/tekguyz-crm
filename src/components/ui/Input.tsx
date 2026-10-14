@@ -42,7 +42,7 @@ export function Input({
         aria-invalid={error ? true : undefined}
         aria-describedby={error || hint ? messageId : undefined}
         className={cn(
-          "text-body-md w-full rounded-xs border bg-canvas-pure px-2 py-1 text-ink-main placeholder:text-ink-muted",
+          "text-body-md w-full rounded-xs border bg-canvas-pure px-2 py-1 text-ink-main placeholder:text-ink-muted max-sm:min-h-11",
           "disabled:cursor-not-allowed disabled:opacity-50",
           error ? "border-danger" : "border-hairline",
           className,

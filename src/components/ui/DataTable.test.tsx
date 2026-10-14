@@ -99,6 +99,16 @@ describe("DataTable", () => {
     expect(handles[0]).toHaveAccessibleName("Resize Name column");
   });
 
+  it("gives every resize handle a current width before any drag", () => {
+    renderTable();
+    const handles = screen.getAllByRole("separator");
+    expect(handles.length).toBeGreaterThan(0);
+    for (const handle of handles) {
+      expect(handle).toHaveAttribute("aria-valuenow");
+      expect(Number(handle.getAttribute("aria-valuenow"))).not.toBeNaN();
+    }
+  });
+
   it("shows the empty message and no table when there are no rows", () => {
     renderTable({ rows: [] });
     expect(screen.getByText("Nobody here.")).toBeInTheDocument();
