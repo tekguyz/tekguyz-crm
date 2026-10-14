@@ -191,12 +191,16 @@ Issue #47 step 10.
   `max-sm:min-h-11`. It is a minimum, so a caller's own phone size
   (`max-sm:size-11` on an icon-only button) still wins. Call sites need
   nothing; desktop sizes do not change. An icon-only button is 44×44 on a
-  phone, not 44 tall and 32 wide: square it with `max-sm:size-11`.
+  phone, not 44 tall and 32 wide: square it with `max-sm:size-11`. The close
+  buttons built into `Sheet`, `Dialog` and `Modal` follow the same rule.
 - **Small glyphs keep their look and grow an invisible hit area.** The
-  `Checkbox` box and the 16px "What's this?" glyph (`HelpTooltip`) stay 16px;
+  `Checkbox` box, the 16px "What's this?" glyph (`HelpTooltip`) and the
+  `PasswordInput` eye toggle stay 16px;
   a `::after` around them is the target: 24px on desktop (WCAG 2.5.8), 44px on
   a phone. The glyph opts out of Button's phone floor with `max-sm:min-h-0`,
-  or every label row it sits in would grow to 44px.
+  or every label row it sits in would grow to 44px. Mind the pitch: two such
+  controls closer than 44px apart (two stacked checkboxes) overlap on a phone,
+  and the later one wins the tap. Space them, or give the row itself the tap.
 - **Kanban lanes are at least 192px** (`min-w-48`, was 256px), so all four fit
   beside the sidebar from about 1100px. Below that the board scrolls. Card
   names truncate; the amount and the due label stay whole.
