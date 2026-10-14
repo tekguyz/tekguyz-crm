@@ -2,10 +2,11 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
-// Bare structural shell. No sorting, selection or data prop — build those with
-// the feature, not ahead of it. Column resize and reorder are opt-in and live
-// in the sibling `table-columns.tsx` (first caller: ProspectsTable); a table
-// that does not use them renders exactly this shell and nothing more.
+// Bare structural shell. No sorting, selection or data prop. Column resize and
+// reorder are opt-in and live in the sibling `table-columns.tsx`.
+// `DataTable.tsx` is the composed table (icon headers, URL sort, row open)
+// built on both; a table that needs none of that renders this shell and
+// nothing more (StageLedger, the importers, `/design`).
 //
 // The horizontal scroll wrapper is here rather than at call sites so a wide
 // table can never make the page body scroll sideways.

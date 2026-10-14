@@ -92,6 +92,35 @@ describe("KanbanBoard — lanes", () => {
     expect(within(newLane).getByText("Dana Rivers")).toBeInTheDocument();
   });
 
+  it("shows only the lanes it is given", () => {
+    render(
+      <KanbanBoard leads={leads} orgTimezone="UTC" currencyFormat="USD" lanes={["QUOTED"]} />,
+    );
+    expect(screen.getByRole("heading", { name: "Quoted" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "New" })).toBeNull();
+  });
+
+  it("orders the cards in a lane by the chosen sort", () => {
+    const two = [
+      { ...lead("z", "Zed Young", "NEW", null), estimated_revenue: 5000 },
+      { ...lead("a", "Abe Arnold", "NEW", null), estimated_revenue: 100 },
+    ] as Lead[];
+    const order = () =>
+      [
+        ...screen
+          .getByRole("heading", { name: "New" })
+          .closest("section")!
+          .querySelectorAll("p.font-medium.truncate"),
+      ].map((p) => p.textContent);
+
+    const { unmount } = render(<KanbanBoard leads={two} orgTimezone="UTC" currencyFormat="USD" />);
+    expect(order()).toEqual(["Zed Young", "Abe Arnold"]);
+    unmount();
+
+    render(<KanbanBoard leads={two} orgTimezone="UTC" currencyFormat="USD" sort="name" dir="asc" />);
+    expect(order()).toEqual(["Abe Arnold", "Zed Young"]);
+  });
+
   it("does not complain when a drop is saved", async () => {
     renderBoard();
 

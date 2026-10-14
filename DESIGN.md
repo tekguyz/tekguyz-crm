@@ -137,13 +137,42 @@ behavior, restyled to the new tokens:
 ## Scope — what this system covers
 Applies to every view that currently exists: AppShell nav, Today's Agenda (SLA
 Critical / High-Value / Starred / Tasks Due), Kanban board, Focus List,
-Contacts row list (one panel, a row per contact: avatar, name, stage, channels, owner), Profile Sheet (brief/timeline/notes/tasks), Settings
+Contacts row list (one panel, a row per contact: avatar, name, stage, channels, owner), Table View (`DataTable`: Contacts and Pipeline at `lg` and up), the view bar (`ViewBar`), Profile Sheet (brief/timeline/notes/tasks), Settings
 (org details, account, webhook rotation, API keys), all modals (EditLeadModal,
 CSV Import Wizard, confirmation dialogs), Help drawer + inline tooltips.
 
 **Explicitly does not cover** (don't exist yet — built directly in this system
-when their time comes, not retrofitted later): Table View, Saved Views,
-Group-by, Kanban compact/dense toggle, Team Role Management UI.
+when their time comes, not retrofitted later): Saved Views, Group-by, Kanban
+compact/dense toggle, Team Role Management UI.
+
+
+---
+
+## Table View and the view bar (2026-10-13)
+
+Issue #47 step 9. Contacts and Pipeline share both parts.
+
+- **`ViewBar`** (`src/components/views/ViewBar.tsx`) sits under the page
+  header. Left: the view's name, built from its filters ("Active leads",
+  "Archived · My leads", "Open leads · Quoted, Active"), truncating; on
+  Pipeline a Board / Table switch (`lg` and up). Right: **Filter** (Status on
+  Contacts, Owner, Stage multi-select, Reset; the button shows how many
+  filters are on), **Sort** (one field and a direction; Pipeline adds
+  Priority, its default), and Export CSV on Contacts. Below `lg` the three are
+  44px icon buttons. The record count stays in the page header.
+- **The URL is the only view state.** `src/lib/views/params.ts` parses and
+  builds every href; a default is omitted. Filters run in the query, sort on
+  the server page (`src/lib/leads/sort.ts`, missing values last both ways).
+- **`DataTable`** (`src/components/ui/DataTable.tsx`) is the composed table
+  on the `Table` shell: a Tabler icon (`size-4`, stroke 1.75, `ink-muted`) and
+  a label in every header; a sortable header is a link with `aria-sort` and an
+  arrow; session-only resize (every column but the last) and drag-to-move
+  from `table-columns.tsx`; one bordered panel, hairline rows about 48px,
+  hover `canvas-soft`; the row opens from one stretched button, and links in
+  other cells sit above it. No selection, inline edit or grouping. Lead
+  columns live once in `src/components/leads/lead-columns.tsx`.
+- **Phone:** Contacts keeps its two-line row list and Pipeline its Focus List
+  below `lg`. Saved Views and Group-by are not built.
 
 
 ---
@@ -187,8 +216,8 @@ Shell/IA **Variant C — Quiet** (picked 2026-09-07, wired 2026-09-13) replaced
     query and the number is the list's own.
   - **Action:** New lead (primary) on Today, Pipeline and Contacts; Import CSV
     (primary) on Prospects. Reports, Settings and Import have none. Export CSV
-    is a view action, not a page action: it stays beside the filters (step 9's
-    view bar owns it next).
+    is a view action, not a page action: it lives in the view bar (Contacts
+    only, #47 step 9).
   - Below `sm` the title steps down to `text-title` and an action shows its
     icon only (44px, label kept as the accessible name).
   - A nested route names itself and links back: `/prospects/import` reads

@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils/cn";
 // palette. This is a dropdown.
 //
 // Deliberately partial. shadcn's dropdown-menu also exports Group, Portal,
-// CheckboxItem, Shortcut, Sub, SubTrigger and SubContent; none has a consumer
-// in this app, and a part with no caller is scope creep. Add one by copying
-// its structure from the live registry when something actually needs it.
+// Shortcut, Sub, SubTrigger and SubContent; none has a consumer in this app,
+// and a part with no caller is scope creep. Add one by copying its structure
+// from the live registry when something actually needs it. CheckboxItem
+// arrived with its first caller, the view bar's Stage filter (#47 step 9).
 //
 // The check mark is Tabler, not lucide — lucide-react was fully removed on
 // 2026-08-14.
@@ -130,6 +131,29 @@ function DropdownMenuRadioItem({
   );
 }
 
+// Same row as the radio item, for a multi-select group (the view bar's Stage
+// filter). Trailing indicator for the same reason as the radio item.
+function DropdownMenuCheckboxItem({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem>) {
+  return (
+    <DropdownMenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      className={cn(ITEM_CLASS, "pr-8", className)}
+      {...props}
+    >
+      {children}
+      <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-accent">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <IconCheck className="size-4" stroke={2} />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+    </DropdownMenuPrimitive.CheckboxItem>
+  );
+}
+
 function DropdownMenuLabel({
   className,
   ...props
@@ -160,6 +184,7 @@ export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,

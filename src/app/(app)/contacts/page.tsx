@@ -2,104 +2,63 @@ import type { Metadata } from "next";
 
 import { getCurrentOrg } from "@/lib/organizations/current";
 import { getAllContacts } from "@/lib/leads/queries";
+import { sortLeads } from "@/lib/leads/sort";
+import { parseView, stagesKey, type RawSearchParams } from "@/lib/views/params";
 import { ContactsList } from "@/components/contacts/ContactsList";
-import { FilterTabs } from "@/components/leads/FilterTabs";
-import { Button } from "@/components/ui/Button";
-import { IconDownload } from "@tabler/icons-react";
+import { LeadsTable } from "@/components/leads/LeadsTable";
+import { ViewBar } from "@/components/views/ViewBar";
 
 export const metadata: Metadata = { title: "Contacts" };
-
-// Preserves whichever filters are NOT being changed, so Archived + My Leads
-// combine instead of resetting each other. Both are omitted when off rather
-// than written as "false", to keep the default view's URL clean.
-function contactsHref({ archived, mine }: { archived: boolean; mine: boolean }): string {
-  const params = new URLSearchParams();
-  if (archived) params.set("archived", "true");
-  if (mine) params.set("mine", "true");
-  const query = params.toString();
-  return query ? `/contacts?${query}` : "/contacts";
-}
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; mine?: string }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const { archived, mine } = await searchParams;
-  const showArchived = archived === "true";
-  const showMine = mine === "true";
+  // The URL is the only view state (lib/views/params.ts). The @header slot
+  // parses the same params and makes the same query, so its count is this
+  // list's own.
+  const view = parseView("contacts", await searchParams);
 
-  const { orgId, userId } = await getCurrentOrg();
+  const { orgId, userId, orgTimezone, currencyFormat } = await getCurrentOrg();
   // Filtering happens in the query, not in the list — assigned_to is indexed
   // (idx_leads_tenant_assignee) and this keeps the "empty" state honest: the
-  // count the user sees is the count the database returned.
-  const contacts = await getAllContacts(orgId, showArchived, showMine ? userId : undefined);
+  // count the user sees is the count the database returned. Sorting happens
+  // here, on a copy: the query result is cache()d and shared with the header.
+  const contacts = sortLeads(
+    await getAllContacts(orgId, view.archived, view.mine ? userId : undefined, stagesKey(view.stages)),
+    view.sort,
+    view.dir,
+  );
+
+  const emptyMessage =
+    view.stages.length > 0
+      ? "No contacts in these stages."
+      : view.mine
+        ? "No contacts are assigned to you."
+        : view.archived
+          ? "No archived leads."
+          : "No contacts yet.";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <FilterTabs
-          label="Status"
-          tabs={[
-            {
-              label: "Active",
-              href: contactsHref({ archived: false, mine: showMine }),
-              active: !showArchived,
-            },
-            {
-              label: "Archived",
-              href: contactsHref({ archived: true, mine: showMine }),
-              active: showArchived,
-            },
-          ]}
-        />
-        {/* A second, independent group: ownership is a different question from
-            whether a contact is still live, so the two stack rather than being
-            four mutually exclusive tabs. */}
-        <FilterTabs
-          label="Owner"
-          tabs={[
-            {
-              label: "All leads",
-              href: contactsHref({ archived: showArchived, mine: false }),
-              active: !showMine,
-            },
-            {
-              label: "My leads",
-              href: contactsHref({ archived: showArchived, mine: true }),
-              active: showMine,
-            },
-          ]}
-        />
+      <ViewBar page="contacts" view={view} />
 
-        {/* A plain <a>, not a Link: this navigates to a file download, and
-            next/link would try to client-navigate a route that returns CSV.
-            Button's asChild supplies the classes so no copy of them exists
-            here. `download` is a hint only — the route's own
-            Content-Disposition is what actually names the file. The export is
-            the whole directory, so it deliberately ignores the filters above:
-            a backup that silently omitted the rows you had filtered out would
-            be wrong in the one way an export must not be. */}
-        {/* The count the database returned for these filters is in the page
-            header (@header/contacts), beside the title. */}
-        <Button asChild size="sm" variant="secondary" className="ml-auto">
-          <a href="/api/leads/export" download>
-            <IconDownload size={16} stroke={1.5} aria-hidden="true" />
-            Export CSV
-          </a>
-        </Button>
+      {/* The table at lg and up; the two-line row list with 44px call, text
+          and email targets below it. Both get the same sorted rows. */}
+      <div className="hidden lg:block">
+        <LeadsTable
+          page="contacts"
+          leads={contacts}
+          view={view}
+          orgTimezone={orgTimezone}
+          currencyFormat={currencyFormat}
+          emptyMessage={emptyMessage}
+        />
       </div>
-
-      <ContactsList
-        contacts={contacts}
-        emptyMessage={
-          showMine
-            ? "No contacts are assigned to you."
-            : showArchived
-              ? "No archived leads."
-              : "No contacts yet."
-        }
-      />
+      <div className="lg:hidden">
+        <ContactsList contacts={contacts} emptyMessage={emptyMessage} />
+      </div>
     </div>
   );
 }
