@@ -140,9 +140,12 @@ export function ViewBar({ page, view }: { page: ViewPage; view: LeadView }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="sm" aria-label="Sort" className={BAR_BUTTON}>
+            {/* The button names the active sort, so a board's card order is
+                never a mystery. Its words are the accessible name at every
+                width; below lg they are sr-only and the icon shows. */}
+            <Button variant="secondary" size="sm" className={BAR_BUTTON}>
               <IconArrowsSort size={16} stroke={1.5} aria-hidden="true" />
-              <span className="max-lg:sr-only">Sort</span>
+              <span className="max-lg:sr-only">Sort: {SORT_LABELS[view.sort]}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

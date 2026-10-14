@@ -60,16 +60,26 @@ describe("ViewBar", () => {
     expect(push).toHaveBeenCalledWith("/contacts?sort=amount", { scroll: false });
   });
 
+  it("names the active sort on the Sort button", () => {
+    renderBar("pipeline");
+    expect(screen.getByRole("button", { name: "Sort: Priority" })).toBeInTheDocument();
+  });
+
+  it("names a picked sort on the Sort button", () => {
+    renderBar("contacts", { sort: "amount" });
+    expect(screen.getByRole("button", { name: "Sort: Amount" })).toBeInTheDocument();
+  });
+
   it("sorts by the field picked in Sort", async () => {
     const user = renderBar("pipeline");
-    await openMenu(user, "Sort");
+    await openMenu(user, /^Sort/);
     await user.click(screen.getByRole("menuitemradio", { name: "Amount" }));
     expect(push).toHaveBeenCalledWith("/pipeline?sort=amount", { scroll: false });
   });
 
   it("offers Priority on Pipeline only", async () => {
     const user = renderBar("contacts");
-    await openMenu(user, "Sort");
+    await openMenu(user, /^Sort/);
     expect(screen.queryByRole("menuitemradio", { name: "Priority" })).toBeNull();
   });
 
