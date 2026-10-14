@@ -90,6 +90,15 @@ describe("DataTable", () => {
     expect(onRowOpen).not.toHaveBeenCalled();
   });
 
+  // The handle sits 4px past its cell's edge. On the last column that edge is
+  // the table's, so the scroll wrapper grew a sideways scrollbar.
+  it("gives every column but the last a resize handle", () => {
+    renderTable();
+    const handles = screen.getAllByRole("separator");
+    expect(handles).toHaveLength(1);
+    expect(handles[0]).toHaveAccessibleName("Resize Name column");
+  });
+
   it("shows the empty message and no table when there are no rows", () => {
     renderTable({ rows: [] });
     expect(screen.getByText("Nobody here.")).toBeInTheDocument();

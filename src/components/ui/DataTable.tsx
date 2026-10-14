@@ -93,9 +93,14 @@ export function DataTable<T, K extends string>({
         <TableColumnGroup layout={layout} />
         <TableHead>
           <TableRow ref={layout.headerRowRef}>
-            {layout.order.map((id) => {
+            {layout.order.map((id, index) => {
               const column = byId.get(id)!;
               const header = columnHeaderProps(layout, id);
+              // The handle sits 4px past its cell's trailing edge. On the last
+              // column that edge is the table's own, so the scroll wrapper
+              // would grow a sideways scrollbar. Prospects avoids it the same
+              // way: its last column is not resizable.
+              const resizable = column.resizable !== false && index < layout.order.length - 1;
               const sorted = sort !== null && column.sortKey === sort.key ? sort.dir : null;
               const ColumnIcon = column.icon;
               const icon = (
@@ -131,7 +136,7 @@ export function DataTable<T, K extends string>({
                       </span>
                     )}
                   </div>
-                  {column.resizable === false ? null : (
+                  {!resizable ? null : (
                     <ColumnResizeHandle layout={layout} id={id} label={column.label} />
                   )}
                 </TableHeaderCell>
