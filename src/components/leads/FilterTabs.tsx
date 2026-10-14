@@ -7,8 +7,9 @@ export type FilterTab = {
   active: boolean;
 };
 
-// A row of link-shaped filter tabs, used by the Contacts directory and the
-// Pipeline board. A server component: every tab is a plain <Link> to a
+// A row of link-shaped filter tabs, used by Prospects, Reports and the view
+// bar's Board / Table switch. No directive, so server and client components
+// both render it: every tab is a plain <Link> to a
 // searchParams variant of the same route, so the filtering itself stays a
 // server query and there is no client filter state anywhere.
 //
