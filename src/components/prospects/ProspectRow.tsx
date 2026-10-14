@@ -103,7 +103,7 @@ export function ProspectRow({
                   asChild
                   variant="ghost"
                   size="sm"
-                  className="-my-1 px-1 max-sm:-my-3 max-sm:size-11"
+                  className="-my-1 shrink-0 px-1 max-sm:-my-3 max-sm:size-11"
                 >
                   <a
                     href={prospect.google_maps_url}

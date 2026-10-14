@@ -30,7 +30,11 @@ export function HelpTooltip({ topicId, blurb }: { topicId: string; blurb: string
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
           onFocus={() => setOpen(true)}
-          className="size-4 shrink-0 gap-0 rounded-full p-0"
+          // The glyph stays 16px inside the field label. Its ::after is the
+          // hit area: 24px on desktop (WCAG 2.5.8), 44px on a phone.
+          // max-sm:min-h-0 cancels Button's phone floor, which would make the
+          // whole label row 44px tall.
+          className="relative size-4 shrink-0 gap-0 rounded-full p-0 after:absolute after:-inset-1 after:content-[''] max-sm:min-h-0 max-sm:after:-inset-3.5"
         >
           <IconHelpCircle className="size-4" stroke={1.75} />
         </Button>
