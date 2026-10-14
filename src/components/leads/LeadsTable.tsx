@@ -1,4 +1,3 @@
-// src/components/leads/LeadsTable.tsx
 "use client";
 
 import { useMemo, useState } from "react";

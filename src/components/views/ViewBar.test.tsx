@@ -1,4 +1,3 @@
-// src/components/views/ViewBar.test.tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,6 +57,18 @@ describe("ViewBar", () => {
     await openMenu(user, /Filter/);
     await user.click(screen.getByRole("menuitem", { name: "Reset filters" }));
     expect(push).toHaveBeenCalledWith("/contacts?sort=amount", { scroll: false });
+  });
+
+  // The menu stays open so several stages can be picked in one visit. The
+  // second tick lands before the server answers the first, so it must build
+  // on the ticks already made, not on the view the page last rendered.
+  it("keeps the first stage when a second is ticked before the page updates", async () => {
+    const user = renderBar("pipeline");
+    await openMenu(user, "Filter");
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "New" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Quoted" }));
+    expect(push).toHaveBeenLastCalledWith("/pipeline?stage=NEW,QUOTED", { scroll: false });
+    expect(screen.getByRole("menuitemcheckbox", { name: "New" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("names the active sort on the Sort button", () => {

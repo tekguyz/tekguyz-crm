@@ -1,4 +1,3 @@
-// src/components/leads/lead-columns.tsx
 import {
   IconAddressBook,
   IconCalendarDue,

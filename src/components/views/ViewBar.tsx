@@ -1,6 +1,6 @@
-// src/components/views/ViewBar.tsx
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowsSort, IconDownload, IconFilter } from "@tabler/icons-react";
 
@@ -19,13 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PIPELINE_STATUSES } from "@/lib/leads/pipeline";
+import { PIPELINE_STATUSES, type PipelineStatus } from "@/lib/leads/pipeline";
 import {
   SORT_LABELS,
   filterCount,
   resetFiltersHref,
   sortKeysFor,
-  toggleStageHref,
+  stagesKey,
   viewHref,
   viewName,
   type LeadSortKey,
@@ -51,8 +51,29 @@ const BAR_BUTTON = "max-lg:h-11 max-lg:min-w-11 max-lg:justify-center";
 
 export function ViewBar({ page, view }: { page: ViewPage; view: LeadView }) {
   const router = useRouter();
-  const go = (href: string) => router.push(href, { scroll: false });
-  const count = filterCount(page, view);
+  const [navigating, startTransition] = useTransition();
+  const go = (href: string) => startTransition(() => router.push(href, { scroll: false }));
+
+  // The ticked stages, held here while a navigation is in flight. The Stage
+  // menu stays open so several stages can be picked in one visit, and the
+  // second tick lands before the server answers the first: built from the
+  // `view` prop it would drop the first tick. Once nothing is in flight the
+  // URL is the truth again, so a Reset, a back button or a reload re-syncs.
+  const viewStages = stagesKey(view.stages);
+  const [picked, setPicked] = useState<PipelineStatus[]>(view.stages);
+  const [syncedStages, setSyncedStages] = useState(viewStages);
+  if (!navigating && syncedStages !== viewStages) {
+    setSyncedStages(viewStages);
+    setPicked(view.stages);
+  }
+
+  function toggleStage(stage: PipelineStatus) {
+    const next = picked.includes(stage) ? picked.filter((s) => s !== stage) : [...picked, stage];
+    setPicked(next);
+    go(viewHref(page, view, { stages: next }));
+  }
+
+  const count = filterCount(page, { ...view, stages: picked });
   const name = viewName(page, view);
 
   return (
@@ -123,9 +144,9 @@ export function ViewBar({ page, view }: { page: ViewPage; view: LeadView }) {
             {PIPELINE_STATUSES.map((stage) => (
               <DropdownMenuCheckboxItem
                 key={stage}
-                checked={view.stages.includes(stage)}
+                checked={picked.includes(stage)}
                 onSelect={(event) => event.preventDefault()}
-                onCheckedChange={() => go(toggleStageHref(page, view, stage))}
+                onCheckedChange={() => toggleStage(stage)}
               >
                 <StageBadge status={stage} />
               </DropdownMenuCheckboxItem>
