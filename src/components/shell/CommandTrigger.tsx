@@ -15,11 +15,12 @@ import { Button } from "@/components/ui/Button";
 // the first thing to overflow on a narrow bar. The accessible name carries the
 // word instead.
 //
-// The ⌘K shortcut itself lives in ShellContext, so it works from every route
-// whether or not this control is on screen. This is the affordance for people
-// who will never learn the shortcut, which is why it is a real button and not
-// a hint.
-export function CommandTrigger() {
+// The ⌘K / Ctrl-K shortcut itself lives in ShellContext, so it works from every
+// route whether or not this control is on screen. This is the affordance for
+// people who will never learn the shortcut, which is why it is a real button
+// and not a hint. The keycap's label comes from the server (see
+// src/lib/shell/platform.ts), so it is right in the first paint.
+export function CommandTrigger({ shortcut }: { shortcut: "⌘K" | "Ctrl K" }) {
   const { openCommand } = useShell();
 
   return (
@@ -29,13 +30,13 @@ export function CommandTrigger() {
       onClick={openCommand}
       aria-label="Search"
       title="Search"
-      className="gap-2"
+      className="gap-2 max-sm:min-w-11"
     >
       <IconSearch className="size-5 text-ink-muted" stroke={1.75} />
-      {/* The hint is desktop-only: a phone has no ⌘, and printing a shortcut
+      {/* The hint is desktop-only: a phone has no modifier key, and printing a shortcut
           nobody can press is noise. */}
       <kbd className="text-label hidden rounded-sm border border-hairline px-1.5 py-0.5 text-ink-muted md:inline">
-        ⌘K
+        {shortcut}
       </kbd>
     </Button>
   );

@@ -26,10 +26,12 @@ import { IdentityMenu } from "@/components/shell/IdentityMenu";
 export function Header({
   userEmail,
   displayName,
+  shortcut,
   children,
 }: {
   userEmail: string;
   displayName: string | null;
+  shortcut: "⌘K" | "Ctrl K";
   children?: ReactNode;
 }) {
   return (
@@ -40,7 +42,7 @@ export function Header({
 
       <div className="flex shrink-0 items-center gap-1">
         <HelpTrigger />
-        <CommandTrigger />
+        <CommandTrigger shortcut={shortcut} />
         <span aria-hidden="true" className="mx-1 h-5 w-px bg-hairline" />
         <IdentityMenu userEmail={userEmail} displayName={displayName} />
       </div>

@@ -16,7 +16,7 @@ vi.mock("@/components/shell/IdentityMenu", () => ({
   IdentityMenu: () => <div data-testid="identity-menu" />,
 }));
 
-const PROPS = { userEmail: "someone@example.com", displayName: null };
+const PROPS = { userEmail: "someone@example.com", displayName: null, shortcut: "Ctrl K" as const };
 
 describe("the Quiet header's order", () => {
   // Shell/IA Variant C: the page's part (its @header slot) on the left, then Help, search and
