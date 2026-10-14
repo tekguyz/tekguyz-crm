@@ -5,16 +5,17 @@ import { getPipelineLeads } from "@/lib/leads/queries";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { FocusList } from "@/components/pipeline/FocusList";
 import { FilterTabs } from "@/components/leads/FilterTabs";
+import { parseView, stagesKey, type RawSearchParams } from "@/lib/views/params";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
 export default async function PipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ mine?: string }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const { mine } = await searchParams;
-  const showMine = mine === "true";
+  const view = parseView("pipeline", await searchParams);
+  const showMine = view.mine;
 
   const { orgId, orgTimezone, currencyFormat, userId } = await getCurrentOrg();
   // Filtered in the query rather than in the board, so the Kanban's own
@@ -22,7 +23,7 @@ export default async function PipelinePage({
   // counts stay truthful. Nothing here is coupled to any automated routing —
   // the spam shield's review queue is a separate surface entirely, and this
   // filter never sets or reads `archived`.
-  const leads = await getPipelineLeads(orgId, showMine ? userId : undefined);
+  const leads = await getPipelineLeads(orgId, view.mine ? userId : undefined, stagesKey(view.stages));
 
   return (
     <div className="flex h-full flex-col gap-4">

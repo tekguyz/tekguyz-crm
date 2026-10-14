@@ -6,6 +6,7 @@ import { ContactsList } from "@/components/contacts/ContactsList";
 import { FilterTabs } from "@/components/leads/FilterTabs";
 import { Button } from "@/components/ui/Button";
 import { IconDownload } from "@tabler/icons-react";
+import { parseView, stagesKey, type RawSearchParams } from "@/lib/views/params";
 
 export const metadata: Metadata = { title: "Contacts" };
 
@@ -23,17 +24,22 @@ function contactsHref({ archived, mine }: { archived: boolean; mine: boolean }):
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; mine?: string }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const { archived, mine } = await searchParams;
-  const showArchived = archived === "true";
-  const showMine = mine === "true";
+  const view = parseView("contacts", await searchParams);
+  const showArchived = view.archived;
+  const showMine = view.mine;
 
   const { orgId, userId } = await getCurrentOrg();
   // Filtering happens in the query, not in the list — assigned_to is indexed
   // (idx_leads_tenant_assignee) and this keeps the "empty" state honest: the
   // count the user sees is the count the database returned.
-  const contacts = await getAllContacts(orgId, showArchived, showMine ? userId : undefined);
+  const contacts = await getAllContacts(
+    orgId,
+    view.archived,
+    view.mine ? userId : undefined,
+    stagesKey(view.stages),
+  );
 
   return (
     <div className="space-y-4">

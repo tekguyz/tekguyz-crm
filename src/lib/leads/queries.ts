@@ -88,7 +88,13 @@ export async function getStarredLeads(orgId: string): Promise<Lead[]> {
 // whole tenant's pipeline exactly as before.
 // cache()d per request: the page's @header slot counts these same rows, and
 // must call with the SAME arguments as the page so both share one query.
-export const getPipelineLeads = cache(async function getPipelineLeads(orgId: string, assignedTo?: string): Promise<Lead[]> {
+export const getPipelineLeads = cache(async function getPipelineLeads(
+  orgId: string,
+  assignedTo?: string,
+  // A stagesKey() string ("NEW,QUOTED"), never an array — cache() keys by
+  // argument identity. "" means every stage.
+  stages = "",
+): Promise<Lead[]> {
   const supabase = await createClient();
   let query = supabase
     .from("leads")
@@ -98,6 +104,7 @@ export const getPipelineLeads = cache(async function getPipelineLeads(orgId: str
     .is("outcome", null);
 
   if (assignedTo) query = query.eq("assigned_to", assignedTo);
+  if (stages) query = query.in("status", stages.split(","));
 
   const { data, error } = await query;
 
@@ -146,6 +153,8 @@ export const getAllContacts = cache(async function getAllContacts(
   orgId: string,
   archived = false,
   assignedTo?: string,
+  // A stagesKey() string, never an array — see getPipelineLeads.
+  stages = "",
 ): Promise<ContactLead[]> {
   const supabase = await createClient();
   let query = supabase
@@ -155,6 +164,7 @@ export const getAllContacts = cache(async function getAllContacts(
     .eq("archived", archived);
 
   if (assignedTo) query = query.eq("assigned_to", assignedTo);
+  if (stages) query = query.in("status", stages.split(","));
 
   const { data, error } = await query.order("client_name", { ascending: true });
 
