@@ -6,6 +6,7 @@ import { sortLeads } from "@/lib/leads/sort";
 import { parseView, stagesKey, type RawSearchParams } from "@/lib/views/params";
 import { ContactsList } from "@/components/contacts/ContactsList";
 import { LeadsTable } from "@/components/leads/LeadsTable";
+import { EmptyViewMessage } from "@/components/views/EmptyViewMessage";
 import { ViewBar } from "@/components/views/ViewBar";
 
 export const metadata: Metadata = { title: "Contacts" };
@@ -31,7 +32,7 @@ export default async function ContactsPage({
     view.dir,
   );
 
-  const emptyMessage =
+  const emptyText =
     view.stages.length > 0
       ? "No contacts in these stages."
       : view.mine
@@ -39,6 +40,7 @@ export default async function ContactsPage({
         : view.archived
           ? "No archived leads."
           : "No contacts yet.";
+  const emptyMessage = <EmptyViewMessage page="contacts" view={view} text={emptyText} />;
 
   return (
     <div className="space-y-4">

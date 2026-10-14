@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { LEAD_COLUMN_IDS, leadColumns } from "@/components/leads/lead-columns";
@@ -34,7 +34,7 @@ export function LeadsTable({
   view: LeadView;
   orgTimezone: string;
   currencyFormat: string;
-  emptyMessage: string;
+  emptyMessage: ReactNode;
 }) {
   const columns = useMemo(() => {
     const all = leadColumns({ orgTimezone, currencyFormat });

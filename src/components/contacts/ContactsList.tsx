@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { ContactRow } from "@/components/contacts/ContactRow";
 import type { ContactLead } from "@/lib/leads/queries";
 
@@ -18,7 +20,7 @@ export function ContactsList({
   emptyMessage = "No contacts yet.",
 }: {
   contacts: ContactLead[];
-  emptyMessage?: string;
+  emptyMessage?: ReactNode;
 }) {
   if (contacts.length === 0) {
     return (

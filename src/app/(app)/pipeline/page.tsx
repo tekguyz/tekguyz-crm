@@ -8,6 +8,7 @@ import { boardKey, parseView, stagesKey, type RawSearchParams } from "@/lib/view
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { FocusList } from "@/components/pipeline/FocusList";
 import { LeadsTable } from "@/components/leads/LeadsTable";
+import { EmptyViewMessage } from "@/components/views/EmptyViewMessage";
 import { ViewBar } from "@/components/views/ViewBar";
 
 export const metadata: Metadata = { title: "Pipeline" };
@@ -54,7 +55,7 @@ export default async function PipelinePage({
             view={view}
             orgTimezone={orgTimezone}
             currencyFormat={currencyFormat}
-            emptyMessage="No open leads match this view."
+            emptyMessage={<EmptyViewMessage page="pipeline" view={view} text="No open leads match this view." />}
           />
         </div>
       ) : (

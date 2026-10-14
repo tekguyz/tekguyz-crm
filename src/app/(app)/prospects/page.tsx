@@ -33,8 +33,8 @@ export default async function ProspectsPage({
       {/* The title, the count and Import CSV are in the page header
           (@header/prospects). */}
       <p className="text-body-md max-w-prose text-ink-muted">
-        Cold outreach from the leadgen scrape. Ring one, learn an email address, then promote it
-        into a real lead.
+        Your cold outreach list. Ring one, learn an email address, then promote it into a real
+        lead.
       </p>
 
       <FilterTabs

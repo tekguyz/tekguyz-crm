@@ -69,7 +69,7 @@ export function DataTable<T, K extends string>({
   onRowOpen: (row: T) => void;
   sort: DataTableSort | null;
   sortHref: (key: string) => string;
-  emptyMessage: string;
+  emptyMessage: ReactNode;
 }) {
   const layout = useColumnLayout(columns);
 
