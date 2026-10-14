@@ -1,20 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { channelLinks, type ChannelLinkKind } from "@/lib/leads/channel-links";
 import type { ContactLead } from "@/lib/leads/queries";
 import { AssigneeLabel } from "@/components/leads/AssigneeLabel";
-import { ChannelIcon } from "@/components/leads/ChannelIcon";
+import { ChannelLinks } from "@/components/leads/ChannelLinks";
 import { EditLeadDrawer } from "@/components/leads/EditLeadDrawer";
 import { StageBadge } from "@/components/leads/StageBadge";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
-
-// The channels a phone row keeps. The rest (website, socials, map) are one
-// tap away in the lead's panel header; on a 375px row they would push the
-// call/text/email targets below 44px or onto a third line.
-const PHONE_CHANNELS = new Set<ChannelLinkKind>(["call", "text", "email", "whatsapp"]);
 
 // One Contacts row. The name is the row's one <button>: its ::after stretches
 // over the whole row, so a click anywhere opens the lead, while the channel
@@ -27,7 +20,6 @@ const PHONE_CHANNELS = new Set<ChannelLinkKind>(["call", "text", "email", "whats
 // two lines: identity and stage, then the channels and owner under the name.
 export function ContactRow({ lead }: { lead: ContactLead }) {
   const [open, setOpen] = useState(false);
-  const links = channelLinks(lead);
 
   return (
     <li className="relative flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 transition-colors hover:bg-canvas-soft lg:col-span-4 lg:grid lg:grid-cols-subgrid lg:gap-x-6">
@@ -51,27 +43,7 @@ export function ContactRow({ lead }: { lead: ContactLead }) {
       <span aria-hidden="true" className="basis-full lg:hidden" />
 
       <div className="flex min-h-11 min-w-0 flex-1 items-center gap-1 pl-9 lg:min-h-0 lg:pl-0">
-        {links.map((link) => (
-          <Button
-            key={link.kind}
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "relative z-10 size-11 justify-center px-0 lg:size-8",
-              !PHONE_CHANNELS.has(link.kind) && "hidden lg:inline-flex",
-            )}
-          >
-            <a
-              href={link.href}
-              aria-label={`${link.label} ${lead.client_name}`}
-              title={link.label}
-              {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            >
-              <ChannelIcon kind={link.kind} className="size-[1.125rem] lg:size-4" />
-            </a>
-          </Button>
-        ))}
+        <ChannelLinks lead={lead} />
       </div>
 
       {/* "Unassigned" holds the desktop column's place; on a phone row it is
