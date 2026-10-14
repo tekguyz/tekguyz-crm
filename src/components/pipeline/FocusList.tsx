@@ -14,21 +14,30 @@ import {
   groupLeadsByStatus,
   type PipelineStatus,
 } from "@/lib/leads/pipeline";
+import { leadComparator } from "@/lib/leads/sort";
+import type { LeadSortKey, SortDir } from "@/lib/views/params";
 
 export function FocusList({
   leads,
   orgTimezone,
   currencyFormat,
+  // Same as KanbanBoard: the Stage filter's lanes and the Sort's order.
+  lanes = PIPELINE_STATUSES,
+  sort = "priority",
+  dir = "asc",
 }: {
   leads: Lead[];
   orgTimezone: string;
   currencyFormat: string;
+  lanes?: readonly PipelineStatus[];
+  sort?: LeadSortKey;
+  dir?: SortDir;
 }) {
   const [focusLeads, setFocusLeads] = useState(leads);
   const [addingIn, setAddingIn] = useState<PipelineStatus | null>(null);
   const [, startTransition] = useTransition();
 
-  const groups = groupLeadsByStatus(focusLeads);
+  const groups = groupLeadsByStatus(focusLeads, leadComparator(sort, dir));
 
   function handleStatusChange(leadId: string, targetStatus: PipelineStatus) {
     const lead = focusLeads.find((l) => l.id === leadId);
@@ -56,7 +65,7 @@ export function FocusList({
   return (
     <>
       <div className="flex flex-col gap-6">
-        {PIPELINE_STATUSES.map((status) => (
+        {lanes.map((status) => (
           <section key={status} className="flex flex-col gap-3">
             <div className="flex items-center gap-2 px-1">
               {/* The stage's own colour, same pill as everywhere else — the column

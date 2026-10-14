@@ -12,15 +12,25 @@ import {
   groupLeadsByStatus,
   type PipelineStatus,
 } from "@/lib/leads/pipeline";
+import { leadComparator } from "@/lib/leads/sort";
+import type { LeadSortKey, SortDir } from "@/lib/views/params";
 
 export function KanbanBoard({
   leads,
   orgTimezone,
   currencyFormat,
+  // The view bar's Stage filter hides the lanes it does not pick, and its
+  // Sort orders the cards inside each lane. Priority is the default order.
+  lanes = PIPELINE_STATUSES,
+  sort = "priority",
+  dir = "asc",
 }: {
   leads: Lead[];
   orgTimezone: string;
   currencyFormat: string;
+  lanes?: readonly PipelineStatus[];
+  sort?: LeadSortKey;
+  dir?: SortDir;
 }) {
   const [boardLeads, setBoardLeads] = useState(leads);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
@@ -28,7 +38,7 @@ export function KanbanBoard({
   const [addingIn, setAddingIn] = useState<PipelineStatus | null>(null);
   const [, startTransition] = useTransition();
 
-  const columns = groupLeadsByStatus(boardLeads);
+  const columns = groupLeadsByStatus(boardLeads, leadComparator(sort, dir));
 
   function handleDrop(leadId: string, targetStatus: PipelineStatus) {
     const lead = boardLeads.find((l) => l.id === leadId);
@@ -60,7 +70,7 @@ export function KanbanBoard({
   return (
     <>
       <div className="flex h-full gap-2 overflow-x-auto pb-2">
-        {PIPELINE_STATUSES.map((status) => (
+        {lanes.map((status) => (
           <KanbanColumn
             key={status}
             status={status}
