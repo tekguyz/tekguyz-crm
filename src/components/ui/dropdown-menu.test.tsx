@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
@@ -100,6 +101,32 @@ describe("dropdown-menu focus-ring floor", () => {
     }
   });
 
+  it("does not suppress the focus outline on DropdownMenuCheckboxItem", () => {
+    render(
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuCheckboxItem checked>Quoted</DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    expectNoOutlineSuppression(screen.getByRole("menuitemcheckbox", { name: "Quoted" }));
+  });
+
+  it("marks a checked DropdownMenuCheckboxItem as checked", () => {
+    render(
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuCheckboxItem checked>Quoted</DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem checked={false}>Active</DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Quoted" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Active" })).toHaveAttribute("aria-checked", "false");
+  });
+
   // A caller passing its own className must not be able to smuggle the class
   // back in either — `cn` would happily merge it, and that is the same
   // regression arriving through a different door.
@@ -116,9 +143,10 @@ describe("dropdown-menu focus-ring floor", () => {
   });
 
   // Guard against the part growing new row types that quietly ship with
-  // shadcn's `outline-none`. If DropdownMenuCheckboxItem / SubTrigger are added
-  // later (neither exists today — the file is deliberately partial), this
-  // sweeps them too without anyone remembering to add a case above.
+  // shadcn's `outline-none`. DropdownMenuCheckboxItem now exists and is swept
+  // here; if SubTrigger is added later (it does not exist today — the file is
+  // deliberately partial), this sweeps it too without anyone remembering to
+  // add a case above.
   it("suppresses the outline on no interactive row in an open menu", () => {
     render(
       <DropdownMenu defaultOpen>
@@ -128,6 +156,7 @@ describe("dropdown-menu focus-ring floor", () => {
           <DropdownMenuRadioGroup value="dark">
             <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
+          <DropdownMenuCheckboxItem checked>Quoted</DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>,
     );
