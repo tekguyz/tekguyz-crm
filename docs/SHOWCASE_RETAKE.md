@@ -51,8 +51,7 @@ They post as they are: no crop, no resize. The 540 px width shows the app in
 its phone layout, so the text reads on a phone. Frame the key part above the
 fold. If it needs a scroll, fix the app, not the picture.
 
-Source spec: `muse-outbox` `work-pack/picture-specs.md`. **Not found on this
-laptop on 2026-10-13**, so the sizes above come from the capture tool README.
+Source spec: `C:/Projects/tekguyz-one/growth/outreach/muse-work-pack/picture-specs.md`.
 Check that file before trusting a size for a new platform (LinkedIn, Google
 Business Profile cover, X).
 
@@ -93,5 +92,22 @@ dark surfaces use the `-dark` files; never `filter: invert()`. Detail:
 3. Run the capture command above. Say "use tools/capture to retake the
    pictures of tekguyz-crm" and Claude does this and checks each picture.
 4. Open each picture. Look for the demo bar, dev badge, real data, cut-off text.
-5. Commit `showcase/`. README images point at `showcase/*.png`; check they
+5. Copy every picture and video to Drive
+   `tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/`, one folder per kind
+   (per `C:/Projects/tekguyz-one/growth/outreach/muse-work-pack/README.md`).
+   The reel goes in `video/` with the other video files. Use `rclone copy`,
+   never `sync`. Run each line with `--dry-run` first, read the list, then run
+   it without.
+
+   ```bash
+   rclone copy C:/Projects/tekguyz-crm/showcase tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/desktop --include "*-desktop-*.png" --dry-run
+   rclone copy C:/Projects/tekguyz-crm/showcase tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/phone --include "*-phone-*.png" --dry-run
+   rclone copy C:/Projects/tekguyz-crm/showcase tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/feed --include "*-feed-*.png" --dry-run
+   rclone copy C:/Projects/tekguyz-crm/showcase tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/stories --include "*-stories-*.png" --dry-run
+   rclone copy C:/Projects/tekguyz-crm/showcase/video tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/video --dry-run
+   ```
+
+   Then check the counts with
+   `rclone lsf -R tekguyz-drive:tekguyz-one/social/lead-pipeline-crm/`.
+6. Commit `showcase/`. README images point at `showcase/*.png`; check they
    still look right.
