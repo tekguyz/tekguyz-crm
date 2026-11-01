@@ -16,3 +16,6 @@ supabase/.temp/
 
 # Impeccable design tool output (local critiques)
 .impeccable/
+
+# Next.js rewrites this on every dev or build run (Next default: ignored)
+next-env.d.ts
