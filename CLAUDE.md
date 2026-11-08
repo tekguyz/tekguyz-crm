@@ -120,7 +120,7 @@ Exit `0` clean · `1` findings · `2` could not run, which is **not** a pass.
 
 ## Issues and labels
 
-New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and `docs/ADDENDA_LOG.md` keep governing existing and deferred items, per the rule above. Labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, and `size:small`, `size:feature`, `size:big`. What each `size:` label means is in the global rules.
+New work goes to GitHub Issues (`gh` CLI). `docs/KNOWN_GAPS.md` and `docs/ADDENDA_LOG.md` keep governing existing and deferred items, per the rule above. Labels: `ready-for-agent`, `ready-for-human`, `bug`, `enhancement`, `documentation`, `accessibility`, `question`, `invalid`, `wontfix`, and one Model label per issue (`opus-medium`, `sonnet-high`…). How to pick it is in the global rules.
 
 Terms go in `CONTEXT.md` and decisions in `docs/adr/`, at the repo root, created lazily as they resolve.
 
