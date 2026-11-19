@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { TryDemoButton } from "@/components/demo/TryDemoButton";
 import { AppScreenshot } from "@/components/landing/AppScreenshot";
 import { LandingFooter, LandingHeader } from "@/components/landing/LandingChrome";
@@ -17,6 +18,10 @@ import { BRAND, LANDING } from "@/lib/brand/copy";
 export function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col gap-12 overflow-x-clip bg-canvas-soft px-4 py-4 text-ink-main sm:px-8">
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-NH1HKS344J" strategy="afterInteractive" />
+      <Script id="ga4-init" strategy="afterInteractive">
+        {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-NH1HKS344J');`}
+      </Script>
       <LandingHeader />
 
       {/* DOM order is the phone order: copy, screenshot, points. From `lg` the
