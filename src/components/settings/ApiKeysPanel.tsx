@@ -58,6 +58,7 @@ export function ApiKeysPanel({ canEdit }: { canEdit: boolean }) {
   // corrects one field instead of re-fetching two keys from their provider.
   useEffect(() => {
     if (state?.success) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
       setGeminiKey("");
       setAnthropicKey("");
     }

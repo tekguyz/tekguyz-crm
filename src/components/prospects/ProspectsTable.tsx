@@ -156,9 +156,11 @@ export function ProspectsTable({
             <TableColumnGroup layout={layout} />
             <TableHead className="max-sm:block">
               <TableRow
+                // eslint-disable-next-line react-hooks/refs -- false positive: the hook returns one object that holds a ref, the rule treats every field as a ref read
                 ref={layout.headerRowRef}
                 className="max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-1 max-sm:px-2"
               >
+                {/* eslint-disable-next-line react-hooks/refs -- false positive: the hook returns one object that holds a ref, the rule treats every field as a ref read */}
                 {layout.order.map((id) => {
                   const column = COLUMN_BY_ID.get(id)!;
                   const name = column.label || "Actions";

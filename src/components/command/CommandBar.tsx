@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -46,7 +47,7 @@ type Selection =
   | { kind: "prospect"; prospect: ProspectSearchResult };
 
 export function CommandBar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [contacts, setContacts] = useState<ContactLead[] | null>(null);
   const [tasks, setTasks] = useState<TaskSearchResult[] | null>(null);
   const [prospects, setProspects] = useState<ProspectSearchResult[] | null>(null);
@@ -60,10 +61,6 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
   // exactly as it always has.
   const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // All three sources refetch every time the palette opens, once — never per
   // keystroke. Ranking and filtering happen in the browser (Fuse, below), so
   // typing costs no round trips and there is no debounce or pagination to
@@ -71,6 +68,7 @@ export function CommandBar({ open, onClose }: { open: boolean; onClose: () => vo
   // and tasks already used rather than introducing a third fetch strategy.
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
     setQuery("");
     setActiveIndex(0);
     fetchSearchableContacts().then(setContacts);

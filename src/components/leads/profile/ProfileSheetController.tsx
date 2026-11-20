@@ -23,6 +23,7 @@ export function ProfileSheetController() {
 
   useEffect(() => {
     if (!leadId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
       setLead(null);
       return;
     }

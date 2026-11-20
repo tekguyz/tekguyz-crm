@@ -69,6 +69,7 @@ export function ActivityTimeline({
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
     setLogs(null);
     setError(null);
 
