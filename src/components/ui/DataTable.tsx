@@ -92,7 +92,9 @@ export function DataTable<T, K extends string>({
       <Table aria-label={label} {...tableProps}>
         <TableColumnGroup layout={layout} />
         <TableHead>
+          {/* eslint-disable-next-line react-hooks/refs -- false positive: the hook returns one object that holds a ref, the rule treats every field as a ref read */}
           <TableRow ref={layout.headerRowRef}>
+            {/* eslint-disable-next-line react-hooks/refs -- false positive: the hook returns one object that holds a ref, the rule treats every field as a ref read */}
             {layout.order.map((id, index) => {
               const column = byId.get(id)!;
               const header = columnHeaderProps(layout, id);

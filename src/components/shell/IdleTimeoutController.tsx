@@ -65,7 +65,9 @@ export function IdleTimeoutController({ isDemo }: { isDemo: boolean }) {
   // Read inside the listener, which is registered once and would otherwise
   // close over the first render's `warning`.
   const warningRef = useRef(false);
-  warningRef.current = warning;
+  useEffect(() => {
+    warningRef.current = warning;
+  });
 
   useEffect(() => {
     // The public demo is meant to be always-browsable. The read-only visitor
@@ -85,6 +87,7 @@ export function IdleTimeoutController({ isDemo }: { isDemo: boolean }) {
       // shared, so this tab is signed out too — just leave.
       if (!leavingRef.current) {
         leavingRef.current = true;
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full navigation on purpose, drops all client state after sign-out
         window.location.assign("/login");
       }
     });

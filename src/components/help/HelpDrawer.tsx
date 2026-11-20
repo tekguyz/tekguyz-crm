@@ -25,6 +25,7 @@ export function HelpDrawer() {
   // Reset the search every time it opens — a stale filter from last time is
   // never what you want when you reach for help again.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
     if (isOpen) setQuery("");
   }, [isOpen]);
 

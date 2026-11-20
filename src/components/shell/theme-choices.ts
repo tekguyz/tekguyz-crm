@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useTheme } from "next-themes";
 import { IconSun, IconMoon, IconDeviceDesktop } from "@tabler/icons-react";
 
@@ -27,9 +27,7 @@ export type ThemeChoice = (typeof THEME_CHOICES)[number]["value"];
 // lets a caller render a neutral, identically-sized state until then.
 export function useThemeChoice() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const current = (THEME_CHOICES.some((c) => c.value === theme) ? theme : "system") as ThemeChoice;
 

@@ -42,7 +42,9 @@ export function useFormResetRestore(
 ) {
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
   const latest = useRef(restore);
-  latest.current = restore;
+  useEffect(() => {
+    latest.current = restore;
+  });
 
   useEffect(() => {
     const form = anchor.current?.closest("form");

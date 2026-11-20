@@ -47,6 +47,7 @@ export function useArrivalHighlight<T extends { id: string }>(
     if (!target) return;
 
     onArriveRef.current?.(target);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets or loads state when its input changes; no data library here, so the effect is the mechanism
     setHighlightedId(target.id);
 
     const timer = setTimeout(() => setHighlightedId(null), ARRIVAL_HIGHLIGHT_MS);
